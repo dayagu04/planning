@@ -506,8 +506,11 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     last_x_vec = []
     last_y_vec = []
     for i in range(len(ref_x)):
-      ref_unit_vector = [second_soft_upper_bound_x0_vec[i] - second_soft_lower_bound_x0_vec[i],
-                         second_soft_upper_bound_y0_vec[i] - second_soft_lower_bound_y0_vec[i]]
+      ref_unit_vector = [lat_motion_plan_input.hard_upper_bound_x0_vec[i] - lat_motion_plan_input.hard_lower_bound_x0_vec[i],
+                         lat_motion_plan_input.hard_upper_bound_y0_vec[i] - lat_motion_plan_input.hard_lower_bound_y0_vec[i]]
+      if i == len(ref_x) - 1:
+        ref_unit_vector = [lat_motion_plan_input.hard_upper_bound_x1_vec[i] - lat_motion_plan_input.hard_lower_bound_x1_vec[i],
+                           lat_motion_plan_input.hard_upper_bound_y1_vec[i] - lat_motion_plan_input.hard_lower_bound_y1_vec[i]]
       ref_unit_vector = list(normalize_vector(ref_unit_vector))
       tmp_ref_x.append(ref_x[i] + ref_unit_vector[0] * tuned_ref_xy)
       tmp_ref_y.append(ref_y[i] + ref_unit_vector[1] * tuned_ref_xy)

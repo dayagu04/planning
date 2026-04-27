@@ -111,6 +111,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
         is_pre_move_ = false;
         lat_close_boundary_offset_ = 0.0;
+        // 跳转到propose的同帧立即生成轨迹并执行安全检查，提前累计lc_valid_cnt_，节省100ms
+        JointLaneChangeDecisionGeneration();
+        CheckIfProposeToExecution(lane_change_direction, lane_change_type);
+        is_pre_move_ = false;
+        lat_close_boundary_offset_ = 0.0;
       } else {
         // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
         // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
@@ -164,7 +169,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
 
         // 在propose阶段计算靠近车道线的横向偏移量
         // CalculateLatCloseValue();
-        CalculateCongestionLatOffsetValue();
+        // CalculateCongestionLatOffsetValue();
         // lat_close_boundary_offset_ = 0.0;
 
         if (is_propose_to_execution && !is_propose_to_cancel) {
@@ -521,6 +526,11 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     lane_change_stage_info_.lc_back_reason = "no lc request";
     return true;
   }
+  // 目标车道id等于原车道时取消
+  if(lc_lane_mgr_->origin_lane_virtual_id() == lc_lane_mgr_->target_lane_virtual_id()){
+    lane_change_stage_info_.lc_back_reason = "no target lane";
+    return true;
+  }
 
   // NOTICE: some cancel needs to check whether lane change can be cancelled
   if (lane_change_stage_info_.lc_should_back) {
@@ -757,7 +767,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     is_lc_condition_satisfied = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
   } else if (transition_info_.lane_change_type == MERGE_REQUEST ||
     transition_info_.lane_change_type == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
-    lc_valid_thre = 1;
+    lc_valid_thre = transition_info_.lane_change_type == MERGE_REQUEST ? 2 : 1;
     is_lc_condition_satisfied =
         is_dash_line_safe && is_targetlane_valid && is_roadedge_safe;
   } else {
@@ -1821,6 +1831,7 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   JSON_DEBUG_VECTOR("ego_future_v_vec", ego_future_v_, 2);
 
   JSON_DEBUG_VALUE("lc_safety_check_time", lc_safety_check_time_);
+  JSON_DEBUG_VALUE("rear_agent_overtaking", rear_agent_overtaking_);
   JSON_DEBUG_VALUE("target_lane_congestion_level",
                    int(fix_lane_congestion_level_.level));
   JSON_DEBUG_VALUE("lat_offset_propose",
@@ -2297,8 +2308,8 @@ void LaneChangeStateMachineManager::PreProcess() {
   JSON_DEBUG_VALUE("is_default_aggressive_scence", lc_safety_check_config_.is_default_aggressive_scence);
 }
 void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
-  JSON_DEBUG_VALUE("joint_lane_change_state",
-                   static_cast<int>(transition_info_.lane_change_status));
+  // JSON_DEBUG_VALUE("joint_lane_change_state",
+  //                  static_cast<int>(transition_info_.lane_change_status));
   if (transition_info_.lane_change_status ==
       StateMachineLaneChangeStatus::kLaneKeeping) {
     return;
@@ -2441,7 +2452,13 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     dis_diff_vel = rel_vel * predict_t;
   }
   const double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
-  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
+  const double kRiskGapTime = 0.5;
+  const double kRearFasterThreshold = 0.5;
+  double risk_min_gap = traj[0].vel() * kRiskGapTime;
+  bool is_rear_faster = rel_vel > kRearFasterThreshold;
+  bool is_gap_tight = rear_gap < risk_min_gap;
+  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0)
+                           || (is_rear_faster && is_gap_tight);
 }
 void LaneChangeStateMachineManager::CheckTargetFrontNode(
     int64_t target_lane_front_node_id) {
@@ -3999,11 +4016,10 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       ego_future_v_.emplace_back(ego_trajs_future_[i].v);
     }
 
-    const bool is_large_car_in_side =
-        is_front_agent ? false : IsLargeAgent(after_filter_agent);
+    const bool is_large_car =  IsLargeAgent(after_filter_agent);
 
     lc_safety = CheckIfSafetyForPredictionTrajs(  // 安全检查函数 target  node
-        agent_prediction_trajs, after_filter_agent, is_large_car_in_side,
+        agent_prediction_trajs, after_filter_agent, is_large_car,
         is_front_agent);
     // lc_safety = CheckIfSafetyForOptimizedTrajs(agent_prediction_trajs,
     //   after_filter_agent, is_large_car_in_side, is_front_agent);
@@ -4362,7 +4378,7 @@ bool LaneChangeStateMachineManager::
     }
   }
 
-    double max_lat_buff = 4.0;
+    double max_lat_buff = 5.0;
     double lat_buff = 3.5;
   // 确认初始横向buff 与横向速度相关
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -4522,19 +4538,21 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-      //未来衰减
-      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
-      const double ttc_decay = std::pow(ttc_decay_factor, i);
-      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
       //状态折扣
-      box_longitudinal_buff = is_executing ?
-                            box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio * (1.0 - ego_press_line_ratio)
-                            : box_longitudinal_buff * (1.0 - ego_press_line_ratio);
+      box_longitudinal_buff = is_executing ? 
+                              box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio
+                              :box_longitudinal_buff * 1.0;
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
         // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
         box_longitudinal_buff = reverse_check_time * (agent_traj[i].v  + ego_trajs_future_[i].v);
       }
+      //前车,未来安全检查只对最小距离衰减
+      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
+      double min_front_gap = 3.5 * ttc_decay;
+      box_longitudinal_buff = std::max(box_longitudinal_buff, min_front_gap);
     } else {
       // 1. 运动学距离：后车反应时间 + 差速刹停距离
       // double rear_relative_decel =
@@ -4549,6 +4567,9 @@ bool LaneChangeStateMachineManager::
       double rel_vel = std::max(0.0, agent_traj[i].v - ego_trajs_future_[i].v);
       double dis_diff_vel = 0.0;
       double predict_t = lc_safety_check_time_ + 0.5;
+      if(is_large_car){
+        predict_t = predict_t + 2.0; // 对于大车延长变道后的恐慌感检查时间
+      }
       if (rear_acc > 0.3) {
           // rear accelerating
           dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
@@ -4561,7 +4582,7 @@ bool LaneChangeStateMachineManager::
       }
       dis_diff_vel += lc_safety_check_config_.faster_rear_delay_time * agent_traj[i].v;
       if (is_large_car) {
-        dis_diff_vel += 5.0;
+        dis_diff_vel += 5.0;// 速度无关的大车额外安全距离
       }
       // 2 主观感受 TTC 距离：由预测差速映射 ttc，并与剩余检查时间耦合
       const double diffspeed_kph = 3.6 * rel_vel;
@@ -4700,7 +4721,7 @@ bool LaneChangeStateMachineManager::
     }
     distance = std::min(distance, distance_i);
     // 记录box
-    if (distance < 0.01) {
+    if (distance_i < 0.01) {
       ILOG_DEBUG << i << "box-box not safety !!!";
       const auto& agent_corners = agent_box.GetAllCorners();
       for (const auto& corner_point : agent_corners) {
@@ -4767,6 +4788,26 @@ bool LaneChangeStateMachineManager::
         if (zero_count * 4 >= vec_size) {
           return false;
         }
+      }
+    }
+
+    // 通用距离质量检查：即使碰撞点数量不多，但非碰撞点距离过小也不安全
+    // 计算所有非碰撞点的平均距离和末端距离
+    double non_collision_sum = 0.0;
+    int non_collision_count = 0;
+    for (int j = 0; j < vec_size; ++j) {
+      if (distance_vec[j] >= 0.01) {
+        non_collision_sum += distance_vec[j];
+        ++non_collision_count;
+      }
+    }
+    if (non_collision_count > 0) {
+      const double kMinSafeAvgDist = 0.5;
+      const double kMinTailDist = 1.0;
+      double safe_avg = non_collision_sum / non_collision_count;
+      double tail_dist = distance_vec[vec_size - 1];
+      if (safe_avg < kMinSafeAvgDist && tail_dist < kMinTailDist) {
+        return false;
       }
     }
   }

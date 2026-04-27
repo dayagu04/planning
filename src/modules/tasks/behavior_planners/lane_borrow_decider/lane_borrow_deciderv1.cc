@@ -380,6 +380,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
+  const auto& lat_obstacle_position = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
@@ -406,6 +409,11 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
         frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
+      const auto history_iter = lat_obstacle_position.find(id);
+      if (history_iter != lat_obstacle_position.end() &&
+          !history_iter->second.has_enough_space) {
+        continue;
+      }
       if (lat_obs_iter != lat_obstacle_decision.end() &&
           (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
            lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {

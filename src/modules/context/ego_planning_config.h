@@ -274,8 +274,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
     hpp_min_search_range = read_json_key<double>(json, "hpp_min_search_range");
-    enable_lane_borrow_deciderV2 =
-        read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
+    enable_lane_borrow_deciderV3 =
+        read_json_key<bool>(json, "enable_lane_borrow_deciderV3");
     left_right_turn_func_fading_away_switch =
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
     ReadItem<bool>(json, enable_overtake_lane_change_confirmation,
@@ -323,7 +323,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_ehr_column_box = false;
   bool enable_uss = false;
   double hpp_min_search_range = 20;
-  bool enable_lane_borrow_deciderV2 = false;
+  bool enable_lane_borrow_deciderV3 = false;
   bool left_right_turn_func_fading_away_switch = false;
   bool enable_overtake_lane_change_confirmation = false;
   double press_line_fewly_threshold = 0.3;
@@ -743,6 +743,8 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, obs_static_vel_thold, "lane_borrow",
                      "obs_static_vel_thold");
     ReadItem<int>(json, observe_frames, "lane_borrow", "observe_frames");
+    ReadItem<bool>(json, use_dp_path_planning, "lane_borrow",
+                   "use_dp_path_planning");
     centric_obs_frames = read_json_keys<int>(
         json, std::vector<std::string>{"lane_borrow", "centric_obs_frames"});
     dense_obstacle_dist = read_json_keys<double>(
@@ -753,6 +755,7 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double max_concern_obs_distance = 40.0;
   double obs_static_vel_thold = 0.1;
   int observe_frames = 30;
+  bool use_dp_path_planning = false;
   int centric_obs_frames = 10;
   double dense_obstacle_dist = 8.0;
   double extend_obs_distance = 10.0;
@@ -3330,6 +3333,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "lc_end_ratio_for_first_qreftheta");
     ReadItem<double>(json, end_ratio_for_second_qreftheta, "lat_motion_ilqr",
                      "end_ratio_for_second_qreftheta");
+    ReadItem<double>(json, q_ref_xy_lane_borrow, "lat_motion_ilqr",
+                     "q_ref_xy_lane_borrow");
+    ReadItem<double>(json, q_ref_theta_lane_borrow, "lat_motion_ilqr",
+                     "q_ref_theta_lane_borrow");
     ReadItem<double>(json, enter_ramp_on_road_time, "lat_motion_ilqr",
                      "enter_ramp_on_road_time");
     ReadItem<double>(json, q_ref_xy_split, "lat_motion_ilqr", "q_ref_xy_split");
@@ -3488,6 +3495,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_lane_change_back = 5.0;
   double jerk_bound_lane_change_back = 1.5;
   double q_jerk_bound_lane_change_back = 50000.0;
+
+  double q_ref_xy_lane_borrow = 20.0;
+  double q_ref_theta_lane_borrow = 5000.0;
 
   double enter_ramp_on_road_time = 2.0;
   double q_ref_xy_split = 20.0;

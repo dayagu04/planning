@@ -95,6 +95,7 @@ void BaseLateralMotionPlanner::InitInputAndOutput() {
   is_need_reverse_ = false;
   is_ref_consistent_ = false;
   valid_continuity_idx_ = 0;
+  lane_rel_theta_error_ = 0.0;
   ref_theta_vec_.resize(N, 0.0);
   virtual_ref_x_.reserve(N);
   virtual_ref_y_.reserve(N);
@@ -413,17 +414,22 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
   const auto &planning_init_point =
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   // set init info
+  const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   Point2D cart_ref0(planning_input_.ref_x_vec(0), planning_input_.ref_y_vec(0));
   Point2D frenet_ref0;
   Point2D cart_init(planning_input_.init_state().x(),
                     planning_input_.init_state().y());
   Point2D frenet_init;
-  if (reference_path_ptr->get_frenet_coord() != nullptr &&
-      reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref0, frenet_ref0) &&
-      reference_path_ptr->get_frenet_coord()->XYToSL(cart_init, frenet_init)) {
-    planning_weight_ptr_->SetInitDisToRef((frenet_init.y - frenet_ref0.y));
+  if (frenet_coord != nullptr) {
+    if (frenet_coord->XYToSL(cart_ref0, frenet_ref0)) {
+    planning_weight_ptr_->SetInitDisToRef((planning_init_point.frenet_state.r - frenet_ref0.y));
     planning_weight_ptr_->SetInitRefThetaError(
-        (planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+          (planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+    } else {
+      planning_weight_ptr_->CalculateInitInfo(planning_input_);
+    }
+    double lane_theta = frenet_coord->GetPathCurveHeading(planning_init_point.frenet_state.s);
+    lane_rel_theta_error_ = planning_math::NormalizeAngle(planning_init_point.lat_init_state.theta() - lane_theta);
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
@@ -445,12 +451,12 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot / 57.3);
   double max_steer_angle_rate_lc =
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot_lc / 57.3);
-  double max_wheel_angle = max_steer_angle / steer_ratio;
-  double max_wheel_angle_rate = max_steer_angle_rate / steer_ratio;
-  double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
-  double max_acc = std::min(max_wheel_angle * kv2, 5.0);
-  double limit_jerk = max_wheel_angle_rate * kv2;
-  double limit_jerk_lc = max_wheel_angle_rate_lc * kv2;
+  max_wheel_angle_ = max_steer_angle / steer_ratio;
+  max_wheel_angle_rate_ = max_steer_angle_rate / steer_ratio;
+  max_wheel_angle_rate_lc_ = max_steer_angle_rate_lc / steer_ratio;
+  double max_acc = std::min(max_wheel_angle_ * kv2, 5.0);
+  double limit_jerk = max_wheel_angle_rate_ * kv2;
+  double limit_jerk_lc = max_wheel_angle_rate_lc_ * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
   std::vector<double> fp_max_jerk{limit_jerk, 1.8, 1.5, 1.4};
   double max_jerk = planning::interp(planning_input_.ref_vel(), xp_v, fp_max_jerk);
@@ -458,6 +464,7 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
   planning_weight_ptr_->SetMaxJerkLC(limit_jerk_lc);
+  planning_weight_ptr_->SetInitSteerAngle(planning_init_point.lat_init_state.delta() * steer_ratio * 57.3);
   return true;
 }
 
@@ -527,7 +534,10 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   // generate motion planning output into planning_context
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   // append the planning traj anti-direction for decoupling lat & lon replan
   const static double appended_length = config_.path_backward_appended_length;
   motion_planner_output.path_backward_appended_length = appended_length;
@@ -545,65 +555,70 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   d_curv_vec_[0] = d_curv_vec_[1];
   t_vec_[0] = -0.2;
 
-  // const double concerned_index = 20;  //
-  // planning_input_.motion_plan_concerned_index(); double concerned_dis_to_ref
-  // = std::hypot(
-  //     x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index
-  //     + 1), y_vec[concerned_index + 2] -
-  //     planning_input_.ref_y_vec(concerned_index + 1));
-  // const double end_points_size = concerned_index + 1;
-  // if ((!(session_->environmental_model().function_info().function_mode() ==
-  //        common::DrivingFunctionInfo_DrivingFunctionMode::
-  //            DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&
-  //     (!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1)
-  //     &&
-  //     (!session_->planning_context()
-  //           .general_lateral_decider_output()
-  //           .lane_change_scene)) {
-  //   const double end_points_size = concerned_index + 1;
-  //   std::vector<double> end_x_vec(end_points_size + 1);
-  //   std::vector<double> end_y_vec(end_points_size + 1);
-  //   std::vector<double> end_s_vec(end_points_size + 1);
-  //   for (size_t i = 0; i < end_points_size + 1; ++i) {
-  //     if (i > concerned_index) {
-  //       end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
-  //       end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
-  //       end_s_vec[i] = end_s_vec[i - 1] +
-  //                      std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
-  //                                          end_y_vec[i] - end_y_vec[i - 1]),
-  //                               1e-3);
-  //     } else {
-  //       end_x_vec[i] = planning_output_.x_vec(i);
-  //       end_y_vec[i] = planning_output_.y_vec(i);
-  //       end_s_vec[i] = s_vec[i + 1];
-  //     }
-  //   }
-  //   pnc::mathlib::spline end_x_s_spline;
-  //   pnc::mathlib::spline end_y_s_spline;
-  //   end_x_s_spline.set_points(end_s_vec, end_x_vec);
-  //   end_y_s_spline.set_points(end_s_vec, end_y_vec);
-  //   double end_ds =
-  //       (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
-  //       (N - end_points_size);
-  //   end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
-  //   double end_s = end_s_vec[end_points_size - 1];
-  //   for (size_t i = end_points_size; i < N; ++i) {
-  //     end_s += end_ds;
-  //     x_vec[i + 1] = end_x_s_spline(end_s);
-  //     y_vec[i + 1] = end_y_s_spline(end_s);
-  //     double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
-  //                                    end_x_s_spline.deriv(1, end_s));
-  //     double theta_err = theta_vec[i] - next_theta;
-  //     const double pi2 = 2.0 * M_PI;
-  //     if (theta_err > M_PI) {
-  //       next_theta += pi2;
-  //     } else if (theta_err < -M_PI) {
-  //       next_theta -= pi2;
-  //     }
-  //     theta_vec[i + 1] = next_theta;
-  //     s_vec[i + 1] = end_s;
-  //   }
-  // }
+  const size_t concerned_index = planning_input_.motion_plan_concerned_index();
+  // double concerned_dis_to_ref = std::hypot(
+  //     x_vec_[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
+  //     y_vec_[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
+  if (planning_weight_ptr_->GetLateralMotionScene() ==
+      pnc::lateral_planning::LateralMotionScene::RAMP &&
+      reference_path_ptr->GetReferencePathCurveInfo().curve_type ==
+      ReferencePathCurveInfo::CurveType::BIG_CURVE &&
+      !planning_input_.complete_follow() &&
+      (concerned_index < N - 1)) {
+    size_t end_points_size = concerned_index + 1;
+    Point2D frenet_ref_pt, frenet_traj_pt;
+    for (size_t i = concerned_index + 1; i < N; ++i) {
+      if (frenet_coord->XYToSL(Point2D(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i)), frenet_ref_pt) &&
+          frenet_coord->XYToSL(Point2D(planning_output_.x_vec(i), planning_output_.y_vec(i)), frenet_traj_pt)) {
+        if (std::fabs(frenet_traj_pt.y - frenet_ref_pt.y) >= 0.05) {
+          end_points_size = i;
+          break;
+        }
+      }
+    }
+    std::vector<double> end_x_vec(N);
+    std::vector<double> end_y_vec(N);
+    std::vector<double> end_s_vec(N);
+    for (size_t i = 0; i < N; ++i) {
+      if (i >= end_points_size) {
+        end_x_vec[i] = planning_input_.ref_x_vec(i);
+        end_y_vec[i] = planning_input_.ref_y_vec(i);
+        end_s_vec[i] = end_s_vec[i - 1] +
+                       std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
+                                           end_y_vec[i] - end_y_vec[i - 1]),
+                                1e-3);
+      } else {
+        end_x_vec[i] = planning_output_.x_vec(i);
+        end_y_vec[i] = planning_output_.y_vec(i);
+        end_s_vec[i] = s_vec_[i + 1];
+      }
+    }
+    pnc::mathlib::spline end_x_s_spline;
+    pnc::mathlib::spline end_y_s_spline;
+    end_x_s_spline.set_points(end_s_vec, end_x_vec);
+    end_y_s_spline.set_points(end_s_vec, end_y_vec);
+    double end_ds =
+        (end_s_vec.back() - end_s_vec[end_points_size - 1]) /
+        (N - end_points_size);
+    end_ds = std::max(std::min(end_ds, planning_input_.ref_vel() * 0.2), 1e-3);
+    double end_s = end_s_vec[end_points_size - 1];
+    for (size_t i = end_points_size; i < N; ++i) {
+      end_s += end_ds;
+      x_vec_[i + 1] = end_x_s_spline(end_s);
+      y_vec_[i + 1] = end_y_s_spline(end_s);
+      double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
+                                     end_x_s_spline.deriv(1, end_s));
+      double theta_err = theta_vec_[i] - next_theta;
+      const double pi2 = 2.0 * M_PI;
+      if (theta_err > M_PI) {
+        next_theta += pi2;
+      } else if (theta_err < -M_PI) {
+        next_theta -= pi2;
+      }
+      theta_vec_[i + 1] = next_theta;
+      s_vec_[i + 1] = end_s;
+    }
+  }
 
   // construct lateral kd path
   motion_planner_output.lateral_path_coord =
@@ -642,15 +657,11 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   motion_planner_output.u_vec = u_vec;
 
   // assemble results
-  const auto &general_lateral_decider_output =  // result from lat decision
+  const auto& general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();
-
-  auto &traj_points = session_->mutable_planning_context()
-                          ->mutable_planning_result()
-                          .traj_points;
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+  auto& traj_points = session_->mutable_planning_context()
+                              ->mutable_planning_result()
+                              .traj_points;
   for (size_t i = 0; i < N; i++) {
     traj_points[i].x = x_vec_[i + 1];
     traj_points[i].y = y_vec_[i + 1];

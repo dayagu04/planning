@@ -102,7 +102,7 @@ double CalDesireStaticLateralDistance(
     max_extra_lateral_buffer += config.extra_truck_nudge_buffer;
   }
   double min_extra_lateral_buffer =
-      std::fmin(0.15 * ego_vel, max_extra_lateral_buffer);
+      std::fmin(std::fmax(0.15 * ego_vel, 0.15), max_extra_lateral_buffer);
 
   double clip_ego_l = clip(fabs(ego_l), kMaxEgoLCoeff, 0.0);
   double lateral_extra_buffer =
