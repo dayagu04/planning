@@ -152,12 +152,17 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
+  if (origin_refline == nullptr) {
+    is_merge_lane_change_situation_ = false;
+    return;
+  }
 
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
-  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+  if (base_frenet_coord_ == nullptr ||
+      !base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
     ILOG_DEBUG << "fail to get ego position on base lane";
     is_merge_lane_change_situation_ = false;
     return;

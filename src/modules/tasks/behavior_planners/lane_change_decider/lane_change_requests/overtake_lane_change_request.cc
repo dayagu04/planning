@@ -502,13 +502,16 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 
   if (origin_refline == nullptr) {
+    Finish();
+    overtake_count_ = 0;
     return;
   }
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
-  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+  if (base_frenet_coord_ == nullptr ||
+      !base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
     ILOG_DEBUG << "fail to get ego position on base lane";
     Finish();
     overtake_count_ = 0;
