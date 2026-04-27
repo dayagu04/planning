@@ -154,7 +154,7 @@ void WeightMaker::MakeAccWeight(const TargetMaker& target_maker) {
   const double default_a_weight =
       speed_planning_config_.weight_maker_config.a_weight;
   acc_weight_ = std::vector<double>(plan_points_num_, default_a_weight);
-  if (IsNeedAWeight(target_maker)) {
+  if (IsNeedAWeight(target_maker) && (!session_->is_rads_scene())) {
     a_weight_ = std::vector<double>(
         plan_points_num_, default_a_weight + KDefaultAWeightIncrement);
   } else {

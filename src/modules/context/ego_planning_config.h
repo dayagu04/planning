@@ -4444,6 +4444,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_limit_decider",
                                 "tunnel_vel_limit_dis_table_low", "dis_table"},
         tunnel_vel_limit_dis_table_low.dis_table);
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "rads_curv_speed_limit_radius_vec"},
+                                     rads_curv_speed_limit_radius_vec);
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                    "rads_curv_speed_limit_scale_vec"},
+                                    rads_curv_speed_limit_scale_vec);
 
   }
   struct VehicleLatDisRelVelTable {
@@ -4590,6 +4598,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
   double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
   double ewma_alpha_v_limit_in_turns = 0.3;  // EWMA coefficient for v_limit_in_turns
+  std::vector<double> rads_curv_speed_limit_radius_vec = {20.0, 25.0, 30.0};
+  std::vector<double> rads_curv_speed_limit_scale_vec = {0.4, 0.7, 1.0};
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
