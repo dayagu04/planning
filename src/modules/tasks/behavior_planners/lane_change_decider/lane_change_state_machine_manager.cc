@@ -107,6 +107,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             StateMachineLaneChangeStatus::kLaneChangePropose;
         transition_info_.lane_change_direction = lane_change_direction;
         transition_info_.lane_change_type = lane_change_type;
+        suppress_large_curve_cnt_ = 0;
         lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
         is_pre_move_ = false;
         lat_close_boundary_offset_ = 0.0;
@@ -172,6 +173,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_lane_mgr_->set_fix_lane_to_target();
           lc_timer_.Reset();
           propose_state_frame_nums_ = 0;
+          suppress_large_curve_cnt_ = 0;
           is_pre_move_ = false;
           lat_close_boundary_offset_ = 0.0;
         } else if (is_propose_to_cancel) {
@@ -398,8 +400,13 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
   if(lane_change_type != EMERGENCE_AVOID_REQUEST && lane_change_type != CONE_REQUEST) {
     is_suppress_large_curve = lc_request_.IsCurveSurpressLaneChange(lc_req_mgr_->target_lane_virtual_id());
     if(is_suppress_large_curve) {
-      lane_change_stage_info_.lc_invalid_reason = "target lane too large curve";
-      return false;
+      suppress_large_curve_cnt_++;
+      if(suppress_large_curve_cnt_ >= 2) {
+        lane_change_stage_info_.lc_invalid_reason = "target lane too large curve";
+        return false;
+      }
+    } else {
+      suppress_large_curve_cnt_ = 0;
     }
   }
   CheckLaneChangeValid(lane_change_direction);
@@ -1073,7 +1080,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
 
   if (target_lane == nullptr) {
     lc_state_info.lc_should_back = true;
-    lc_state_info.lc_back_reason = "dash not enough";
+    lc_state_info.lc_back_reason = "no target lane";
     return lc_state_info;
   }
 
@@ -1666,6 +1673,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   execution_state_frame_nums_ = 0;
   hold_state_frame_nums_ = 0;
   complete_state_frame_nums_ = 0;
+  suppress_large_curve_cnt_ = 0;
   is_high_priority_back_ = false;
   ego_trajs_future_.clear();
   lc_path_generate_.reset();
@@ -1697,6 +1705,7 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   execution_state_frame_nums_ = 0;
   hold_state_frame_nums_ = 0;
   complete_state_frame_nums_ = 0;
+  suppress_large_curve_cnt_ = 0;
   is_high_priority_back_ = false;
   ego_trajs_future_.clear();
   lc_path_generate_.reset();
@@ -3478,6 +3487,10 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   }
   // proposed state 帧数不多，可以变道只是正常计数：正常5 帧安全候触发
   if(propose_state_frame_nums_ < 5){
+    return;
+  }
+  // 大曲率抑制premove
+  if(suppress_large_curve_cnt_ > 0) {
     return;
   }
   //目标车道附近平均速度

@@ -353,6 +353,7 @@ class LaneChangeStateMachineManager {
   RequestType map_turn_signal_ = NO_CHANGE;
   bool is_dash_not_enough_for_lc_ = false;
   int road_edge_collision_cnt_ = 0;
+  int suppress_large_curve_cnt_ = 0;
 
   TrackInfo lc_invalid_track_;
   TrackInfo lc_back_track_;
