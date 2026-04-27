@@ -128,12 +128,16 @@ void MatchGapCost::GetCost(
       min_safe_distance_front = std::max(front_ttc_buffer, 3.5);
     }
     min_safe_distance_front = std::max(min_safe_distance_front, poly_end_v * 0.3);
-    double large_car_buffer = upper_st_point.vehicle_length() > 8.0 ? 3.0 : 0.0;
+    bool is_large_car = agent::AgentType::BUS == upper_st_point.type() ||
+                        agent::AgentType::TRUCK == upper_st_point.type() ||
+                        agent::AgentType::TRAILER == upper_st_point.type() ||
+                        upper_st_point.vehicle_length() > kLargeAgentLengthM;
+    double large_car_buffer = is_large_car ? 3.0 : 0.0;
     double front_buffer_redundancy =
         std::fmax(0.5 - reliable_safe_distance_to_gap_front_obj, 0.0);
     safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
-        large_car_buffer;
+        large_car_buffer + front_buffer_redundancy;
   }
 
   if (lower_st_point.agent_id() != kNoAgentId) {

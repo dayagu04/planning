@@ -250,10 +250,10 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             is_low_speed_congestion_scene_ ? collision_s : merge_point_s_;
         if (gap < 0.0 && ((node.s - front_edge_to_rear_axle_ -
                            rear_edge_to_rear_axle_) > collision_s)) {
-          std::cout << "Gap后车碰撞风险: " << node.getKey()
-                    << " 后车id :" << anchor_matched_lower_st_point.agent_id()
-                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-                    << std::endl;
+          // std::cout << "Gap后车碰撞风险: " << node.getKey()
+          //           << " 后车id :" << anchor_matched_lower_st_point.agent_id()
+          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+          //           << std::endl;
           continue;
         } else {
           double left_time =
@@ -307,10 +307,10 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         gap = gap +
               left_time * (anchor_matched_upper_st_point.velocity() - node.v);
         if (gap < 0.0 && left_time < 1.0 && node.s > merge_point_s_) {
-          std::cout << "Gap前车碰撞风险: " << node.getKey()
-                    << " 前车id : " << anchor_matched_upper_st_point.agent_id()
-                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-                    << std::endl;
+          // std::cout << "Gap前车碰撞风险: " << node.getKey()
+          //           << " 前车id : " << anchor_matched_upper_st_point.agent_id()
+          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+          //           << std::endl;
           continue;
         } else {
           double left_time =
@@ -411,7 +411,7 @@ void LongitudinalAStar::CalculateHCost(STNode& node) {
 void LongitudinalAStar::CalculateFCost(STNode& node) {
   node.safety_cost = node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost;
   node.safety_cost = node.s > merge_point_s_
-                         ? node.safety_cost * config_->safe_cost_gain
+                         ? node.safety_cost * config_->collision_cost_attenuation_coeffi
                          : node.safety_cost;
   node.f_cost = node.g_cost + node.h_cost + node.safety_cost;
 }

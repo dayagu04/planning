@@ -1339,7 +1339,7 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double default_collision_distance = 100.0;
   double safe_cost_gain = 2.0;
   double collision_s_attenuation_coeffi = 0.8;
-  double collision_cost_attenuation_coeffi = 0.1;
+  double collision_cost_attenuation_coeffi = 5;
   RearVehicleMinDistanceMap rear_vehicle_min_distance_map;
 };
 
