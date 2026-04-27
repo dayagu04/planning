@@ -147,6 +147,8 @@ bool RADSLateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
   //
   planning_weight_ptr_->SetLateralMotionWeightForRADS(planning_input_);
+  planning_weight_ptr_->LimitAccBoundAndJerkBound(
+      max_wheel_angle_, max_wheel_angle_rate_, planning_input_);
   //
   ego_base_.SetBasePose(Pose2f(planning_input_.init_state().x(),
                                planning_input_.init_state().y(),

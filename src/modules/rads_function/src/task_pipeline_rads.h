@@ -24,8 +24,8 @@
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/hmi_decider/rads_hmi_decider.h"
 #include "tasks/behavior_planners/hpp_general_lateral_decider/rads_general_lateral_decider/rads_general_lateral_decider.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+// #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+// #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/rads_lateral_obstacle_decider/rads_lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
@@ -57,14 +57,14 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<RADSLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
-//   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
+  //   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<RADSGeneralLateralDecider> rads_general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
-  std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
-      lane_borrow_deciderV2_;
-  std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
-      lane_borrow_deciderV1_;
+//   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
+//       lane_borrow_deciderV2_;
+//   std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
+//       lane_borrow_deciderV1_;
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;
@@ -97,8 +97,6 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::shared_ptr<speed::StGraphInput> st_graph_input_;
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
-  bool enable_lane_borrow_deciderV2_ = false;
-
   std::unique_ptr<RADSHMIDecider> hmi_decider_;
 };
 

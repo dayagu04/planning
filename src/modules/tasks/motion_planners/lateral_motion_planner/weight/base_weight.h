@@ -193,6 +193,10 @@ class BaseWeight {
       std::vector<double> &virtual_ref_x, std::vector<double> &virtual_ref_y,
       std::vector<double> &virtual_ref_theta);
 
+  void LimitAccBoundAndJerkBound(
+      const double max_delta, const double max_omega,
+      planning::common::LateralPlanningInput& planning_input);
+
   void SetLateralMotionWeight(
       const LateralMotionScene scene,
       planning::common::LateralPlanningInput &planning_input);
@@ -226,6 +230,8 @@ class BaseWeight {
   void SetInitS(const double init_s) { init_s_ = init_s; }
 
   void SetInitL(const double init_l) { init_l_ = init_l; }
+
+  void SetInitSteerAngle(const double init_steer_angle) { init_steer_angle_ = init_steer_angle; }
 
   void SetLateralOffset(const double lat_offset) { lat_offset_ = lat_offset; }
 
@@ -352,6 +358,9 @@ class BaseWeight {
       const bool is_divide_lane_into_two,
       planning::common::LateralPlanningInput &planning_input);
 
+  void MakeLaneBorrowDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
   void MakeDynamicPosBoundWeight(
       planning::common::LateralPlanningInput &planning_input);
 
@@ -373,6 +382,7 @@ class BaseWeight {
   double ref_vel_;
   double init_s_;
   double init_l_;
+  double init_steer_angle_;
   double end_ratio_for_qrefxy_;
   double end_ratio_for_qreftheta_;
   double end_ratio_for_qjerk_;

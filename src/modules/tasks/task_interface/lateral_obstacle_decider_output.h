@@ -41,6 +41,7 @@ struct LateralObstacleHistoryInfo {
   bool is_not_set = false;
   bool is_cross_lane = false;
   int cross_lane_count = 0;
+  bool has_enough_space = true;
 };
 
 struct FollowObstacleInfo {

@@ -68,7 +68,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                    double start_w_jerk, double ego_v, double expected_acc, double start_acc, double end_acc,
                    double end_ratio1, double end_ratio2, double end_ratio3, double max_iter,
                    double wheel_base, double q_front_ref_xy,
-                   double q_virtual_ref_xy, double q_virtual_ref_theta,
+                   double q_virtual_ref_xy, double q_virtual_ref_theta, double max_delta, double max_omega,
                    std::vector<double> virtual_ref_x, std::vector<double> virtual_ref_y, std::vector<double> virtual_ref_theta) {
   planning::common::LateralPlanningInput planning_input =
       BytesToProto<planning::common::LateralPlanningInput>(
@@ -104,14 +104,25 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   // ref
   // const auto N = planning_input.ref_x_vec_size();
   for (size_t i = 0; i < N; i++) {
-    Eigen::Vector2d ref_unit_vector(
-        origin_planning_input.hard_upper_bound_x0_vec(i) -
-            origin_planning_input.hard_lower_bound_x0_vec(i),
-        origin_planning_input.hard_upper_bound_y0_vec(i) -
-            origin_planning_input.hard_lower_bound_y0_vec(i));
-    ref_unit_vector.normalize();
-    planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
-    planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
+    if (i < N - 1) {
+      Eigen::Vector2d ref_unit_vector(
+          origin_planning_input.hard_upper_bound_x0_vec(i) -
+              origin_planning_input.hard_lower_bound_x0_vec(i),
+          origin_planning_input.hard_upper_bound_y0_vec(i) -
+              origin_planning_input.hard_lower_bound_y0_vec(i));
+      ref_unit_vector.normalize();
+      planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
+      planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
+    } else {
+      Eigen::Vector2d ref_unit_vector(
+          origin_planning_input.hard_upper_bound_x1_vec(i) -
+              origin_planning_input.hard_lower_bound_x1_vec(i),
+          origin_planning_input.hard_upper_bound_y1_vec(i) -
+              origin_planning_input.hard_lower_bound_y1_vec(i));
+      ref_unit_vector.normalize();
+      planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
+      planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
+    }
   }
   planning_input.mutable_ref_vel_vec()->Resize(N, origin_planning_input.ref_vel());
   if (origin_planning_input.ref_vel_vec_size() == N) {
@@ -497,7 +508,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   pBase->SimUpdate(expected_acc, start_acc, end_acc,
                    end_ratio1, end_ratio2, end_ratio3,
                    max_iter, motion_plan_concerned_start_index,
-                   start_w_jerk, ego_v,
+                   start_w_jerk, ego_v, max_delta, max_omega,
                    wheel_base, q_front_ref_xy,
                    q_virtual_ref_xy, q_virtual_ref_theta,
                    virtual_ref_x, virtual_ref_y, virtual_ref_theta,

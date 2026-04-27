@@ -62,6 +62,6 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   //   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   //   std::unique_ptr<SamplePolySpeedAdjustDecider>
   //       sample_poly_speed_adjust_decider_;
-  //   bool enable_lane_borrow_deciderV2_ = false;
+  //   bool enable_lane_borrow_deciderV3_ = false;
 };
 }  // namespace planning

@@ -30,13 +30,43 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
   }
   const auto& lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
+  double ego_speed =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  lane_borrow_turn_signal_speed_hysteresis_.SetIsValidByValue(ego_speed);
+  // 计算自车到借道方向车道边界的距离
+  const auto current_ref_path = session_->environmental_model()
+      .get_reference_path_manager()
+      ->get_reference_path_by_current_lane();
+  double ego_dist_to_boundary = std::numeric_limits<double>::max();
+  if (current_ref_path != nullptr) {
+    const auto& ego_frenet_boundary =
+        current_ref_path->get_ego_frenet_boundary();
+    double ego_s = current_ref_path->get_frenet_ego_state().s();
+    ReferencePathPoint ref_point;
+    if (current_ref_path->get_reference_point_by_lon(ego_s, ref_point)) {
+      if (lane_borrow_decider_output.borrow_direction ==
+          BorrowDirection::LEFT_BORROW) {
+        ego_dist_to_boundary =
+            ref_point.distance_to_left_lane_border - ego_frenet_boundary.l_end;
+      } else if (lane_borrow_decider_output.borrow_direction ==
+                 BorrowDirection::RIGHT_BORROW) {
+        ego_dist_to_boundary =
+            ref_point.distance_to_right_lane_border +
+            ego_frenet_boundary.l_start;
+      }
+    }
+  }
+  lane_borrow_boundary_dist_hysteresis_.SetIsValidByValue(
+      -ego_dist_to_boundary);
+  bool close_to_boundary = lane_borrow_boundary_dist_hysteresis_.IsValid();
   bool turn_signal_on_from_lane_borrow =
-      lane_borrow_decider_output.lane_borrow_state ==
-          LaneBorrowStatus::kLaneBorrowDriving ||
-      lane_borrow_decider_output.lane_borrow_state ==
-          LaneBorrowStatus::kLaneBorrowCrossing ||
-      lane_borrow_decider_output.lane_borrow_state ==
-          LaneBorrowStatus::kLaneBorrowWaitting;
+      (lane_borrow_decider_output.lane_borrow_state ==
+           LaneBorrowStatus::kLaneBorrowDriving ||
+       lane_borrow_decider_output.lane_borrow_state ==
+           LaneBorrowStatus::kLaneBorrowCrossing ||
+       lane_borrow_decider_output.lane_borrow_state ==
+           LaneBorrowStatus::kLaneBorrowWaitting) &&
+      lane_borrow_turn_signal_speed_hysteresis_.IsValid();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const bool is_split_select_executing =
@@ -114,7 +144,7 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
       static_cast<int>(planning_result.turn_signal));
     return;
   }
-  if (turn_signal_on_from_lane_borrow) {
+  if (turn_signal_on_from_lane_borrow && close_to_boundary) {
     planning_result.turn_signal = lane_borrow_decider_output.borrow_direction ==
                                           BorrowDirection::LEFT_BORROW
                                       ? RequestType::LEFT_CHANGE

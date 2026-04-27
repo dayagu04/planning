@@ -237,7 +237,7 @@ class DPRoadGraph : public Task {
   const std::vector<planning_math::PathPoint>& refined_paths() const {
     return refined_paths_;
   }
-  std::vector<planning_math::PathPoint>& muteble_refined_paths() {
+  std::vector<planning_math::PathPoint>& mutable_refined_paths() {
     return refined_paths_;
   }
   const std::vector<DPRoadGraphNode>& min_cost_path() const {

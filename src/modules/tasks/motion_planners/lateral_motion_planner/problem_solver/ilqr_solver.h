@@ -39,6 +39,7 @@ class iLQRSolver {
                     double end_ratio_for_qjerk, double max_iter,
                     const size_t motion_plan_concerned_start_index,
                     const double concerned_start_q_jerk, const double ego_vel,
+                    double max_delta, double max_omega,
                     const double wheel_base, const double q_front_xy,
                     double q_virtual_ref_xy, double q_virtual_ref_theta,
                     std::vector<double>& virtual_ref_x,
