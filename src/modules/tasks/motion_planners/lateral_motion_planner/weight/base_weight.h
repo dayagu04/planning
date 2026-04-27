@@ -306,6 +306,8 @@ class BaseWeight {
 
   const LaneChangeStyle GetLaneChangeStyle() const { return lc_style_; }
 
+  LateralMotionScene GetLateralMotionScene() const { return lateral_motion_scene_; }
+
   void SetLowChangeCoolDown(const bool is_enter_low_speed_lane_change_cooldown) {
     is_enter_low_speed_lane_change_cooldown_ = is_enter_low_speed_lane_change_cooldown;
   }

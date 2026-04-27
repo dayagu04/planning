@@ -527,7 +527,10 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   // generate motion planning output into planning_context
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   // append the planning traj anti-direction for decoupling lat & lon replan
   const static double appended_length = config_.path_backward_appended_length;
   motion_planner_output.path_backward_appended_length = appended_length;
@@ -545,65 +548,70 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   d_curv_vec_[0] = d_curv_vec_[1];
   t_vec_[0] = -0.2;
 
-  // const double concerned_index = 20;  //
-  // planning_input_.motion_plan_concerned_index(); double concerned_dis_to_ref
-  // = std::hypot(
-  //     x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index
-  //     + 1), y_vec[concerned_index + 2] -
-  //     planning_input_.ref_y_vec(concerned_index + 1));
-  // const double end_points_size = concerned_index + 1;
-  // if ((!(session_->environmental_model().function_info().function_mode() ==
-  //        common::DrivingFunctionInfo_DrivingFunctionMode::
-  //            DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&
-  //     (!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1)
-  //     &&
-  //     (!session_->planning_context()
-  //           .general_lateral_decider_output()
-  //           .lane_change_scene)) {
-  //   const double end_points_size = concerned_index + 1;
-  //   std::vector<double> end_x_vec(end_points_size + 1);
-  //   std::vector<double> end_y_vec(end_points_size + 1);
-  //   std::vector<double> end_s_vec(end_points_size + 1);
-  //   for (size_t i = 0; i < end_points_size + 1; ++i) {
-  //     if (i > concerned_index) {
-  //       end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
-  //       end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
-  //       end_s_vec[i] = end_s_vec[i - 1] +
-  //                      std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
-  //                                          end_y_vec[i] - end_y_vec[i - 1]),
-  //                               1e-3);
-  //     } else {
-  //       end_x_vec[i] = planning_output_.x_vec(i);
-  //       end_y_vec[i] = planning_output_.y_vec(i);
-  //       end_s_vec[i] = s_vec[i + 1];
-  //     }
-  //   }
-  //   pnc::mathlib::spline end_x_s_spline;
-  //   pnc::mathlib::spline end_y_s_spline;
-  //   end_x_s_spline.set_points(end_s_vec, end_x_vec);
-  //   end_y_s_spline.set_points(end_s_vec, end_y_vec);
-  //   double end_ds =
-  //       (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
-  //       (N - end_points_size);
-  //   end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
-  //   double end_s = end_s_vec[end_points_size - 1];
-  //   for (size_t i = end_points_size; i < N; ++i) {
-  //     end_s += end_ds;
-  //     x_vec[i + 1] = end_x_s_spline(end_s);
-  //     y_vec[i + 1] = end_y_s_spline(end_s);
-  //     double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
-  //                                    end_x_s_spline.deriv(1, end_s));
-  //     double theta_err = theta_vec[i] - next_theta;
-  //     const double pi2 = 2.0 * M_PI;
-  //     if (theta_err > M_PI) {
-  //       next_theta += pi2;
-  //     } else if (theta_err < -M_PI) {
-  //       next_theta -= pi2;
-  //     }
-  //     theta_vec[i + 1] = next_theta;
-  //     s_vec[i + 1] = end_s;
-  //   }
-  // }
+  const size_t concerned_index = planning_input_.motion_plan_concerned_index();
+  // double concerned_dis_to_ref = std::hypot(
+  //     x_vec_[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
+  //     y_vec_[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
+  if (planning_weight_ptr_->GetLateralMotionScene() ==
+      pnc::lateral_planning::LateralMotionScene::RAMP &&
+      reference_path_ptr->GetReferencePathCurveInfo().curve_type ==
+      ReferencePathCurveInfo::CurveType::BIG_CURVE &&
+      !planning_input_.complete_follow() &&
+      (concerned_index < N - 1)) {
+    size_t end_points_size = concerned_index + 1;
+    Point2D frenet_ref_pt, frenet_traj_pt;
+    for (size_t i = concerned_index + 1; i < N; ++i) {
+      if (frenet_coord->XYToSL(Point2D(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i)), frenet_ref_pt) &&
+          frenet_coord->XYToSL(Point2D(planning_output_.x_vec(i), planning_output_.y_vec(i)), frenet_traj_pt)) {
+        if (std::fabs(frenet_traj_pt.y - frenet_ref_pt.y) >= 0.05) {
+          end_points_size = i;
+          break;
+        }
+      }
+    }
+    std::vector<double> end_x_vec(N);
+    std::vector<double> end_y_vec(N);
+    std::vector<double> end_s_vec(N);
+    for (size_t i = 0; i < N; ++i) {
+      if (i >= end_points_size) {
+        end_x_vec[i] = planning_input_.ref_x_vec(i);
+        end_y_vec[i] = planning_input_.ref_y_vec(i);
+        end_s_vec[i] = end_s_vec[i - 1] +
+                       std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
+                                           end_y_vec[i] - end_y_vec[i - 1]),
+                                1e-3);
+      } else {
+        end_x_vec[i] = planning_output_.x_vec(i);
+        end_y_vec[i] = planning_output_.y_vec(i);
+        end_s_vec[i] = s_vec_[i + 1];
+      }
+    }
+    pnc::mathlib::spline end_x_s_spline;
+    pnc::mathlib::spline end_y_s_spline;
+    end_x_s_spline.set_points(end_s_vec, end_x_vec);
+    end_y_s_spline.set_points(end_s_vec, end_y_vec);
+    double end_ds =
+        (end_s_vec.back() - end_s_vec[end_points_size - 1]) /
+        (N - end_points_size);
+    end_ds = std::max(std::min(end_ds, planning_input_.ref_vel() * 0.2), 1e-3);
+    double end_s = end_s_vec[end_points_size - 1];
+    for (size_t i = end_points_size; i < N; ++i) {
+      end_s += end_ds;
+      x_vec_[i + 1] = end_x_s_spline(end_s);
+      y_vec_[i + 1] = end_y_s_spline(end_s);
+      double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
+                                     end_x_s_spline.deriv(1, end_s));
+      double theta_err = theta_vec_[i] - next_theta;
+      const double pi2 = 2.0 * M_PI;
+      if (theta_err > M_PI) {
+        next_theta += pi2;
+      } else if (theta_err < -M_PI) {
+        next_theta -= pi2;
+      }
+      theta_vec_[i + 1] = next_theta;
+      s_vec_[i + 1] = end_s;
+    }
+  }
 
   // construct lateral kd path
   motion_planner_output.lateral_path_coord =
@@ -639,15 +647,11 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
   motion_planner_output.u_vec = u_vec;
 
   // assemble results
-  const auto &general_lateral_decider_output =  // result from lat decision
+  const auto& general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();
-
-  auto &traj_points = session_->mutable_planning_context()
-                          ->mutable_planning_result()
-                          .traj_points;
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+  auto& traj_points = session_->mutable_planning_context()
+                              ->mutable_planning_result()
+                              .traj_points;
   for (size_t i = 0; i < N; i++) {
     traj_points[i].x = x_vec_[i + 1];
     traj_points[i].y = y_vec_[i + 1];
