@@ -690,6 +690,20 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
         narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
       print("narrow_space_state: ", planning_json['narrow_space_state'])
+      print(" mirror status ")
+      try:
+        mirror_cmd = plan_msg.rear_view_mirror_signal_command
+        print("后视镜请求有效性（available）：", mirror_cmd.available)
+        mirror_value = mirror_cmd.rear_view_mirror_value
+        print("后视镜折叠请求值（数字）：", mirror_value)
+        mirror_value_map = {
+            0: "REAR_VIEW_MIRROR_NONE（No instructions）",
+            1: "REAR_VIEW_MIRROR_FOLD（fold mirror）",
+            2: "REAR_VIEW_MIRROR_UNFOLD（unfold mirror）"
+        }
+        print("后视镜折叠请求（文字）：", mirror_value_map.get(mirror_value, "未知状态（数字：{}）".format(mirror_value)))
+      except AttributeError as e:
+        print("未找到后视镜命令字段，错误原因：", e)
     except:
       print("no narrow space")
     lat_plan_data['data_narrow_space_corners'].data.update({
