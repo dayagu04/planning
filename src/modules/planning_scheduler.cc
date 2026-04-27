@@ -742,6 +742,11 @@ void PlanningScheduler::FillPlanningTrajectory(
   open_loop_steering_command->need_steering_wheel_stationary = false;
   open_loop_steering_command->steering_wheel_rad_limit = 0.1;
 
+  auto rear_mirror_cmd_output = &(planning_output->rear_view_mirror_signal_command);
+  const auto& internal_mirror_result =
+      session_.planning_context().planning_output().rear_view_mirror_signal_command;
+  rear_mirror_cmd_output->available = internal_mirror_result.available;
+  rear_mirror_cmd_output->rear_view_mirror_value = internal_mirror_result.rear_view_mirror_value;
   // 8.Planning status
   auto planning_status = &(planning_output->planning_status);
   planning_status->standstill = false;
