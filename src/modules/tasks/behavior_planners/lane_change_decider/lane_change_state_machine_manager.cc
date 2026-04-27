@@ -3490,7 +3490,7 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
     return;
   }
   // 大曲率抑制premove
-  if(lane_change_stage_info_.lc_invalid_reason == "target lane too large curve") {
+  if(suppress_large_curve_cnt_ > 0) {
     return;
   }
   //目标车道附近平均速度
