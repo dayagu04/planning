@@ -78,21 +78,21 @@ bool MirrorDecider::Execute() {
   //获取当前车辆的四个角点的frenet坐标信息
   const auto& ego_corners = frenet_ego.corners();
   // 仿照frenet_ego.corners()来写加上后视镜后车宽的角点(只需要前头2个角点)
-  double sin_handing_angle = std::sin(heading_angle);
-  double cos_handing_angle = std::cos(heading_angle);
+  double sin_heading_angle = std::sin(heading_angle);
+  double cos_heading_angle = std::cos(heading_angle);
 
   double s_front_left_ego =
-      ego_s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle -
-      vehicle_param.max_width / 2.0 * sin_handing_angle;
+      ego_s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle -
+      vehicle_param.max_width / 2.0 * sin_heading_angle;
   double l_front_left_ego =
-      ego_1 + vehicle_param.front_edge_to_rear_axle * sin_handing_angle +
-      vehicle_param.max_width / 2.0 * cos_handing_angle;
+      ego_1 + vehicle_param.front_edge_to_rear_axle * sin_heading_angle +
+      vehicle_param.max_width / 2.0 * cos_heading_angle;
   double s_front_right_ego =
-      ego_s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle +
-      vehicle_param.max_width / 2.0 * sin_handing_angle;
+      ego_s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle +
+      vehicle_param.max_width / 2.0 * sin_heading_angle;
   double l_front_right_ego =
-      ego_1 + vehicle_param.front_edge_to_rear_axle * sin_handing_angle -
-      vehicle_param.max_width / 2.0 * cos_handing_angle;
+      ego_1 + vehicle_param.front_edge_to_rear_axle * sin_heading_angle -
+      vehicle_param.max_width / 2.0 * cos_heading_angle;
 
   //计算 当前车辆的前方2个角点距离左右两侧障碍物的距离
   double front_left_l1_ego  = narrow_output.left_boundary_spline(s_front_left_ego)   - l_front_left_ego;   // 角点：左前 左侧障碍物距离（正）
@@ -126,20 +126,20 @@ bool MirrorDecider::Execute() {
           //计算未来4秒的相对航向角
           heading_angle_traj = planning_math::NormalizeAngle( pt.heading_angle - frenet_coord->GetPathCurveHeading(pt.s));
           // 计算4秒内的前2个角点的轨迹点
-          double sin_handing_angle_traj = std::sin(heading_angle_traj);
-          double cos_handing_angle_traj = std::cos(heading_angle_traj);
+          double sin_heading_angle_traj = std::sin(heading_angle_traj);
+          double cos_heading_angle_traj = std::cos(heading_angle_traj);
           s_front_left_traj =
-              pt.s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle_traj -
-              vehicle_param.max_width / 2.0 * sin_handing_angle_traj;
+              pt.s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle_traj -
+              vehicle_param.max_width / 2.0 * sin_heading_angle_traj;
           l_front_left_traj =
-              pt.l + vehicle_param.front_edge_to_rear_axle * sin_handing_angle_traj +
-              vehicle_param.max_width / 2.0 * cos_handing_angle_traj;
+              pt.l + vehicle_param.front_edge_to_rear_axle * sin_heading_angle_traj +
+              vehicle_param.max_width / 2.0 * cos_heading_angle_traj;
           s_front_right_traj =
-              pt.s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle_traj +
-              vehicle_param.max_width / 2.0 * sin_handing_angle_traj;
+              pt.s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle_traj +
+              vehicle_param.max_width / 2.0 * sin_heading_angle_traj;
           l_front_right_traj =
-              pt.l + vehicle_param.front_edge_to_rear_axle * sin_handing_angle_traj -
-              vehicle_param.max_width / 2.0 * cos_handing_angle_traj;
+              pt.l + vehicle_param.front_edge_to_rear_axle * sin_heading_angle_traj -
+              vehicle_param.max_width / 2.0 * cos_heading_angle_traj;
 
           //计算 未来4秒轨迹的车辆的前方2个角点距离左右两侧障碍物的距离
           front_left_l1_traj  = narrow_output.left_boundary_spline(s_front_left_traj)   - l_front_left_traj;   // 角点：左前 左侧障碍物距离（正）
@@ -193,12 +193,12 @@ bool MirrorDecider::Execute() {
           //计算未来4秒的相对航向角
           heading_angle_traj = planning_math::NormalizeAngle( pt.heading_angle - frenet_coord->GetPathCurveHeading(pt.s));
           // 计算4秒内的角点位置（复用你的计算逻辑）
-          double sin_handing_angle_traj = std::sin(heading_angle_traj);
-          double cos_handing_angle_traj = std::cos(heading_angle_traj);
-          s_front_left_traj  = pt.s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle_traj - vehicle_param.max_width / 2.0 * sin_handing_angle_traj;
-          l_front_left_traj  = pt.l + vehicle_param.front_edge_to_rear_axle * sin_handing_angle_traj + vehicle_param.max_width / 2.0 * cos_handing_angle_traj;
-          s_front_right_traj = pt.s + vehicle_param.front_edge_to_rear_axle * cos_handing_angle_traj + vehicle_param.max_width / 2.0 * sin_handing_angle_traj;
-          l_front_right_traj = pt.l + vehicle_param.front_edge_to_rear_axle * sin_handing_angle_traj - vehicle_param.max_width / 2.0 * cos_handing_angle_traj;
+          double sin_heading_angle_traj = std::sin(heading_angle_traj);
+          double cos_heading_angle_traj = std::cos(heading_angle_traj);
+          s_front_left_traj  = pt.s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle_traj - vehicle_param.max_width / 2.0 * sin_heading_angle_traj;
+          l_front_left_traj  = pt.l + vehicle_param.front_edge_to_rear_axle * sin_heading_angle_traj + vehicle_param.max_width / 2.0 * cos_heading_angle_traj;
+          s_front_right_traj = pt.s + vehicle_param.front_edge_to_rear_axle * cos_heading_angle_traj + vehicle_param.max_width / 2.0 * sin_heading_angle_traj;
+          l_front_right_traj = pt.l + vehicle_param.front_edge_to_rear_axle * sin_heading_angle_traj - vehicle_param.max_width / 2.0 * cos_heading_angle_traj;
 
           // 计算距离
           front_left_l1_traj  = narrow_output.left_boundary_spline(s_front_left_traj)   - l_front_left_traj;
