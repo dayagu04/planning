@@ -1246,6 +1246,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   ForcedMergeParam forced_merge_param;
 };
 
+struct RearVehicleMinDistanceMap {
+  std::vector<double> rear_speed_kph_table;
+  std::vector<double> min_distance_table;
+};
 struct SampleAstarTrajConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -1268,10 +1272,12 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "weight_accel"});
     weight_jerk = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
-    weight_front_ttc = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_front_ttc"});
-    weight_back_ttc = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
+    jerk_gain = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "jerk_gain"});
+    weight_normal_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_normal_ttc"});
+    weight_overlap_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_overlap_ttc"});
     weight_lead_safe_distance = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
     safe_collision_decel = read_json_keys<double>(
@@ -1300,6 +1306,22 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "lateral_offset_scale_factor"});
     default_collision_distance = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "default_collision_distance"});
+    safe_cost_gain = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "safe_cost_gain"});
+    collision_s_attenuation_coeffi = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "collision_s_attenuation_coeffi"});
+    collision_cost_attenuation_coeffi = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "collision_cost_attenuation_coeffi"});
+    read_json_vec(
+    json,
+    std::vector<std::string>{"sample_astar_traj", "rear_vehicle_min_distance_map",
+                                "rear_speed_kph_table"},
+                                rear_vehicle_min_distance_map.rear_speed_kph_table);
+    read_json_vec(
+    json,
+    std::vector<std::string>{"sample_astar_traj", "rear_vehicle_min_distance_map",
+                                "min_distance_table"},
+                                rear_vehicle_min_distance_map.min_distance_table);
   }
   double time_step_near = 1.0;
   double time_step_far = 1.0;
@@ -1307,25 +1329,30 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double goal_tolerance = 5.0;
   double weight_dist = 1.0;
   double weight_time = 1.0;
-  double weight_vel = 0.2;
-  double weight_accel = 0.2;
-  double weight_jerk = 0.2;
-  double weight_front_ttc = 1.0;
-  double weight_back_ttc = 1.0;
+  double weight_vel = 1.0;
+  double weight_accel = 1.0;
+  double weight_jerk = 0.5;
+  double jerk_gain = 0.5;
+  double weight_normal_ttc = 2.0;
+  double weight_overlap_ttc = 4.0;
   double weight_lead_safe_distance = 1.0;
   double safe_collision_decel = 1.0;
   double gap_rear_buffer_base = 2.0;
-  double gap_rear_buffer_decay_factor = 10.0;
-  double gap_rear_buffer_extra_coef = 0.7;
+  double gap_rear_buffer_decay_factor = 20.0;
+  double gap_rear_buffer_extra_coef = 0.5;
   double gap_front_follow_decel = 2.0;
   double gap_front_thw_coef = 0.3;
   double gap_front_min_buffer = 3.0;
   double gap_front_buffer_extra_coef = 0.7;
   double leading_follow_decel = 2.0;
-  double leading_thw_coef = 0.5;
+  double leading_thw_coef = 0.3;
   double leading_min_safe_distance = 3.0;
   double lateral_offset_scale_factor = 10.0;
   double default_collision_distance = 100.0;
+  double safe_cost_gain = 2.0;
+  double collision_s_attenuation_coeffi = 0.8;
+  double collision_cost_attenuation_coeffi = 5;
+  RearVehicleMinDistanceMap rear_vehicle_min_distance_map;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -4658,6 +4685,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_limit_decider",
                                 "tunnel_vel_limit_dis_table_low", "dis_table"},
         tunnel_vel_limit_dis_table_low.dis_table);
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "rads_curv_speed_limit_radius_vec"},
+                                     rads_curv_speed_limit_radius_vec);
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                    "rads_curv_speed_limit_scale_vec"},
+                                    rads_curv_speed_limit_scale_vec);
 
   }
   struct VehicleLatDisRelVelTable {
@@ -4805,6 +4840,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
   double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
   double ewma_alpha_v_limit_in_turns = 0.3;  // EWMA coefficient for v_limit_in_turns
+  std::vector<double> rads_curv_speed_limit_radius_vec = {20.0, 25.0, 30.0};
+  std::vector<double> rads_curv_speed_limit_scale_vec = {0.4, 0.7, 1.0};
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
@@ -6385,6 +6422,44 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_negative_speed_upper");
     }
+    // construction_deep_intrusion_kinematic_param
+    {
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_positive_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_positive_speed_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_positive_speed_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_positive_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_positive_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_positive_speed_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_positive_speed_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_negative_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_negative_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_negative_speed_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_negative_speed_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_negative_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_negative_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.acc_negative_speed_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "acc_negative_speed_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_positive_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_positive_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_positive_speed_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_positive_speed_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_positive_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_positive_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_positive_speed_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_positive_speed_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_negative_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_negative_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_negative_speed_lower, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_negative_speed_lower");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_negative_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_negative_upper");
+      ReadItem<double>(json, construction_deep_intrusion_kinematic_param.jerk_negative_speed_upper, "speed_planning", "cruise_target", "construction_deep_intrusion_kinematic_param", "jerk_negative_speed_upper");
+    }
+    // construction_near_kinematic_param
+    {
+      ReadItem<double>(json, construction_near_kinematic_param.acc_positive_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_positive_speed_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_positive_speed_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_positive_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_positive_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_positive_speed_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_positive_speed_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_negative_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_negative_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_negative_speed_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_negative_speed_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_negative_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_negative_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.acc_negative_speed_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "acc_negative_speed_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_positive_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_positive_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_positive_speed_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_positive_speed_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_positive_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_positive_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_positive_speed_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_positive_speed_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_negative_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_negative_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_negative_speed_lower, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_negative_speed_lower");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_negative_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_negative_upper");
+      ReadItem<double>(json, construction_near_kinematic_param.jerk_negative_speed_upper, "speed_planning", "cruise_target", "construction_near_kinematic_param", "jerk_negative_speed_upper");
+    }
 
 
     {
@@ -6910,6 +6985,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   KinematicParam near_poi_kinematic_param;
   KinematicParam map_near_ramp_kinematic_param;
   KinematicParam construction_kinematic_param;
+  KinematicParam construction_deep_intrusion_kinematic_param;
+  KinematicParam construction_near_kinematic_param;
 
   SpeedPlanningBound speed_planning_bound;
 

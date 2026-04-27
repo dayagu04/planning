@@ -101,7 +101,7 @@ def load_cut_in_st_boundaries(st_graph_data):
   cut_in_st_info = []
   cut_in_boundaries_list = st_graph_data.cut_in_st_boundaries
   cut_in_boundaries_size = len(cut_in_boundaries_list)
-  
+
   for i in range(20):
     cut_in_st_boundary_info = {
         'agent_id': -1,
@@ -116,43 +116,43 @@ def load_cut_in_st_boundaries(st_graph_data):
         'center_point_s': [],
         'center_point_t': [],
     }
-    
+
     if i < cut_in_boundaries_size:
       agent_st_boundary = cut_in_boundaries_list[i]
       cut_in_st_boundary_info['agent_id'] = agent_st_boundary.agent_id
-      
+
       if len(agent_st_boundary.st_boundary) > 0:
         st_boundary = agent_st_boundary.st_boundary[0]
-        
+
         lower_point_s_vec = [point.s for point in st_boundary.lower_points]
         lower_point_t_vec = [point.t for point in st_boundary.lower_points]
         upper_point_s_vec = [point.s for point in st_boundary.upper_points]
         upper_point_t_vec = [point.t for point in st_boundary.upper_points]
-        
+
         cut_in_st_boundary_info['polygen_lower_points_s_vec'] = lower_point_s_vec
         cut_in_st_boundary_info['polygen_lower_points_t_vec'] = lower_point_t_vec
         cut_in_st_boundary_info['polygen_upper_points_s_vec'] = upper_point_s_vec
         cut_in_st_boundary_info['polygen_upper_points_t_vec'] = upper_point_t_vec
-        
+
         if len(lower_point_s_vec) > 0 and len(upper_point_s_vec) > 0:
           left_point_s = [lower_point_s_vec[0], upper_point_s_vec[0]]
           left_point_t = [lower_point_t_vec[0], upper_point_t_vec[0]]
           right_point_s = [lower_point_s_vec[-1], upper_point_s_vec[-1]]
           right_point_t = [lower_point_t_vec[-1], upper_point_t_vec[-1]]
-          
+
           cut_in_st_boundary_info['left_point_s'] = left_point_s
           cut_in_st_boundary_info['left_point_t'] = left_point_t
           cut_in_st_boundary_info['right_point_s'] = right_point_s
           cut_in_st_boundary_info['right_point_t'] = right_point_t
-          
+
           # Calculate center point consistent with st_label
           center_s = [((lower_point_s_vec[0]+lower_point_s_vec[-1])/2 + (upper_point_s_vec[0]+upper_point_s_vec[-1])/2)/2]
           center_t = [((lower_point_t_vec[0]+lower_point_t_vec[-1])/2 + (upper_point_t_vec[0]+upper_point_t_vec[-1])/2)/2]
           cut_in_st_boundary_info['center_point_s'] = center_s
           cut_in_st_boundary_info['center_point_t'] = center_t
-    
+
     cut_in_st_info.append(cut_in_st_boundary_info)
-  
+
   return cut_in_st_info
 
 def load_st_polygen_points(st_graph_data):
@@ -318,7 +318,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
-                              'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", "is_small_front_intersection", "dis_to_tfl", \
+                              'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", "cur_lane_mark_plan", "is_small_front_intersection", "dis_to_tfl", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "dis_to_roundabout", "take_over_request", "request_reason", "tla_reminder_state", "obstacle_brake_hmi_sts",\
                               'new_cutin_id', 'new_cutin_id_count', \
@@ -346,7 +346,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
                               "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["comfort_follow_agent_ids", "prediction_cut_in_agent_ids", "rule_base_cut_in_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", 
+  st_search_value_list = ["comfort_follow_agent_ids", "prediction_cut_in_agent_ids", "rule_base_cut_in_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop",
                           "is_confluence_area", "road_right_level", "upper_bound_agent_ids", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet",
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
@@ -550,7 +550,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       f'cut_in_upper_points_{i}_s_vec': cut_in_boundary_info['polygen_upper_points_s_vec'],
       f'cut_in_upper_points_{i}_t_vec': cut_in_boundary_info['polygen_upper_points_t_vec'],
     })
-    
+
     # Closure point data (left/right edges)
     data_cut_in_st_point = data_cut_in_st_points[i]
     data_cut_in_st_point.data.update({
@@ -559,7 +559,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       f'cut_in_right_point_{i}_s': cut_in_boundary_info['right_point_s'],
       f'cut_in_right_point_{i}_t': cut_in_boundary_info['right_point_t'],
     })
-    
+
     # Label data (agent ID)
     data_cut_in_st_label = data_cut_in_st_labels[i]
     data_cut_in_st_label.data.update({
@@ -1212,7 +1212,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
   cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", \
                "LonExtendPosBoundCost", "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonEmergencyStopCost"]
-  
+
   # Map solver condition codes to names
   solver_condition_names = {
     0: "INIT",
@@ -1228,7 +1228,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     10: "FAULT_INPUT_SIZE",
     11: "TIME_LIMIT_TERMINATE",
   }
-  
+
   outer_iter_count = motion_solver_info.outer_iter_count if motion_solver_info.HasField('outer_iter_count') else 0
   condition_name = solver_condition_names.get(motion_solver_info.solver_condition, "UNKNOWN")
   print(f"Solver condition: {condition_name}")

@@ -57,6 +57,7 @@ struct PathWeight {  // temp
   std::vector<double> q_pos_first_soft_bound;
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
+  std::vector<double> q_edt_dist;
   std::unordered_map<size_t, double> time2soft_ratio = {
       {0, 1.3}, {1, 1.3}, {2, 1.2}, {3, 1.0}, {4, 0.8}};
   std::unordered_map<size_t, double> time2hard_ratio = {
@@ -84,6 +85,7 @@ struct PathWeight {  // temp
     q_pos_first_soft_bound.resize(point_num, 0);
     q_pos_soft_bound.resize(point_num, 0);
     q_pos_hard_bound.resize(point_num, 0);
+    q_edt_dist.resize(point_num, 0);
   }
 
   void Clear() {
@@ -108,6 +110,7 @@ struct PathWeight {  // temp
     q_pos_first_soft_bound.clear();
     q_pos_soft_bound.clear();
     q_pos_hard_bound.clear();
+    q_edt_dist.clear();
   }
 
   void Reset() {
@@ -126,6 +129,7 @@ struct PathWeight {  // temp
     std::fill(q_jerk_bound.begin(), q_jerk_bound.end(), 0);
     std::fill(q_pos_soft_bound.begin(), q_pos_soft_bound.end(), 0);
     std::fill(q_pos_hard_bound.begin(), q_pos_hard_bound.end(), 0);
+    std::fill(q_edt_dist.begin(), q_edt_dist.end(), 0);
   }
 };
 

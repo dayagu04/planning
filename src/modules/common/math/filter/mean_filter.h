@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <deque>
 #include <utility>
 #include <vector>

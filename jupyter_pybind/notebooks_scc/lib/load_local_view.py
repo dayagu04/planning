@@ -677,6 +677,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_k'.format(i): center_line_list[i]['curvature_vec'],
           'center_line_{}_confidence'.format(i): center_line_list[i]['confidence_vec'],
           'center_line_{}_id'.format(i): center_line_list[i]['relative_id'],
+          'center_line_{}_order_id'.format(i): center_line_list[i]['order_id'],
           'center_line_{}_dist_to_lborder'.format(i): center_line_list[i]['dist_to_lborder'],
           'center_line_{}_dist_to_rborder'.format(i): center_line_list[i]['dist_to_rborder'],
         })

@@ -100,7 +100,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     bool is_near_stop_point =
         min_cost_traj_ptr_ == nullptr
             ? true
-            : (distance_to_merge_point_ > left_merge_dist_coef * ego_v_) &&
+            : (distance_to_stop_point_ < left_merge_dist_coef * ego_v_) &&
                   (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
                    0.0);
     if (is_near_stop_point ||
@@ -114,7 +114,12 @@ bool SamplePolySpeedAdjustDecider::Execute() {
         if (GenerateAStarTraj()) {
           astar_iteration_count = astar_traj_ptr_->count_;
           astar_merge_count_ = 0;
+          // std::cout << "  iteration_count:  " << astar_traj_ptr_->count_
+          //           << std::endl;
         } else {
+          // std::cout << "警告：未找到可行的纵向参考轨迹！"
+          //           << "  iteration_count:  " << astar_traj_ptr_->count_
+          //           << std::endl;
           astar_traj_ptr_.reset();
           astar_merge_count_ =
               std::min(astar_merge_count_ + 1, 2);
@@ -802,10 +807,10 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   }
   //汇流任务判断
   if(lane_change_source_ == MERGE_REQUEST){
-    if (boundary_merge_point_valid_ && !is_lane_continuous) {
+    if (boundary_merge_point_valid_) {
       merge_stop_line_distance_ = session_->planning_context()
-              .ego_lane_road_right_decider_output()
-              .merge_point_distance;
+                                      .ego_lane_road_right_decider_output()
+                                      .merge_point_distance;
       is_merge_change_ = true;
       return true;
     } else {
@@ -1021,16 +1026,19 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
     const double headway_v, const double ego_v,
     const std::vector<double>& t_gap_ego_v_bp,
-    const std::vector<double>& t_gap_ego_v) {
+    const std::vector<double>& t_gap_ego_v, bool is_forced_merge_check) {
   double v_lead_clip = std::max(headway_v, 0.0);
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
   double v_rel = ego_v - v_lead_clip;
-  double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
+  double distance_hysteresis = is_forced_merge_check
+                                   ? ego_v * astar_config_.leading_thw_coef
+                                   : ego_v * config_.leading_safe_delay_time;
   double min_follow_distance = 3.0;
   double fix_safe_distance =
       v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
-  return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis,
+  double extra_buffer = is_forced_merge_check ? 0.0 : min_follow_distance;
+  return std::max(fix_safe_distance + distance_hysteresis + extra_buffer,
                   min_follow_distance);
 }
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
@@ -1067,8 +1075,9 @@ bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
         traveled_distance = leading_veh_.v * poly_arrived_t;
       }
     }
-    double buffer_distance = CalcHeadwayDistance(leading_veh_v, ego_pred_end_v,
-                                                 t_gap_ego_v_bp_, t_gap_ego_v_);
+    double buffer_distance =
+        CalcHeadwayDistance(leading_veh_v, ego_pred_end_v, t_gap_ego_v_bp_,
+                            t_gap_ego_v_, is_forced_merge_check);
     if (leading_veh_.half_length > 4.0) {
       buffer_distance += 3.0;
     }
@@ -1095,7 +1104,7 @@ bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
     if (ego_init_vel_pred_end_s >
         leading_veh_.center_s + ego_s_ + leading_veh_.v * evaulation_t_ -
             CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
-                                t_gap_ego_v_)) {
+                                t_gap_ego_v_, false)) {
       init_vel_is_ok = false;
     }
   }
@@ -1364,6 +1373,10 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
   if (!current_lane || !virtual_target_lane) {
     return;
   }
+  double ego_lateral_offset = current_lane->get_ego_lateral_offset();
+  ego_lateral_offset = lane_change_request_ == 1
+                           ? std::fmax(ego_lateral_offset, 0.0)
+                           : std::fmax(-ego_lateral_offset, 0.0);
   const auto& current_reference_points =
       current_lane->get_reference_path()->get_points();
   const auto& target_reference_points =
@@ -1386,7 +1399,7 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
                                           .distance_to_right_lane_border
                                     : target_reference_points[current_point]
                                           .distance_to_left_lane_border;
-      double lane_width = ref_distance - target_lane_to_border;
+      double lane_width = ref_distance - target_lane_to_border - ego_lateral_offset;
       double over_lateral = ego_width_ / 2.0 - lane_width;
       if (astar_config_.lateral_offset_scale_factor * over_lateral > lateral_offset) {
         agent_lateral_offset_map_[lateral_offset] =
@@ -1398,8 +1411,13 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
   }
 }
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
-  GoalState goal_state(merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
-                       v_suggestted_, config_.forced_merge_param.astar_goal_offset);
+  is_low_speed_congestion_scene_ =
+      traffic_density_status_ == Congested &&
+      target_lane_objs_flow_vel_ < kCongestedSceneSpeedLimit && 
+      (target_lane_objs_flow_vel_ - ego_v_) < kMaxSpeedDiffThreshold;
+  GoalState goal_state(
+      merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
+      v_suggestted_, config_.forced_merge_param.astar_goal_offset);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
   const double astar_speed_cap =
       std::fmin(v_adjust_speed_limit_ * config_.speed_limit_scale_factor,
@@ -1415,11 +1433,18 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
                              ? distance_to_stop_point_
                              : 0.0;
+  double fartheset_merge_s = kMaxMergeDistance;
+  auto it = agent_lateral_offset_map_.find(
+      static_cast<int>((ego_width_ * 5.0) + 0.51));
+  if(it != agent_lateral_offset_map_.end()){
+    fartheset_merge_s = it->second;
+  }
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
       front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_,
-      agent_lateral_offset_map_);
+      agent_lateral_offset_map_, is_low_speed_congestion_scene_,
+      fartheset_merge_s);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

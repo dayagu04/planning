@@ -18,8 +18,7 @@ struct TargetPoseDeciderRequest {
   ApaSlotLatPosPreference slot_lat_pos_preference =
       ApaSlotLatPosPreference::MID;
   bool is_searching_stage = false;
-  geometry_lib::PathPoint ego_pose_local =
-      geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0);
+  bool ego_in_believe_slot_area = false;
 
   TargetPoseDeciderRequest() = default;
   TargetPoseDeciderRequest(
@@ -30,8 +29,7 @@ struct TargetPoseDeciderRequest {
       const ApaSlotLatPosPreference _slot_lat_pos_preference =
           ApaSlotLatPosPreference::MID,
       const bool _is_searching_stage = false,
-      const geometry_lib::PathPoint _ego_pose_local =
-          geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0))
+      const bool _ego_in_believe_slot_area = false)
       : lat_body_buffer_vec(_lat_body_buffer_vec),
         lat_mirror_buffer_vec(_lat_mirror_buffer_vec),
         lon_buffer(_lon_buffer),
@@ -40,7 +38,23 @@ struct TargetPoseDeciderRequest {
         base_on_slot(_base_on_slot),
         slot_lat_pos_preference(_slot_lat_pos_preference),
         is_searching_stage(_is_searching_stage),
-        ego_pose_local(_ego_pose_local) {}
+        ego_in_believe_slot_area(_ego_in_believe_slot_area) {}
+
+  TargetPoseDeciderRequest(
+      const ParkingScenarioType _scenario_type,
+      const ApaSlotLatPosPreference _slot_lat_pos_preference =
+          ApaSlotLatPosPreference::MID) {
+    lat_body_buffer_vec = {0.0};
+    lat_mirror_buffer_vec = {0.0};
+    lon_buffer = 0.0;
+    scenario_type = _scenario_type;
+    consider_obs = false;
+    base_on_slot = true;
+    slot_lat_pos_preference = _slot_lat_pos_preference;
+    is_searching_stage = false;
+    ego_in_believe_slot_area = false;
+  }
+
   ~TargetPoseDeciderRequest() = default;
 };
 enum class TargetPoseType {
@@ -106,7 +120,7 @@ class TargetPoseDecider final : public ParkingTask {
   bool base_on_slot_ = false;
   bool is_searching_stage_ = false;
   ParkingScenarioType scenario_type_;
-  geometry_lib::PathPoint ego_pose_local_;
+  bool ego_in_believe_slot_area_ = false;
   TargetPoseDeciderResult result_;
 };
 }  // namespace apa_planner

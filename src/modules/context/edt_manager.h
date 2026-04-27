@@ -17,12 +17,18 @@ class EdtManager {
 
   void update();
 
+  bool UpdateByLatDecision();
+
   EulerDistanceTransform *GetEulerDistanceTransform() { return &edt_; }
 
   const bool GetIsEulerDistanceTransformValid() const { return is_edt_valid_; }
 
   static bool FilterObstacleForAra(
       const planning::FrenetObstacle &frenet_obstacle);
+
+  static bool FilterObstacleByLatDecision(
+      const planning::FrenetObstacle& frenet_obstacle,
+      const LatObstacleDecisionType& lat_decision);
 
  private:
   void InitEDT();

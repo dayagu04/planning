@@ -59,6 +59,7 @@ constexpr double kCAInvadeLatMaxDis = 2.5;
 constexpr double kCAInvadeLatMinDis = 2;
 constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
+constexpr int kConstructionIntrusionExitDelayFrames = 30;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 // Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1,
@@ -150,10 +151,12 @@ constexpr double kTriggerDistanceMildDecelThreshold = -0.3;  // Acceleration thr
 constexpr double kTriggerDistanceModerateDecelThreshold = -0.6;  // Acceleration threshold for moderate deceleration (m/s²)
 constexpr double kTriggerDistanceBaseOffsetMin = 6.0;  // Minimum base position offset for trigger distance optimization (m)
 constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for base position offset calculation (s)
-static constexpr double kCurvaturePreviewHighSpeedThreshold = 40.0;   // 40 km/h
+static constexpr double kCurvaturePreviewMinSpeedThreshold  = 40.0;   // 40 km/h
+static constexpr double kCurvaturePreviewMaxSpeedThreshold = 100.0;  // 100 km/h
+static constexpr double kCurvaturePreviewOffsetLow = 2.0;            // 40 km/h 时前视起点偏移 (m)
+static constexpr double kCurvaturePreviewOffsetHigh = 16.0;          // 100 km/h 时前视起点偏移 (m)
 constexpr double KMinThreshold = 1.75;
 constexpr double KSpeedMax = 120.0;
-constexpr double kMinLateralSpeedThreshold = 0.1;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -1009,14 +1012,18 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   std::vector<CurvInfo> preview_curv_info_vec;
   double v_ego_kph = v_ego * 3.6;
 
-  if (v_ego_kph > kCurvaturePreviewHighSpeedThreshold) {
-    static double last_valid_curv = 0.0001;
-    static int abnormal_count = 0;
-    static double prev_curv = 0.0001;
-    static std::deque<double> curv_history;
+  double preview_start_offset = planning_math::LerpWithLimit(
+      kCurvaturePreviewOffsetLow, kCurvaturePreviewMinSpeedThreshold,
+      kCurvaturePreviewOffsetHigh, kCurvaturePreviewMaxSpeedThreshold,
+      v_ego_kph);
+
+  if (v_ego_kph > kCurvaturePreviewMinSpeedThreshold) {
+    double last_valid_curv = 0.0001;
+    int abnormal_count = 0;
+    double prev_curv = 0.0001;
 
     for (int idx = 0; idx * 2.0 < preview_x; idx++) {
-      double s = ego_start_s + 2.0 + idx * 2.0;
+      double s = ego_start_s + preview_start_offset + idx * 2.0;
       if (s < 0) continue;
 
       CurvInfo one_curv_info;
@@ -1087,7 +1094,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         double curv = 0.0001;
         ReferencePathPoint refpath_pt;
         if (reference_path_ptr->get_reference_point_by_lon(
-                ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
+                ego_start_s + preview_start_offset + idx * 2.0 + j * 2.0, refpath_pt)) {
           curv = std::fabs(refpath_pt.path_point.kappa());
           if (j == 0) {
             curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
@@ -1283,6 +1290,21 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("dist_to_max_curv", dist_to_max_curv);
   JSON_DEBUG_VALUE("avg_radius_0_80m", avg_radius_0_80m);
   JSON_DEBUG_VALUE("use_avg_radius_for_ewma", use_avg_radius_for_ewma ? 1 : 0);
+
+  if (session_->is_rads_scene()) {
+    double curv_speed_scale = interp(road_radius, speed_limit_config_.rads_curv_speed_limit_radius_vec,
+                                  speed_limit_config_.rads_curv_speed_limit_scale_vec);
+    double rads_curv_speed_limit = ego_state_mgr->ego_v_cruise() * curv_speed_scale;
+    SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
+    if (rads_curv_speed_limit < v_target_) {
+      v_target_ = rads_curv_speed_limit;
+      v_target_type_ = v_limit_type;
+    }
+    auto speed_limit_output = session_->mutable_planning_context()
+                                  ->mutable_speed_limit_decider_output();
+    speed_limit_output->SetSpeedLimitIntoMap(rads_curv_speed_limit, v_limit_type);
+    return;
+  }
 
   // Determine sharp curve with hysteresis
   bool is_sharp_curve = false;
@@ -2082,6 +2104,10 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   auto fsm_state = local_view.function_state_machine_info.current_state;
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+  bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE);
+  const auto& route_info_output = session_->environmental_model().get_route_info()
+                                                           ->get_route_info_output();
 
   double v_limit_tfl_dis = 40.0;
   const auto &environmental_model = session_->environmental_model();
@@ -2094,7 +2120,8 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
                             ->get_function_switch_config()
                             .disable_tlf_function);
   if ((!disable_tlf_from_product && speed_limit_config_.enable_tfl_v_limit) &&
-      dis_tfl < kTFLSpeedLimitDis && (!noa_mode)) {
+      dis_tfl < kTFLSpeedLimitDis && (!noa_mode) && (!acc_mode) &&
+      (!route_info_output.is_ego_on_expressway)) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
         traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
@@ -2878,7 +2905,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     if (min_s <= 0.0) {
       continue;
     }
-    
+
     const auto &agent_corners = avoid_agent->box().GetAllCorners();
     double agent_min_l = std::numeric_limits<double>::max();
     double agent_max_l = -std::numeric_limits<double>::max();
@@ -2908,20 +2935,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
     if (lateral_dist > lateral_threshold) {
       continue;
-    }
-
-    if (!avoid_agent->is_truck() && !avoid_agent->is_vru() &&
-        lateral_threshold > kMinLateralRatioThreshold * lane_width) {
-      const auto agent_matched_path_point =
-          current_lane_coord->GetPathPointByS(agent_s);
-      const double agent_matched_lane_theta = agent_matched_path_point.theta();
-      const double agent_relative_theta =
-          planning_math::NormalizeAngle(avoid_agent->theta() - agent_matched_lane_theta);
-      const double object_l_speed_mps =
-          avoid_agent->speed() * std::sin(agent_relative_theta);
-      if (std::abs(object_l_speed_mps) < kMinLateralSpeedThreshold) {
-        continue;
-      }
     }
 
     double v_min_limit = avoid_agent->is_static()
@@ -3242,7 +3255,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   double dis_to_construction = std::numeric_limits<double>::max();
   int construction_strong_mode_reason = 0;
   auto speed_limit_output = session_->mutable_planning_context()
-                                  ->mutable_speed_limit_decider_output();
+                                ->mutable_speed_limit_decider_output();
 
   // Configuration flag: enable/disable construction zone speed limiting
   if (!speed_limit_config_.enable_construction_speed_limit) {
@@ -3258,11 +3271,11 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
     speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
                                              SpeedLimitType::ON_CONSTRUCTION);
-    // Always set the other type to default value to ensure proper clearing
     speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
                                              SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
+
   // Check if the construction zone is valid
   const auto &construction_scene = session_->environmental_model()
                                        .get_construction_scene_manager()
@@ -3274,6 +3287,9 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_lat_dist_flag_ = false;
     construction_v_limit_set_ = false;
     construction_manual_intervention_detected_ = false;
+    construction_intrusion_active_ = false;
+    construction_intrusion_exit_frame_count_ = 0;
+    construction_intrusion_last_level_ = 0;
     last_v_cruise_fsm_ = kDefaultLimitSpeedMps;
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
@@ -3286,10 +3302,10 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
     JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
-    JSON_DEBUG_VALUE("construction_manual_intervention_detected", construction_manual_intervention_detected_);
+    JSON_DEBUG_VALUE("construction_manual_intervention_detected",
+                     construction_manual_intervention_detected_);
     speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
                                              SpeedLimitType::ON_CONSTRUCTION);
-    // Always set the other type to default value to ensure proper clearing
     speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
                                              SpeedLimitType::NEAR_CONSTRUCTION);
     return;
@@ -3306,6 +3322,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   double v_ego = ego_state_mgr->ego_v();
   const auto init_point = ego_state_mgr->planning_init_point();
   double v_cruise = ego_state_mgr->ego_v_cruise();
+
   // Construction manual intervention detected
   double speed_increase = v_cruise_fsm - last_v_cruise_fsm_;
   if (construction_v_limit_set_ && is_exist_construction &&
@@ -3324,6 +3341,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                                              SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
+
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
@@ -3333,6 +3351,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                                              SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
+
   double construction_s = 0.0;
   double construction_l = 0.0;
   double construction_s_nearest = std::numeric_limits<double>::max();
@@ -3347,7 +3366,8 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       construction_s_nearest = construction_s;
     }
   }
-  // Construciotn need strong deceleration
+
+  // Construction need strong deceleration
   std::vector<SLPoint> sl_construction_points_all;
   sl_construction_points_all.reserve(20);
   double construction_nearest_l = std::numeric_limits<double>::max();
@@ -3366,13 +3386,14 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       }
     }
   }
-  //
+
   int construction_invade_count = 0;
   for (const auto &p : sl_construction_points_all) {
     if (std::abs(p.l) < speed_limit_config_.ca_invade_entry_lat_dis_thr) {
       construction_invade_count++;
     }
   }
+
   // Check entry and exit conditions for strong deceleration
   bool enter_condition = false;
   bool exit_condition = false;
@@ -3398,7 +3419,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     exit_condition = true;
     construction_strong_mode_reason = 12;
   }
-  //
+
   if (!construction_strong_deceleration_mode_) {
     if (enter_condition) {
       construction_strong_deceleration_mode_ = true;
@@ -3418,6 +3439,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       construction_strong_mode_reason = 30;
     }
   }
+
   ILOG_DEBUG << "construction_strong_deceleration_mode :"
              << construction_strong_deceleration_mode_;
   JSON_DEBUG_VALUE("construction_strong_deceleration_mode",
@@ -3426,6 +3448,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                    construction_strong_mode_reason);
   JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                    construction_strong_mode_frame_count_);
+
   // Construction Lateral Dis Flag
   if (!construction_lat_dist_flag_) {
     if (std::abs(construction_nearest_l) <
@@ -3439,51 +3462,233 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     }
   }
   JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
+
   // Construction zone info
   dis_to_construction = std::max(construction_s_nearest - ego_s, 0.0);
-  if (is_on_construction && construction_lat_dist_flag_) {
-    if (construction_strong_deceleration_mode_) {
-      v_target_construction =
-          speed_limit_config_.v_limit_construction -
-          std::max(speed_limit_config_.construction_invade_speed_diff, 0.0);
-    } else {
-      v_target_construction = speed_limit_config_.v_limit_construction;
+
+  const auto &current_lane = session_->environmental_model()
+                                 .get_virtual_lane_manager()
+                                 ->get_current_lane();
+  double lane_width = current_lane ? current_lane->width_by_s(ego_s) : 3.5;
+  double half_lane_width = lane_width * 0.5;
+
+  double perception_margin = 0.25;
+  double lane_boundary = half_lane_width;
+  double warning_buffer = 0.5;      // 车道线外 0.5m 范围
+  double warning_boundary = lane_boundary + warning_buffer;
+
+  // ========== 侵入等级判断 ==========
+  bool has_intruding_point = false;
+  double min_intruding_distance = std::numeric_limits<double>::max();
+  int max_intrusion_level = 0;
+  double min_abs_l_at_intrusion = std::numeric_limits<double>::max();
+
+  for (const auto &[cluster_id, cluster_area] :
+       construction_scene.construction_agent_cluster_attribute_map) {
+    // 收集前方有效范围内的 SL 点
+    std::vector<std::pair<double, double>> sl_points;
+    for (const auto &pt : cluster_area.points) {
+      double s = 0.0, l = 0.0;
+      if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) continue;
+      if (s >= ego_s && s <= ego_s + 125.0 &&
+          std::abs(l) <= lane_width + warning_buffer) {
+        sl_points.push_back({s, l});//这边l是锥桶中心点
+      }
     }
-    double v_target_construction_kph =
-        std::round(v_target_construction * 3.6 / 10.0) * 10;
-    if (v_target_construction_kph < v_cruise_limit_) {
-      v_cruise_limit_ = v_target_construction_kph;
+    if (sl_points.empty()) continue;
+
+    // 计算局部侵入趋势（滑动窗口，任意连续段有趋势即触发）
+    double cluster_intrusion_rate = 0.0;
+    if (sl_points.size() >= 3) {
+      std::sort(sl_points.begin(), sl_points.end());
+      const int window_size = std::min(static_cast<int>(sl_points.size()), 5);
+      for (int i = 0; i <= static_cast<int>(sl_points.size()) - window_size; ++i) {
+        double sum_s = 0.0, sum_abs_l = 0.0, sum_s2 = 0.0, sum_s_abs_l = 0.0;
+        double n = static_cast<double>(window_size);
+        for (int j = i; j < i + window_size; ++j) {
+          double s_val = sl_points[j].first;
+          double abs_l_val = std::abs(sl_points[j].second);
+          sum_s += s_val;
+          sum_abs_l += abs_l_val;
+          sum_s2 += s_val * s_val;
+          sum_s_abs_l += s_val * abs_l_val;
+        }
+        double denom = n * sum_s2 - sum_s * sum_s;
+        if (std::abs(denom) > 1e-6) {
+          double slope = (n * sum_s_abs_l - sum_s * sum_abs_l) / denom;
+          double local_rate = -slope;
+          if (local_rate > cluster_intrusion_rate) {
+            cluster_intrusion_rate = local_rate;
+          }
+        }
+      }
+    }
+
+    // 逐点判断侵入等级
+    for (const auto &pt : cluster_area.points) {
+      double s = 0.0, l = 0.0;
+      if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) continue;
+      if (s < ego_s || s > ego_s + 125.0) continue;
+
+      double abs_l = std::abs(l);
+      int level = 0;
+
+      if (abs_l <= lane_boundary + perception_margin) {
+        // 侵入车道内：严重侵入
+        level = 2;
+      } else if ((abs_l < warning_boundary + perception_margin &&
+                 cluster_intrusion_rate > 0.01) || abs_l <= lane_boundary + warning_buffer) {
+        // 车道线外 0.5m 内，且有侵入趋势
+        level = 1;
+      }
+      // abs_l >= warning_boundary: 不处理
+
+      if (level > 0) {
+        has_intruding_point = true;
+        double relative_s = s - ego_s;
+        if (relative_s < min_intruding_distance) {
+          min_intruding_distance = relative_s;
+          min_abs_l_at_intrusion = abs_l;
+          max_intrusion_level = std::max(max_intrusion_level, level);
+        }
+      }
+    }
+  }
+
+  double effective_distance = has_intruding_point ? min_intruding_distance : 0.0;
+  int final_intrusion_level = has_intruding_point ? max_intrusion_level : 0;
+  double final_abs_l = has_intruding_point ? min_abs_l_at_intrusion : 0.0;
+
+  // ========== 延时逻辑：避免限速频繁跳变 ==========
+  if (final_intrusion_level > 0) {
+    if (final_intrusion_level > construction_intrusion_last_level_) {
+      // level 升级：立即生效
+      construction_intrusion_active_ = true;
+      construction_intrusion_exit_frame_count_ = 0;
+      construction_intrusion_last_level_ = final_intrusion_level;
+      construction_intrusion_last_abs_l_ = final_abs_l;
+      construction_intrusion_last_distance_ = effective_distance;
+    } else if (final_intrusion_level == construction_intrusion_last_level_) {
+      // level 持平：立即更新距离和横向位置
+      construction_intrusion_active_ = true;
+      construction_intrusion_exit_frame_count_ = 0;
+      construction_intrusion_last_abs_l_ = final_abs_l;
+      construction_intrusion_last_distance_ = effective_distance;
+    } else {
+      // level 降级（2→1 或 1→0）：延时确认
+      construction_intrusion_exit_frame_count_++;
+      if (construction_intrusion_exit_frame_count_ >=
+          kConstructionIntrusionExitDelayFrames) {
+        construction_intrusion_last_level_ = final_intrusion_level;
+        construction_intrusion_last_abs_l_ = final_abs_l;
+        construction_intrusion_last_distance_ = effective_distance;
+        construction_intrusion_exit_frame_count_ = 0;
+      } else {
+        // 延时期间沿用上一次的高 level
+        final_intrusion_level = construction_intrusion_last_level_;
+        final_abs_l = construction_intrusion_last_abs_l_;
+        effective_distance = construction_intrusion_last_distance_;
+      }
+    }
+  } else if (construction_intrusion_active_) {
+    // 从有侵入到无侵入：延时退出
+    construction_intrusion_exit_frame_count_++;
+    if (construction_intrusion_exit_frame_count_ >=
+        kConstructionIntrusionExitDelayFrames) {
+      construction_intrusion_active_ = false;
+      construction_intrusion_exit_frame_count_ = 0;
+      construction_intrusion_last_level_ = 0;
+      construction_intrusion_last_abs_l_ = 0.0;
+      construction_intrusion_last_distance_ = 0.0;
+      construction_v_limit_set_ = false;
+      return;
+    }
+    // 延时期间沿用上一次的侵入等级
+    final_intrusion_level = construction_intrusion_last_level_;
+    final_abs_l = construction_intrusion_last_abs_l_;
+    effective_distance = construction_intrusion_last_distance_;
+  } else {
+    // 没有侵入，不减速
+    construction_v_limit_set_ = false;
+    return;
+  }
+
+  if ((is_on_construction && construction_lat_dist_flag_) ||
+      construction_intrusion_active_) {
+    double target_speed = kDefaultLimitSpeedMps;
+    SpeedLimitType speed_limit_type = SpeedLimitType::ON_CONSTRUCTION;
+
+    if (final_intrusion_level >= 2) {
+      if (final_abs_l < lane_boundary * 0.5) {
+        // 深侵入：60 km/h
+        target_speed = 16.67;
+        speed_limit_type = SpeedLimitType::CONSTRUCTION_DEEP_INTRUSION;
+      } else {
+        // 浅侵入：80 km/h
+        target_speed = speed_limit_config_.v_limit_construction;
+        speed_limit_type = SpeedLimitType::ON_CONSTRUCTION;
+      }
+    } else if (final_intrusion_level >= 1) {
+      // 车道线外 0.5m 内且有侵入趋势：100 kph
+      target_speed = speed_limit_config_.v_limit_near_construction;
+      speed_limit_type = SpeedLimitType::NEAR_CONSTRUCTION;
+    } else {
+      return;
+    }
+
+    // 强减速模式覆盖
+    if (construction_strong_deceleration_mode_) {
+      target_speed = std::min(
+          target_speed,
+          speed_limit_config_.v_limit_construction -
+              std::max(speed_limit_config_.construction_invade_speed_diff,
+                       0.0));
+    }
+
+    double target_speed_kph = std::round(target_speed * 3.6 / 10.0) * 10;
+    if (target_speed_kph < v_cruise_limit_) {
+      v_cruise_limit_ = target_speed_kph;
       construction_v_limit_set_ = true;
     }
-    if (v_target_construction < v_target_ &&
+
+    if (target_speed < v_target_ &&
         !construction_manual_intervention_detected_) {
       construction_v_limit_set_ = true;
-      v_target_ = v_target_construction;
-      v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
+      v_target_ = target_speed;
+      v_target_type_ = speed_limit_type;
     } else if (v_target_ > speed_limit_config_.construction_speed_upper &&
                construction_manual_intervention_detected_) {
       v_target_ = speed_limit_config_.construction_speed_upper;
-      v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
+      v_target_type_ = speed_limit_type;
     }
+
+    ILOG_DEBUG << "Construction intrusion: level=" << final_intrusion_level
+               << ", abs_l=" << final_abs_l
+               << ", distance=" << effective_distance
+               << ", target_speed=" << target_speed;
+
     JSON_DEBUG_VALUE("construction_manual_intervention_detected",
                      construction_manual_intervention_detected_);
-    ILOG_DEBUG << "v_target_construction :" << v_target_construction;
-    JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
-    JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
+    JSON_DEBUG_VALUE("v_target_construction", target_speed);
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
-    auto speed_limit_output = session_->mutable_planning_context()
-                                  ->mutable_speed_limit_decider_output();
-    // Set current type and clear the other type
-    speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
-                                             SpeedLimitType::ON_CONSTRUCTION);
-    // Always set the other type to default value to ensure proper clearing
-    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::NEAR_CONSTRUCTION);
+
+    speed_limit_output->SetSpeedLimitIntoMap(
+        speed_limit_type == SpeedLimitType::ON_CONSTRUCTION ? target_speed : kDefaultLimitSpeedMps,
+        SpeedLimitType::ON_CONSTRUCTION);
+    speed_limit_output->SetSpeedLimitIntoMap(
+        speed_limit_type == SpeedLimitType::NEAR_CONSTRUCTION ? target_speed : kDefaultLimitSpeedMps,
+        SpeedLimitType::NEAR_CONSTRUCTION);
+    speed_limit_output->SetSpeedLimitIntoMap(
+        speed_limit_type == SpeedLimitType::CONSTRUCTION_DEEP_INTRUSION ? target_speed : kDefaultLimitSpeedMps,
+        SpeedLimitType::CONSTRUCTION_DEEP_INTRUSION);
     return;
   }
+
   double construction_speed_threshold =
       speed_limit_config_.construction_speed_threshold;
   double v_limit_near_construction =
       speed_limit_config_.v_limit_near_construction;
+
   if (construction_strong_deceleration_mode_) {
     construction_speed_threshold =
         construction_speed_threshold -
@@ -3505,6 +3710,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                          speed_limit_config_.acc_to_construction,
                  0.5);
   }
+
   double v_target_near_construction_kph =
       std::round(v_target_near_construction * 3.6 / 10.0) * 10;
   if (v_target_near_construction_kph < v_cruise_limit_) {
@@ -3529,17 +3735,13 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_v_limit_set_ = false;
     construction_manual_intervention_detected_ = false;
   }
+
   JSON_DEBUG_VALUE("construction_manual_intervention_detected",
                    construction_manual_intervention_detected_);
   ILOG_DEBUG << "dis_to_construction :" << dis_to_construction;
   ILOG_DEBUG << "v_target_near_construction :" << v_target_near_construction;
-  //auto speed_limit_output = session_->mutable_planning_context()
-  //                               ->mutable_speed_limit_decider_output();
-  // Set current type and clear the other type
-  //speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
-  //                                           SpeedLimitType::NEAR_CONSTRUCTION);
-  // Always set the other type to default value to ensure proper clearing
-  speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ON_CONSTRUCTION);
+  speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                           SpeedLimitType::ON_CONSTRUCTION);
   JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
   JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
   JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);

@@ -23,11 +23,11 @@ namespace apa_planner {
 struct InitalActionRequest {
   AstarPathGear ref_gear = AstarPathGear::NONE;
   AstarPathSteer ref_steer = AstarPathSteer::NONE;
-  float ref_length = 0.0;
+  float ref_length = 0.0f;
   // first gear is drive and the min ref length
-  float ref_drive_length = 0.0;
+  float ref_drive_length = 0.0f;
   // first gear is reverse and the min ref length
-  float ref_reverse_length = 0.0;
+  float ref_reverse_length = 0.0f;
 };
 
 enum class SearchMode {
@@ -48,8 +48,8 @@ struct HybridAStarRequest {
       AnalyticExpansionType::LINK_POSE_LINE;
   int max_gear_shift_number = 20;
   int max_scurve_number = 5;
-  float every_gear_length = 0.0;
-  float sample_ds = 0.1;
+  float every_gear_length = 0.0f;
+  float sample_ds = 0.1f;
   bool swap_start_goal = false;
 
   SearchMode search_mode = SearchMode::FORMAL;

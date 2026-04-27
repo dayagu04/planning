@@ -43,6 +43,13 @@ class CollisionDetector {
     COUNT_OBS
   };
 
+  enum CallScene {
+    NORMAL_SCENE,
+    InversedTrialsByGivenGear_SCENE,
+  };
+
+
+
   enum class ObsSlotType : uint8_t {
     OBS_INVALID,
     SLOT_INSIDE_OBS,
@@ -264,6 +271,20 @@ class CollisionDetector {
     skip_obs_types_.emplace_back(ObsType(obs_type));
   };
 
+  void SetCallScenario(const size_t scenario_type) {
+    calling_scenario_ = CallScene(scenario_type);
+  };
+
+  CallScene GetCallScenario(){
+    return calling_scenario_;
+  }
+
+
+
+  void CleanCallScenario() {
+    calling_scenario_ = CallScene::NORMAL_SCENE;
+  };
+
   const bool CheckObstacleInSkipTypes(const size_t obs_type);
 
  private:
@@ -283,6 +304,8 @@ class CollisionDetector {
   std::vector<Eigen::Vector2d> origin_car_local_rectangle_vertex_vec_;
 
   std::vector<ObsType> skip_obs_types_;
+
+  CallScene calling_scenario_;
 
   Paramters param_;
 };

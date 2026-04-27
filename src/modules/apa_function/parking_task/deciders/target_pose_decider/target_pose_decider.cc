@@ -24,16 +24,14 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   base_on_slot_ = request.base_on_slot;
   slot_lat_pos_preference_ = request.slot_lat_pos_preference;
   is_searching_stage_ = request.is_searching_stage;
-  ego_pose_local_ = request.ego_pose_local;
+  ego_in_believe_slot_area_ = request.ego_in_believe_slot_area;
   scenario_type_ = request.scenario_type;
 
   const double find_target_pose_start_time = IflyTime::Now_ms();
 
   if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
       scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    return CalcTargetPoseForPerpendicularParkingIn();
-  } else {
-    return result_;
+    result_ = CalcTargetPoseForPerpendicularParkingIn();
   }
 
   TimeBenchmark::Instance().SetTime(
@@ -95,11 +93,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     const double mid_x =
         (origin_pt_local.pt_01_mid.x() + origin_pt_local.pt_23_mid.x()) * 0.5;
 
-    double mid_ego_x =
-        mid_x - (0.5 * param.car_length - param.rear_overhanging);
-    if (heading_in) {
-      mid_ego_x = mid_x + (0.5 * param.car_length - param.rear_overhanging);
-    }
+    const double half_offset = 0.5 * param.car_length - param.rear_overhanging;
+    const double mid_ego_x =
+        heading_in ? (mid_x + half_offset) : (mid_x - half_offset);
 
     virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
@@ -148,30 +144,25 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
                                            : origin_pt_global.pt_01_unit_vec;
 
   ApaObsMovementType consider_obs_movement_type;
-  bool use_limiter = true;
+  bool use_limiter;
   CarBodyType car_body_type;
   if (is_searching_stage_) {
-    if (slot_.is_selected_) {
-      consider_obs_movement_type = ApaObsMovementType::STATIC;
-    } else {
-      consider_obs_movement_type = ApaObsMovementType::ALL;
-    }
+    consider_obs_movement_type = slot_.is_selected_ ? ApaObsMovementType::STATIC
+                                                    : ApaObsMovementType::ALL;
     use_limiter = false;
     car_body_type = CarBodyType::ONLY_MAX_POLYGAN;
   } else {
     consider_obs_movement_type = ApaObsMovementType::STATIC;
-    if (heading_in) {
-      car_body_type = CarBodyType::EXPAND_MIRROR_TO_END;
-    } else {
-      car_body_type = CarBodyType::EXPAND_MIRROR_TO_FRONT;
-    }
+    use_limiter = true;
+    car_body_type = heading_in ? CarBodyType::EXPAND_MIRROR_TO_END
+                               : CarBodyType::EXPAND_MIRROR_TO_FRONT;
   }
 
   const GJKColDetRequest gjk_col_det_request(
       base_on_slot_, param.uss_config.use_uss_pt_cloud, car_body_type,
       consider_obs_movement_type, param.use_obs_height_method, use_limiter);
 
-  const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
+  const std::shared_ptr<GJKCollisionDetector>& gjk_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();
   const geometry_lib::PathPoint& base_target_pose =
       base_on_slot_ ? tar_pose_local : tar_pose_global;
@@ -185,7 +176,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
       tmp_pose_vec[i].pos += preference_lon_path_vec[i] * lon_move_dir;
     }
 
-    if (gjl_det_ptr
+    if (gjk_det_ptr
             ->Update(tmp_pose_vec,
                      param.lat_lon_target_pose_buffer.max_lat_body_buffer, 0.0,
                      gjk_col_det_request, true,
@@ -199,41 +190,31 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
   }
 
-  // calc max_lat_move_dist and max_lon_move_dist
+  // calc max_lat_move_dist
   double max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
   // The distance between the body and the slot line: positive value indicates
   // the line cannot be crossed, negative value means crossing is allowed
-  double car2line_dist_threshold = param.car2line_dist_threshold;
-  if (!is_searching_stage_) {
-    car2line_dist_threshold -= 0.03;
-  }
-  max_lat_move_dist -= param.car2line_dist_threshold;
+  const double car2line_dist_threshold =
+      is_searching_stage_ ? param.car2line_dist_threshold
+                          : param.car2line_dist_threshold - 0.03;
+  max_lat_move_dist -= car2line_dist_threshold;
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
-  double max_lon_move_dist{0.};
-  double dx = origin_pt_local.pt_01_mid.x() -
-              (virtual_tar_x + param.wheel_base + param.front_overhanging);
-  if (heading_in) {
-    dx = origin_pt_local.pt_01_mid.x() -
-         (virtual_tar_x + param.rear_overhanging);
-  }
-  double front_exceed_line_dx = param.max_front_exceed_line_dx;
-  if (slot_.slot_type_ == SlotType::SLANT) {
-    front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
-  }
 
-  if (!is_searching_stage_ && base_on_slot_) {
-    if ((slot_.IsPointInCustomSlot(
-             ego_pose_local_.pos, param.believe_obs_ego_area,
-             param.believe_obs_ego_area, 0.2, 0.2, true) &&
-         std::fabs(ego_pose_local_.heading) * kRad2Deg < 60.0)) {
-      front_exceed_line_dx += 0.168;
-    } else {
-      front_exceed_line_dx += 0.68;
+  // calc max_lon_move_dist
+  const double ego_front_x =
+      heading_in ? (virtual_tar_x + param.rear_overhanging)
+                 : (virtual_tar_x + param.wheel_base + param.front_overhanging);
+  const double dx = origin_pt_local.pt_01_mid.x() - ego_front_x;
+
+  double front_exceed_line_dx = 0.0;
+  if (slot_.slot_source_type_ != SlotSourceType::SELF_DEFINE) {
+    front_exceed_line_dx = param.max_front_exceed_line_dx;
+    if (slot_.slot_type_ == SlotType::SLANT) {
+      front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
     }
-  }
-
-  if (slot_.slot_source_type_ == SlotSourceType::SELF_DEFINE) {
-    front_exceed_line_dx = 0.0;
+    if (!is_searching_stage_) {
+      front_exceed_line_dx += ego_in_believe_slot_area_ ? 0.168 : 0.68;
+    }
   }
 
   if (param.smart_fold_mirror_params.has_smart_fold_mirror &&
@@ -242,16 +223,12 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     max_lat_move_dist = std::min(max_lat_move_dist, 0.1);
   }
 
-  max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
-  max_lon_move_dist = std::max(max_lon_move_dist, 0.0001);
+  const double max_lon_move_dist =
+      std::max(front_exceed_line_dx + dx - 0.05, 0.0001);
 
   // calc lat_move_step and lon_move_step
-  double lat_move_step{0.02};
-  double lon_move_step{0.05};
-  if (is_searching_stage_) {
-    lat_move_step = 0.05;
-    lon_move_step = 0.1;
-  }
+  const double lat_move_step = is_searching_stage_ ? 0.05 : 0.02;
+  const double lon_move_step = is_searching_stage_ ? 0.1 : 0.05;
 
   ILOG_INFO << "max_lon_move_dist = " << max_lon_move_dist
             << "  max_lat_move_dist = " << max_lat_move_dist
@@ -318,7 +295,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
                     lat_offset + lon_path_vec[pose_idx] * lon_move_dir;
               }
 
-              const ColResult& res = gjl_det_ptr->Update(
+              const ColResult& res = gjk_det_ptr->Update(
                   tmp_pose_vec, lat_body_buffer, 0.0, gjk_col_det_request, true,
                   lat_mirror_buffer);
               if (res.col_flag) {
@@ -366,17 +343,15 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   }
 
   if (exist_target_pose) {
-    if (heading_in) {
-      dx = result_.target_pose_local.GetX() + param.rear_overhanging -
-           origin_pt_local.pt_01_mid.x();
-    } else {
-      dx = result_.target_pose_local.GetX() + param.wheel_base +
-           param.front_overhanging - origin_pt_local.pt_01_mid.x();
-    }
-    result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
+    const double target_ego_front_x =
+        heading_in ? (result_.target_pose_local.GetX() + param.rear_overhanging)
+                   : (result_.target_pose_local.GetX() + param.wheel_base +
+                      param.front_overhanging);
+    const double target_dx = target_ego_front_x - origin_pt_local.pt_01_mid.x();
+    result_.exceed_allow_max_dx = target_dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
               << "  front_exceed_line_dx = " << front_exceed_line_dx
-              << "  dx = " << dx;
+              << "  target_dx = " << target_dx;
     if (result_.exceed_allow_max_dx > 0.1) {
       exist_target_pose = false;
     }

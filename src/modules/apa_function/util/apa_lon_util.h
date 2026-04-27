@@ -13,11 +13,13 @@ const bool IsODVeh(const iflyauto::ObjectType type);
 
 const bool IsODSpecificationer(const iflyauto::ObjectType type);
 
-const bool IsDynamicODVeh(const double v, const iflyauto::ObjectType type);
+const bool IsDynamicODVeh(const iflyauto::ObjectMotionType motion_type,
+                          const iflyauto::ObjectType object_type);
 
 const bool IsODLivingThings(const iflyauto::ObjectType type);
 
-const bool IsDynamicLivingThings(const iflyauto::ObjectType type);
+const bool IsDynamicLivingThings(const iflyauto::ObjectMotionType motion_type,
+                                 const iflyauto::ObjectType object_type);
 
 std::vector<Eigen::VectorXd> TransformDpSpeedConstraints();
 

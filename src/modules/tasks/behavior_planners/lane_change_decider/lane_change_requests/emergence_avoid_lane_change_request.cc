@@ -201,6 +201,10 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(base_lane_virtual_id, false);
 
+  if (origin_refline == nullptr) {
+    Reset();
+    return;
+  }
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),

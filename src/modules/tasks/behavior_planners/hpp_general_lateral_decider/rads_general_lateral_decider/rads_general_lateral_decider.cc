@@ -477,8 +477,8 @@ void RADSGeneralLateralDecider::ConstructTrajPoints(
   // generate traj_points based on kMaxAcc or kMinAcc
   const double kMaxAcc = 0.2;
   const double kMinAcc = -5.5;
-  double cruise_v = session_->planning_context().v_ref_cruise();
-  double ego_v = planning_init_point.v;
+  double cruise_v = std::max(config_.min_v_cruise, session_->planning_context().v_ref_cruise());
+  double ego_v = std::max(planning_init_point.v, config_.min_v_cruise);
   double s_ref = frenet_init_pt.x;
 
   double ref_len_based_on_speed = 0.0;

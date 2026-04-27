@@ -122,6 +122,7 @@ void EgoLaneTrackManger::TrackEgoLane(
     std::vector<int>& order_ids_of_same_zero_relative_id,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
+  JSON_DEBUG_VALUE("vl_cost_count", 0);
   const auto& function_info = session_->environmental_model().function_info();
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
@@ -1811,6 +1812,20 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   // Get Virtual Lane Cost on Route
   const auto& route_info = session_->environmental_model().get_route_info();
   VirtualLanesRouteCost const& lane_cost = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
+
+  // Output VirtualLane Cost for visualization
+  JSON_DEBUG_VALUE("vl_cost_count", static_cast<int>(lane_cost.size()));
+  for (size_t i = 0; i < lane_cost.size() && i < 10; ++i) {
+    const auto& vc = lane_cost[i];
+    std::string prefix = "vl_cost_" + std::to_string(i) + "_";
+    JSON_DEBUG_VALUE((prefix + "order").c_str(), vc.order_id);
+    JSON_DEBUG_VALUE((prefix + "rel").c_str(), vc.relative_id);
+    JSON_DEBUG_VALUE((prefix + "total").c_str(), vc.total_cost);
+    JSON_DEBUG_VALUE((prefix + "match").c_str(), vc.lane_match_confidence);
+    JSON_DEBUG_VALUE((prefix + "topo").c_str(), vc.topo_trace_score);
+    JSON_DEBUG_VALUE((prefix + "penalty").c_str(), vc.distance_penalty);
+    JSON_DEBUG_VALUE((prefix + "on_route").c_str(), vc.is_on_route ? 1 : 0);
+  }
 
   // find best lane in order_id_idx
   int best_order_id_idx = -1;
@@ -4620,82 +4635,96 @@ bool EgoLaneTrackManger::IsPathCollisionWithRoadEdge(
   if (last_lane == nullptr) {
     return true;
   }
-  const auto& origin_lane_points = last_lane->lane_points();
-  if (origin_lane_points.empty()) {
-    return true;
-  }
   if (path_points.size() < 3) {
     return false;
   }
-  const bool has_target_lane = cur_lane != nullptr;
-  const std::vector<iflyauto::ReferencePoint>* target_lane_points_ptr =
-      has_target_lane ? &cur_lane->lane_points() : nullptr;
+
+  // 优先使用 cur_lane，如果不存在则使用 last_lane
+  const std::shared_ptr<VirtualLane>& check_lane =
+      (cur_lane != nullptr) ? cur_lane : last_lane;
+
+  std::shared_ptr<KDPath> frenet_coord = check_lane->get_lane_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return true;
+  }
+
+  const auto& lane_points = check_lane->lane_points();
+  if (lane_points.empty()) {
+    return true;
+  }
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
   const int max_check_num = 16;
   int check_points_num = std::min(max_check_num, static_cast<int>(path_points.size()));
+
   for (size_t i = 0; i < check_points_num; ++i) {
     const double pt_x = path_points[i].x;
     const double pt_y = path_points[i].y;
+    const double pt_heading = path_points[i].heading_angle;
 
-    // 在 last_lane上找最近点
-    size_t origin_nearest_idx = 0;
-    double origin_min_dist_sq = std::numeric_limits<double>::max();
-    for (size_t j = 0; j < origin_lane_points.size(); ++j) {
-      const double dx = origin_lane_points[j].enu_point.x - pt_x;
-      const double dy = origin_lane_points[j].enu_point.y - pt_y;
-      const double dist_sq = dx * dx + dy * dy;
-      if (dist_sq < origin_min_dist_sq) {
-        origin_min_dist_sq = dist_sq;
-        origin_nearest_idx = j;
-      }
+    // 使用 Frenet 投影计算 (s, l)
+    Point2D ego_cart(pt_x, pt_y);
+    Point2D ego_frenet_point;
+    if (!frenet_coord->XYToSL(ego_cart, ego_frenet_point)) {
+      continue;
+    }
+    const double s = ego_frenet_point.x;
+    const double l = ego_frenet_point.y;
+
+    // lane_points 按 s 排序，二分查找最近的中心线离散点
+    auto comp = [](const iflyauto::ReferencePoint& point, double s_val) {
+      return point.s < s_val;
+    };
+    auto it = std::lower_bound(lane_points.begin(), lane_points.end(), s, comp);
+
+    int nearest_idx = -1;
+    if (it == lane_points.end()) {
+      nearest_idx = static_cast<int>(lane_points.size()) - 1;
+    } else if (it == lane_points.begin()) {
+      nearest_idx = 0;
+    } else {
+      auto prev_it = it - 1;
+      double dist_to_it = std::fabs(it->s - s);
+      double dist_to_prev = std::fabs(prev_it->s - s);
+      nearest_idx = (dist_to_prev < dist_to_it) ?
+                    static_cast<int>(std::distance(lane_points.begin(), prev_it)) :
+                    static_cast<int>(std::distance(lane_points.begin(), it));
     }
 
-    // 在 cur_lane 上找最近点
-    size_t target_nearest_idx = 0;
-    double target_min_dist_sq = std::numeric_limits<double>::max();
-    const bool target_valid =
-        has_target_lane && target_lane_points_ptr != nullptr &&
-        !target_lane_points_ptr->empty();
-    if (target_valid) {
-      for (size_t j = 0; j < target_lane_points_ptr->size(); ++j) {
-        const double dx = (*target_lane_points_ptr)[j].enu_point.x - pt_x;
-        const double dy = (*target_lane_points_ptr)[j].enu_point.y - pt_y;
-        const double dist_sq = dx * dx + dy * dy;
-        if (dist_sq < target_min_dist_sq) {
-          target_min_dist_sq = dist_sq;
-          target_nearest_idx = j;
-        }
-      }
-    }
+    const auto& ref_pt = lane_points[nearest_idx];
+    const double ref_heading = ref_pt.enu_heading;
 
-    // 选择距离更近的 lane
-    const bool use_target =
-        target_valid && target_min_dist_sq < origin_min_dist_sq;
-    const auto& nearest_pt =
-        use_target ? (*target_lane_points_ptr)[target_nearest_idx]
-                   : origin_lane_points[origin_nearest_idx];
-    const double ref_x = nearest_pt.enu_point.x;
-    const double ref_y = nearest_pt.enu_point.y;
-    const double ref_heading = nearest_pt.enu_heading;
+    // 计算轨迹点相对车道的航向角偏差
+    double heading_diff = pt_heading - ref_heading;
+    while (heading_diff > M_PI) heading_diff -= 2.0 * M_PI;
+    while (heading_diff < -M_PI) heading_diff += 2.0 * M_PI;
 
-    const double dx = pt_x - ref_x;
-    const double dy = pt_y - ref_y;
-    const double l = -dx * std::sin(ref_heading) + dy * std::cos(ref_heading);
+    // 根据航向角偏差计算车辆左右边界的横向偏移
+    const double lateral_offset =
+        half_vehicle_width / std::max(std::fabs(std::cos(heading_diff)), 1e-6);
 
-    const double left_vehicle_edge = l + half_vehicle_width;
-    const double right_vehicle_edge = l - half_vehicle_width;
+    const double left_vehicle_edge = l + lateral_offset;
+    const double right_vehicle_edge = l - lateral_offset;
+
+    // 先检查是否碰撞道路边界
     if (left_vehicle_edge >
-        nearest_pt.distance_to_left_road_border - road_edge_buffer) {
+        ref_pt.distance_to_left_road_border - road_edge_buffer) {
       return true;
     }
     if (right_vehicle_edge <
-        -nearest_pt.distance_to_right_road_border + road_edge_buffer) {
+        -ref_pt.distance_to_right_road_border + road_edge_buffer) {
       return true;
     }
+
+    // 如果车辆完全进入车道线内，提前结束检测
+    if (left_vehicle_edge < ref_pt.distance_to_left_lane_border &&
+        right_vehicle_edge > -ref_pt.distance_to_right_lane_border) {
+      break;
+    }
   }
+
   return false;
 }
 

@@ -425,7 +425,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // check failed
   if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
     CheckEgoPoseWhenPlanFaild(ParkingFailReason::STUCK_FAILED_TIME);
     return;
   }
@@ -510,9 +509,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   if (CheckGearChangeCountTooMuch(
           apa_param.GetParam().gear_change_decide_params)) {
-    ILOG_INFO << "check gear change count too much!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
     return;
   }
 
@@ -764,7 +761,7 @@ void ParallelParkInScenario::ScenarioTry() {
       }
     }
   }
-  TansformPreparePlanningTraj();
+  TransformPreparePlanningTraj();
   return;
 }
 
@@ -1302,7 +1299,9 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
       }
       const auto obs_scement = pair.second.GetObsScemanticType();
       if (obs_scement == ApaObsScemanticType::UNKNOWN ||
-          obs_scement == ApaObsScemanticType::WALL) {
+          obs_scement == ApaObsScemanticType::WALL ||
+          obs_scement == ApaObsScemanticType::COLUMN ||
+          obs_scement == ApaObsScemanticType::CAR) {
         for (const auto& obs_pt_local : pair.second.GetPtClout2dGlobal()) {
           if (IsPointInOrientedRectangle(obs_pt_local, rect_center,
                                          rect_heading, rect_length,
@@ -1332,6 +1331,10 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
     for (const auto& pair : apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
       if (pair.first == maximum_obs_id) {
         maximum_obs_parent_id = pair.second.GetParentId();
+        if (pair.second.GetObsScemanticType() == ApaObsScemanticType::CAR) {
+          ILOG_INFO << "pa obs is car, stop pa path";
+          return false;
+        }
         break;
       }
     }
@@ -1983,14 +1986,15 @@ const bool ParallelParkInScenario::GenTlane() {
   parent_height_count.clear();
   obs_id_pt_map_.clear();
   std::unordered_map<size_t, double> parent_min_y_abs;//<parent_id, min_y_abs>
-  Eigen::Vector2d obs_slot_front_pt = {slot_length + half_slot_width, 0.0};
-  Eigen::Vector2d obs_slot_rear_pt = {-half_slot_width, 0.0};
+  Eigen::Vector2d obs_slot_front_pt = {slot_length + 0.5 * slot_length, 0.0};
+  Eigen::Vector2d obs_slot_rear_pt = {-0.5 * slot_length, 0.0};
   bool is_car_in_curb = false;
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
+  const double delete_obs_dist =
+      enable_pa_park_ ? 0.1 : kDeletedObsDistOutSlot;
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
-      CollisionDetector::Paramters(kDeletedObsDistOutSlot, true));
-
+      CollisionDetector::Paramters(delete_obs_dist, true));
 
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
@@ -2055,15 +2059,15 @@ const bool ParallelParkInScenario::GenTlane() {
       }
       const bool is_near_slot_front =
           pnc::mathlib::IsInBound(obs_pt_local.x(),
-                                  0.5*slot_length ,
-                                  slot_length + half_slot_width) &&
-          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width+kCurbInitialOffset),
-                                  half_slot_width+kCurbInitialOffset);
+                                  0.75 * slot_length ,
+                                  slot_length + 0.5 * slot_length) &&
+          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width + 0.4),
+                                  half_slot_width + 0.4);
       const bool is_near_slot_rear =
-          pnc::mathlib::IsInBound(obs_pt_local.x(), -half_slot_width,
-                                  0.5*slot_length) &&
-          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width+kCurbInitialOffset),
-                                  half_slot_width+kCurbInitialOffset);
+          pnc::mathlib::IsInBound(obs_pt_local.x(), - 0.5 * slot_length,
+                                  0.5 * slot_length) &&
+          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width + 0.4),
+                                  half_slot_width + 0.4);
       if (is_near_slot_front) {
         // ILOG_INFO << "near_slot_front, obs_pt_local = " << obs_pt_local.x()
                   // << " , " << obs_pt_local.y();
@@ -2281,7 +2285,7 @@ const bool ParallelParkInScenario::GenTlane() {
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
   const bool is_slot_empty_enough =
-      (obs_slot_front_pt.x() - obs_slot_rear_pt.x()) > 5.8;
+      (obs_slot_front_pt.x() - obs_slot_rear_pt.x()) > 6.1;
   ILOG_INFO << "is_slot_empty_enough:" << is_slot_empty_enough
             << "obs_slot_front_pt.x:" << obs_slot_front_pt.x()
             << "obs_slot_rear_pt.x():" << obs_slot_rear_pt.x();
@@ -2330,13 +2334,13 @@ const bool ParallelParkInScenario::GenTlane() {
         rear_max_x = std::max(rear_max_x, obstacle_point_slot.x());
         // ILOG_INFO<<"rear_obs_condition!");
       }
-      double curb_lower = 0.5;
-      double curb_upper = slot_length - 0.5;
+      double curb_lower = 0.3;
+      double curb_upper = slot_length - 0.3;
       if(t_lane_.is_inside_rigid == true){
         curb_lower = 0.0;
         curb_upper = slot_length;
       }
-      const bool curb_condition =
+      bool  curb_condition =
           pnc::mathlib::IsInBound(obstacle_point_slot.x(), curb_lower,
                                   curb_upper ) &&
           (obstacle_point_slot.y() * side_sgn <=
@@ -2361,21 +2365,24 @@ const bool ParallelParkInScenario::GenTlane() {
             pnc::mathlib::IsInBound(obstacle_point_slot.y(),
                                     kCurbYMagIdentification,
                                     -half_slot_width * side_sgn);
-        if (curb_condition && !(cat_to_curb_condition &&
-            obstacle_point_set.first ==
-                static_cast<size_t>(ApaObsScemanticType::CAR))) {
-          if(is_slot_empty_enough){
-            continue;
-          }
-          curb_count++;
-          if (side_sgn > 0.0) {
-            curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-          } else {
-            curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
-          }
-
-          // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+        if (! is_slot_empty_enough) {
+          curb_condition =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), obs_slot_rear_pt.x(),
+                                  obs_slot_front_pt.x() ) &&
+          (obstacle_point_slot.y() * side_sgn <=
+           - half_slot_width + 0.3);  // kCurbInitialOffset
         }
+
+        if (curb_condition) {
+            curb_count++;
+            if (side_sgn > 0.0) {
+              curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+            } else {
+              curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+            }
+
+            // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+          }
       }
 
       const bool front_parallel_line_condition =
@@ -2995,10 +3002,13 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   // apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
   //     filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
-  const double slot_side_y =
+  double slot_side_y =
       slot_side_sgn > 0.0
           ? std::max(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y())
           : std::min(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y());
+  if (enable_pa_park_) {
+    slot_side_y = t_lane_.corner_inside_slot.y();
+  }
   ILOG_INFO << "1 channel_y =" << t_lane_.channel_y;
   std::vector<Eigen::Vector2d> origin_channel_obs_vec;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
@@ -4142,6 +4152,11 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 void ParallelParkInScenario::UpdatePostProcessStatus(
     PathPlannerResult pathplan_result) {
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
+    auto pa_param = parallel_path_planner_.GetPAParams();
+    parallel_path_planner_ = previous_parallel_path_planner_;
+    if (enable_pa_park_) {
+      parallel_path_planner_.SetPAParams(pa_param);
+    }
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_GEARCHANGE);
       delay_check_finish_ = true;
@@ -4671,10 +4686,27 @@ const bool ParallelParkInScenario::SetAstarRequest(
   return true;
 }
 
+bool ParallelParkInScenario::IsReplayRequest() {
+  const EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (ego_info.slot_type == SlotType::PARALLEL &&
+      ego_info.history_slot_type != SlotType::PARALLEL) {
+    return true;
+  }
+  if (ego_info.id != ego_info.history_id) {
+    return true;
+  }
+  return false;
+}
+
 const PathPlannerResult ParallelParkInScenario::PubResponseForScenarioTry(
     const EgoInfoUnderSlot& ego_info) {
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
 
+  if (IsReplayRequest()) {
+    ThreadClearState();
+  }
   UpdateThreadPath();
   // check result
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
@@ -5248,8 +5280,15 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
   ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
   ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
 
+  bool is_in_slot =
+      is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot;
+  if (enable_pa_park_) {
+    if (is_start_pose_in_slot && !is_end_pose_in_slot) {
+      is_in_slot = is_ego_in_slot;
+    }
+  }
   // totally in slot
-  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
+  if (is_in_slot) {
     ILOG_INFO << " totally in slot!";
     safe_uss_remain_dist =
         enable_pa_park_
@@ -6786,6 +6825,27 @@ bool ParallelParkInScenario::UseLastPathForAstar() {
                           frame_.gear_command);
 
   return true;
+}
+
+void ParallelParkInScenario::AddMultiFrameResult(
+    const PathPlannerResult& result) {
+  multi_frame_result_.emplace_back(result);
+  if (multi_frame_result_.size() > 8) {
+    multi_frame_result_.erase(multi_frame_result_.begin());
+  }
+}
+
+bool ParallelParkInScenario::CalcMultiFrameResult() {
+  if (multi_frame_result_.size() < 8) {
+    return false;
+  }
+  int success_count = 0;
+  for (const auto& res : multi_frame_result_) {
+    if (res != PathPlannerResult::PLAN_FAILED) {
+      ++success_count;
+    }
+  }
+  return (success_count > (multi_frame_result_.size() - 2));
 }
 
 }  // namespace apa_planner

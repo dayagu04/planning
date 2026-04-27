@@ -33,6 +33,7 @@ void RuleBasedPredictor::Execute(
     }
 
     if (obstacle.Speed() < 0.3) {
+      obstacle.ClearPredictTraj();
       continue;
     }
 

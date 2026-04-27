@@ -5,7 +5,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-
+#include <optional>
 #include "common_platform_type_soc.h"
 #include "define/geometry.h"
 #include "ilqr_define.h"

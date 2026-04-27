@@ -58,9 +58,7 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
 
   // check failed
   if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
@@ -142,9 +140,7 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
 
   // check failed
   if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 

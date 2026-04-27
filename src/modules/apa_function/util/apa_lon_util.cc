@@ -1,6 +1,7 @@
 #include "apa_lon_util.h"
-#include "pose2d.h"
+
 #include "debug_info_log.h"
+#include "pose2d.h"
 #include "transform2d.h"
 
 namespace planning {
@@ -9,8 +10,8 @@ std::vector<std::vector<Eigen::Vector2d>> GetODTraj() {
   std::vector<std::vector<Eigen::Vector2d>> trajs;
   trajs.clear();
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -30,7 +31,7 @@ std::vector<std::vector<Eigen::Vector2d>> GetODTraj() {
 
   std::vector<Eigen::Vector2d> traj;
   for (int i = 0; i < size; i++) {
-    const common::ParkPredictTraj &proto_traj =
+    const common::ParkPredictTraj& proto_traj =
         speed_debug->mutable_predict_traj_set()->trajs(i);
 
     traj.clear();
@@ -90,18 +91,20 @@ const bool IsODLivingThings(const iflyauto::ObjectType type) {
   return false;
 }
 
-const bool IsDynamicLivingThings(
-                                 const iflyauto::ObjectType type) {
-  if (IsODLivingThings(type)) {
+const bool IsDynamicLivingThings(const iflyauto::ObjectMotionType motion_type,
+                                 const iflyauto::ObjectType object_type) {
+  if (motion_type != iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC &&
+      IsODLivingThings(object_type)) {
     return true;
   }
 
   return false;
 }
 
-const bool IsDynamicODVeh(const double v,
-                          const iflyauto::ObjectType type) {
-  if (IsODVeh(type)) {
+const bool IsDynamicODVeh(const iflyauto::ObjectMotionType motion_type,
+                          const iflyauto::ObjectType object_type) {
+  if (motion_type != iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC &&
+      IsODVeh(object_type)) {
     return true;
   }
 
@@ -112,8 +115,8 @@ std::vector<Eigen::VectorXd> TransformDpSpeedConstraints() {
   std::vector<Eigen::VectorXd> speed_debug_data;
   Eigen::VectorXd v(7);
 
-  auto &debug = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  auto& debug = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -170,8 +173,8 @@ std::vector<Eigen::Vector2d> TransformQPSpeedConstraints() {
   Eigen::Vector2d v;
   v.setZero();
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -203,8 +206,8 @@ std::vector<Eigen::Vector2d> TransformQPSpeedConstraints() {
 }
 
 const double GetDebugRefCruiseSpeed() {
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -224,8 +227,8 @@ std::vector<Eigen::VectorXd> TransformDPSpeedOptimizationData() {
   std::vector<Eigen::VectorXd> speed_profile;
   Eigen::VectorXd v(5);
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -253,8 +256,8 @@ std::vector<Eigen::VectorXd> TransformQPSpeedOptimizationData() {
   std::vector<Eigen::VectorXd> speed_profile;
   Eigen::VectorXd v(5);
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -282,8 +285,8 @@ std::vector<Eigen::VectorXd> TransformStopSigns() {
   std::vector<Eigen::VectorXd> stop_signs;
   stop_signs.clear();
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
@@ -329,8 +332,8 @@ std::vector<Eigen::VectorXd> TransformJLTSpeedData() {
   std::vector<Eigen::VectorXd> speed_profile;
   Eigen::VectorXd point(5);
 
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug* speed_debug = nullptr;
   if (debug->has_apa_speed_debug()) {
     speed_debug = debug->mutable_apa_speed_debug();
   }
