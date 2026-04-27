@@ -26,6 +26,7 @@ class ClosestInPathVehicleDecider : public Task {
  private:
   bool MakeDecison();
   bool CipvDecision();
+  bool CipvDecisionForHpp();
   bool DetermineIfConeBucketCIPV();
   void MakeCipvInfo(const int32_t cipv_id, double* const relative_s,
                     double* const v_frenet, double* const v_fusion_frenet,
