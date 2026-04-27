@@ -535,6 +535,11 @@ void MebCore::SetMebOutputInfo(void) {
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
     }
+
+    if (GetContext.get_param()->meb_request_status_const_switch == true) {
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+          GetContext.get_param()->meb_request_status_const;
+    }
 #endif
   }
 }  // namespace meb_core
@@ -544,7 +549,7 @@ void MebCore::Log(void) {
   auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260409);
+  JSON_DEBUG_VALUE("meb_version", (double)260413);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);

@@ -537,9 +537,9 @@ void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeGearSwitchCost(
       std::fabs(geometry_lib::NormalizeAngle(cur_theta - end_theta)) *
       common_math::kRad2DegF;
 
-  cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
-      gear_switch_pose, cur_gear, score_param.gear_change_penalty,
-      score_param.length_penalty);
+  cost.cur_gear_switch_pose_cost =
+      CalcGearChangePoseCost(gear_switch_pose, score_param.gear_change_penalty,
+                             score_param.length_penalty);
 
   const float gear_change_theta = gear_switch_pose.GetTheta();
   const float gear_change_theta_err =
@@ -579,16 +579,15 @@ void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeGearSwitchCost(
 
   if (curve_node.NextGearSwitchNode() != nullptr) {
     const auto& next_gear_switch_pose = curve_node.GetNextGearSwitchPose();
-    const AstarPathGear next_gear = ReversePathGear(cur_gear);
     cost.next_gear_switch_pose_cost = CalcGearChangePoseCost(
-        next_gear_switch_pose, next_gear, score_param.gear_change_penalty,
+        next_gear_switch_pose, score_param.gear_change_penalty,
         score_param.length_penalty);
   }
 }
 
 const float
 HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseHeuDist(
-    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+    const common_math::PathPt<float>& gear_switch_pose,
     const float gear_switch_penalty) {
   const auto& target_pose = request_.ego_info_under_slot.target_pose;
   const float max_heu_dist = 2.0f * gear_switch_penalty;
@@ -610,7 +609,8 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseHeuDist(
     cost = gear_change_cost * lpl_path.gear_change_num +
            length_cost * lpl_path.total_length +
            kappa_change_cost * lpl_path.kappa_change;
-    if (IsGearDifferent(ReversePathGear(gear), lpl_path.cur_gear)) {
+    if (IsGearDifferent(ReversePathGear(gear_switch_pose.gear),
+                        lpl_path.cur_gear)) {
       cost += 6.0f * gear_change_cost;
     }
     if (cost < min_cost) {
@@ -630,7 +630,7 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseHeuDist(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     std::swap(drive_heu_pos_x, reverse_heu_pos_x);
   }
-  if (gear == AstarPathGear::DRIVE) {
+  if (gear_switch_pose.gear == AstarPathGear::DRIVE) {
     heu_pos.x() = drive_heu_pos_x;
   } else {
     heu_pos.x() = reverse_heu_pos_x;
@@ -661,11 +661,11 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseBaseCost(
 
 const float
 HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseCollisionCost(
-    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+    const common_math::PathPt<float>& gear_switch_pose,
     const float length_penalty) const {
   if (col_det_interface_ptr_->GetEDTColDetPtr()
           ->Update(std::vector<common_math::PathPt<float>>{gear_switch_pose},
-                   0.4f, 0.1f, 0.1f, gear)
+                   0.4f, 0.1f, 0.1f)
           .col_flag) {
     return 0.5f * length_penalty;
   }
@@ -690,7 +690,7 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseRangeCost(
 
 const float
 HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPosePreferXCost(
-    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+    const common_math::PathPt<float>& gear_switch_pose,
     const float gear_switch_penalty) const {
   const auto& target_pose = request_.ego_info_under_slot.target_pose;
 
@@ -706,10 +706,12 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPosePreferXCost(
     std::swap(min_drive_x, min_reverse_x);
   }
 
-  const float idel_x =
-      gear == AstarPathGear::DRIVE ? drive_idel_x : reverse_idel_x;
-  const float min_x =
-      gear == AstarPathGear::DRIVE ? min_drive_x : min_reverse_x;
+  const float idel_x = gear_switch_pose.gear == AstarPathGear::DRIVE
+                           ? drive_idel_x
+                           : reverse_idel_x;
+  const float min_x = gear_switch_pose.gear == AstarPathGear::DRIVE
+                          ? min_drive_x
+                          : min_reverse_x;
 
   if (gear_switch_pose.GetX() < min_x) {
     return 2.0f * gear_switch_penalty;
@@ -721,19 +723,19 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPosePreferXCost(
 }
 
 const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
-    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+    const common_math::PathPt<float>& gear_switch_pose,
     const float gear_switch_penalty, const float length_penalty) {
   const float heu_dist =
-      CalcGearSwitchPoseHeuDist(gear_switch_pose, gear, gear_switch_penalty);
+      CalcGearSwitchPoseHeuDist(gear_switch_pose, gear_switch_penalty);
 
   float gear_switch_pose_cost =
       CalcGearSwitchPoseBaseCost(gear_switch_pose, heu_dist, length_penalty);
   gear_switch_pose_cost +=
-      CalcGearSwitchPoseCollisionCost(gear_switch_pose, gear, length_penalty);
+      CalcGearSwitchPoseCollisionCost(gear_switch_pose, length_penalty);
   gear_switch_pose_cost +=
       CalcGearSwitchPoseRangeCost(gear_switch_pose, gear_switch_penalty);
-  gear_switch_pose_cost += CalcGearSwitchPosePreferXCost(gear_switch_pose, gear,
-                                                         gear_switch_penalty);
+  gear_switch_pose_cost +=
+      CalcGearSwitchPosePreferXCost(gear_switch_pose, gear_switch_penalty);
 
   return gear_switch_pose_cost;
 }

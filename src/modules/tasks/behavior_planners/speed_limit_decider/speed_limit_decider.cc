@@ -135,6 +135,7 @@ constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
 constexpr double kRoundaboutQuitRecoverCounter = 3;
 constexpr double kRoadBoundarySearchDistanceOffset = 25.0;  // Offset distance added to search_distance_min for road boundary search (m)
 constexpr double kLateralRatioThreshold = 0.3;
+constexpr double kMinLateralRatioThreshold = 0.15;
 constexpr double kAvoidAgentMinSpeed = 2.0;
 constexpr double kLateralCollisionCheckThreshold = 0.5;
 constexpr double kLateralAccPredictionAccelTime = 2.0;  // Acceleration time for lateral acc prediction when min_v_limit >= v_ego (s)
@@ -2803,9 +2804,10 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double min_s = agent_s - avoid_agent->length() * 0.5 - ego_s -
                    vehicle_param.front_edge_to_rear_axle;
 
-    if (min_s < 0.0) {
+    if (min_s <= 0.0) {
       continue;
     }
+    
     const auto &agent_corners = avoid_agent->box().GetAllCorners();
     double agent_min_l = std::numeric_limits<double>::max();
     double agent_max_l = -std::numeric_limits<double>::max();
@@ -2837,7 +2839,8 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
       continue;
     }
 
-    if (!avoid_agent->is_truck()) {
+    if (!avoid_agent->is_truck() && !avoid_agent->is_vru() &&
+        lateral_threshold > kMinLateralRatioThreshold * lane_width) {
       const auto agent_matched_path_point =
           current_lane_coord->GetPathPointByS(agent_s);
       const double agent_matched_lane_theta = agent_matched_path_point.theta();

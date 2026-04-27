@@ -97,7 +97,7 @@ void EDTCollisionDetector::AddObsToOGM() {
   // add pt cloud
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;
   for (const auto &obs_pair : obs_map) {
-    const ApaObstacle& obs = obs_pair.second;
+    const ApaObstacle &obs = obs_pair.second;
     ApaObsHeightType obs_height_type = obs.GetObsHeightType();
     if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
       obs_height_type = ApaObsHeightType::HIGH;
@@ -624,8 +624,7 @@ const ColResult EDTCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint> &pt_vec,
     const double body_lat_buffer, const double lon_buffer,
     const bool need_cal_obs_dist, const double max_circle_buffer,
-    const bool special_process_mirror, const double mirror_lat_buffer,
-    const AstarPathGear gear) {
+    const bool special_process_mirror, const double mirror_lat_buffer) {
   // The input PathPoint s must be assigned a value
   col_res_.Reset();
   const size_t N = pt_vec.size();
@@ -642,10 +641,13 @@ const ColResult EDTCollisionDetector::Update(
 
   path_pt_vec_ = pt_vec;
 
-  if (gear == AstarPathGear::DRIVE || gear == AstarPathGear::REVERSE) {
+  const uint8_t gear = path_pt_vec_.back().gear;
+
+  if (gear == geometry_lib::SEG_GEAR_DRIVE ||
+      gear == geometry_lib::SEG_GEAR_REVERSE) {
     Eigen::Vector2d heading_vec =
         geometry_lib::GenHeadingVec(path_pt_vec_.back().heading);
-    if (gear == AstarPathGear::REVERSE) {
+    if (gear == geometry_lib::SEG_GEAR_REVERSE) {
       heading_vec *= -1.0;
     }
     double s = 0.0, ds = 0.1;
@@ -789,8 +791,8 @@ const ColResult EDTCollisionDetector::Update(
 const ColResultF EDTCollisionDetector::Update(
     const std::vector<common_math::PathPt<float>> &pt_vec,
     const float lon_buffer, const float body_lat_buffer,
-    const float mirror_lat_buffer, const AstarPathGear gear,
-    const bool need_cal_obs_dist, const float max_circle_buffer) {
+    const float mirror_lat_buffer, const bool need_cal_obs_dist,
+    const float max_circle_buffer) {
   col_res_f_.Reset();
   if (pt_vec.empty()) {
     return col_res_f_;
@@ -802,6 +804,8 @@ const ColResultF EDTCollisionDetector::Update(
                    mirror_lat_buffer);
 
   const float origin_length = pts_.back().s;
+
+  const AstarPathGear gear = pts_.back().gear;
 
   if (lon_buffer_ > 0.01f &&
       (gear == AstarPathGear::DRIVE || gear == AstarPathGear::REVERSE)) {

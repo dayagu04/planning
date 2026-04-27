@@ -233,7 +233,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
           front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_CTASH_BARREL ||
           front_vehicle_iter->second->type() ==
-              iflyauto::OBJECT_TYPE_CYLINDER_BARRIER ||
+              iflyauto::OBJECT_TYPE_TRAFFIC_BARREL ||
           front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
@@ -261,12 +261,14 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
         if (!GetOriginLaneWidthByCone(base_lane, cone_s, cone_l, true,
                                       &dist_to_left_boundary)) {
           is_cone_lane_change_situation_ = false;
+          is_cone_must_lane_change_situation_ = false;
           return;
         }
         double dist_to_right_boundary;
         if (!GetOriginLaneWidthByCone(base_lane, cone_s, cone_l, false,
                                       &dist_to_right_boundary)) {
           is_cone_lane_change_situation_ = false;
+          is_cone_must_lane_change_situation_ = false;
           return;
         }
         auto point = ConePoint(front_vehicle_iter->first, obs_cart_point.x,
@@ -387,8 +389,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   if (all_cone_cluster_min_lateral_distance >
       kConeLaneChangelateralDistancethre) {
     is_cone_must_lane_change_situation_ = false;
+    is_cone_lane_change_situation_ = false;
   }
-  // if all clusters is far away from cernter line, counter--
+  // if all clusters is far away from center line, counter--
   if (!did_break) {
     cone_alc_trigger_counter_ =
         std::max(cone_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);

@@ -60,6 +60,8 @@ void LaneChangeRequestManager::FinishRequest() {
   int_request_is_allowed_lc_in_cone_scene_ = true;
 }
 
+
+
 bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   ILOG_INFO << "LaneChangeRequestManager.Update()";
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
@@ -120,6 +122,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                                      ->GetEgoDistanceToStopline();
   const double ego_v =
       session_->environmental_model().get_ego_state_manager()->ego_v();
+  StateMachineSplitSelectingStatus split_selecting_status = lane_change_decider_output.split_selecting_status;
 
   if (cur_lane != nullptr && is_merge_region) {
     const auto& curr_reference_path =
@@ -423,31 +426,25 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
   const bool is_exist_interactive_select_split =
       virtual_lane_manager->get_is_exist_interactive_select_split();
-  const bool split_lane_on_left_side_before_interactive =
-      virtual_lane_manager->get_split_lane_on_left_side_before_interactive();
-  const bool split_lane_on_right_side_before_interactive =
-      virtual_lane_manager->get_split_lane_on_right_side_before_interactive();
-  const bool other_split_lane_left_side =
-      virtual_lane_manager->get_other_split_lane_left_side();
-  const bool other_split_lane_right_side =
-      virtual_lane_manager->get_other_split_lane_right_side();
+  // const bool split_lane_on_left_side_before_interactive =
+  //     virtual_lane_manager->get_split_lane_on_left_side_before_interactive();
+  // const bool split_lane_on_right_side_before_interactive =
+  //     virtual_lane_manager->get_split_lane_on_right_side_before_interactive();
+  // const bool other_split_lane_left_side =
+  //     virtual_lane_manager->get_other_split_lane_left_side();
+  // const bool other_split_lane_right_side =
+  //     virtual_lane_manager->get_other_split_lane_right_side();
   bool is_allowed_select_split =
       (lc_status == kLaneKeeping || lc_status == kLaneChangePropose);
-  if (((other_split_lane_left_side && request_ == LEFT_CHANGE) ||
-       (other_split_lane_right_side && request_ == RIGHT_CHANGE) ||
-       (split_lane_on_left_side_before_interactive &&
-        request_ == LEFT_CHANGE) ||
-       (split_lane_on_right_side_before_interactive &&
-        request_ == RIGHT_CHANGE) ||
-       is_exist_interactive_select_split) &&
-      request_source_ == INT_REQUEST && is_allowed_select_split) {
+  if (request_source_ == INT_REQUEST && is_allowed_select_split &&
+      (split_selecting_status != StateMachineSplitSelectingStatus::kNonSelecting || is_exist_interactive_select_split)) {
     int_request_.Finish();
     request_ = NO_CHANGE;
     request_source_ = NO_REQUEST;
     target_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
   }
-  if (!is_exist_interactive_select_split &&
-      last_frame_is_exist_interactive_select_split_) {
+  if (last_frame_interactive_select_split_status_ == StateMachineSplitSelectingStatus::kSelectingComplete &&
+      split_selecting_status != StateMachineSplitSelectingStatus::kSelectingComplete) {
     int_request_.finish_and_clear();
     request_ = NO_CHANGE;
     request_source_ = NO_REQUEST;
@@ -455,8 +452,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
     int_lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
   }
-  last_frame_is_exist_interactive_select_split_ =
-      is_exist_interactive_select_split;
+  last_frame_interactive_select_split_status_ =
+      split_selecting_status;
 
   // if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
   //   int target_lane_order_id =

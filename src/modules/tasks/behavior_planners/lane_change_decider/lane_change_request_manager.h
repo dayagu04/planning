@@ -33,6 +33,7 @@ class LaneChangeRequestManager {
 
   void FinishRequest();
 
+
   bool Update(int lc_status, const bool hd_map_valid);
 
   /// @brief 获取换道请求开始和完成的时间
@@ -127,7 +128,7 @@ class LaneChangeRequestManager {
   std::uint8_t int_lane_change_cmd_ = 0;
   bool trigger_lane_change_cancel_ = false;
   bool int_request_is_allowed_lc_in_cone_scene_ = true;
-  bool last_frame_is_exist_interactive_select_split_ = false;
+  StateMachineSplitSelectingStatus last_frame_interactive_select_split_status_ = kNonSelecting;
 };
 
 }  // namespace planning

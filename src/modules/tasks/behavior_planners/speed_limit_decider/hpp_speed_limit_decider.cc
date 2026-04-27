@@ -92,7 +92,7 @@ bool HPPSpeedLimitDecider::Execute() {
 
   CalculateIntersectionRoadLimit();
 
-  // 构建平滑限速曲线
+  // construct a smooth speed limit curve
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -257,14 +257,14 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     return;
   }
 
-  // --- 遍历绕避 Agent ---
   for (const auto avoid_id : hpp_lateral_output.avoid_ids) {
     const auto* agent = agent_manager->GetAgent(avoid_id);
     if (!agent) {
       continue;
     }
 
-    // 1. 纵向过滤：障碍物需在自车前方
+    // 1. longitudinal filtering: Obstacles must be ahead of the self-driving
+    // vehicle
     double agent_s = 0.0, agent_l = 0.0;
     const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
     if (!frenet_coord) {
@@ -274,7 +274,8 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 障碍物后沿到自车头部的距离
+    // the distance from the rear edge of the obstacle to the front of the
+    // self-driving vehicle
     const double longitudinal_dist =
         agent_s - 0.5 * agent->length() - ego_head_s;
     if (longitudinal_dist < 0.0) {

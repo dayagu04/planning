@@ -719,8 +719,6 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
 
   double search_time = 0.0;
 
-  std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
-
   traj_candidates_size_ = 3;
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
        i++) {
@@ -765,7 +763,7 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
                                      request_.real_goal_stack[idx], map_bounds_,
                                      &traj_candidates_[idx]);
           if (traj_candidates_[idx].x.size() > 5) {
-            feasible_directions_[idx] = true;
+            stable_feasible_directions_[idx] = true;
           }
         }
       } else {
@@ -839,6 +837,12 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
   size_t path_index = 0;
   constexpr float kOffsetX = 0.3f;
   traj_candidates_size_ = 9;
+
+  // Clear all candidate trajectories to avoid using stale data from previous frame
+  for (auto& traj : traj_candidates_) {
+    traj.Clear();
+  }
+
   ILOG_INFO << "lat_safe_buffer_outside "
             << config_.safe_buffer.lat_safe_buffer_outside.size();
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
@@ -919,7 +923,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   // todo: 需要限制搜索时间
   ILOG_INFO << "scenario try planning";
 
-  std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
+  std::fill(stable_feasible_directions_.begin(),
+            stable_feasible_directions_.end(), false);
 
   if (request_.direction_request_size > 1) {
     ParkingDirectionAttempt(advised_lat_buffer_inside);
@@ -1129,6 +1134,13 @@ void HybridAStarInterface::GenerateRefLine() {
 
 void HybridAStarInterface::ParkingDirectionAttempt(
     const float& advised_lat_buffer_inside) {
+  // Total time budget for all directions to prevent timeout
+  const double total_time_budget_ms = config_.max_search_time_ms;
+  // Per-direction time limit: if a direction is hard to compute, skip it early
+  const double per_direction_time_limit_ms =
+      config_.max_search_time_ms_scenario_try_park_out;  // 300ms
+  double accumulated_search_time_ms = 0.0;
+
   for (int8_t i = 0; i < request_.direction_request_size; i++) {
     ILOG_INFO << "***************** [ " << static_cast<int>(i)
               << " ] try, dir :  "
@@ -1172,10 +1184,37 @@ void HybridAStarInterface::ParkingDirectionAttempt(
       target_regulator_goal_ = request_.real_goal_stack[i];
     }
 
+    // Set per-direction time limit to skip hard-to-compute directions early
+    hybrid_astar_->SetSearchTime(per_direction_time_limit_ms);
     hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
                                &traj_candidates_[i]);
-    if (traj_candidates_[i].x.size() > 5 && i < feasible_directions_.size()) {
-      feasible_directions_[i] = true;
+
+    // Update feasibility with temporal filtering to prevent flickering
+    bool this_frame_feasible =
+        (traj_candidates_[i].x.size() > 5 &&
+         i < stable_feasible_directions_.size());
+
+    if (this_frame_feasible) {
+      feasible_confirm_count_[i] = std::min<int8_t>(
+          feasible_confirm_count_[i] + 1, kFeasibleConfirmThresh);
+    } else {
+      feasible_confirm_count_[i] = std::max<int8_t>(
+          feasible_confirm_count_[i] - 1, kInfeasibleConfirmThresh);
+    }
+
+    if (feasible_confirm_count_[i] >= kFeasibleConfirmThresh) {
+      stable_feasible_directions_[i] = true;
+    } else if (feasible_confirm_count_[i] <= kInfeasibleConfirmThresh) {
+      stable_feasible_directions_[i] = false;
+    }
+
+    // Check accumulated time to prevent timeout
+    accumulated_search_time_ms += traj_candidates_[i].time_ms;
+    if (accumulated_search_time_ms > total_time_budget_ms) {
+      ILOG_INFO << "ParkingDirectionAttempt timeout, accumulated time: "
+                << accumulated_search_time_ms << " ms, processed " << (i + 1)
+                << " directions";
+      break;
     }
   }
 }

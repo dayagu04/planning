@@ -271,8 +271,6 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
           front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_TRAFFIC_TEM_SIGN &&
           front_vehicle_iter->second->type() !=
-              iflyauto::OBJECT_TYPE_CYLINDER_BARRIER &&
-          front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_CONSTRUCTION_SIGNS) {
         continue;
       }

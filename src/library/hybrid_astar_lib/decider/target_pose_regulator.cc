@@ -558,12 +558,6 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
     }
   }
 
-  // tf.SetBasePose(pose);
-
-  // edt->DistanceCheckForPoint(&dist, &tf, gear);
-
-  // min_dist = std::min(min_dist, dist);
-
   return min_dist;
 }
 

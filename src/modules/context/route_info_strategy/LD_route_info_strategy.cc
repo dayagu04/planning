@@ -1,5 +1,6 @@
 #include "LD_route_info_strategy.h"
 
+#include <pthread.h>
 #include <iostream>
 #include <utility>
 
@@ -22,6 +23,48 @@ LDRouteInfoStrategy::LDRouteInfoStrategy(
     const planning::framework::Session* session)
     : RouteInfoStrategy(config_builder, session) {
   local_view_ = &session_->environmental_model().get_local_view();
+  // 启动常驻工作线程
+  worker_thread_ = std::thread(&LDRouteInfoStrategy::MapLoadWorker, this);
+  pthread_setname_np(worker_thread_.native_handle(), "Pln_SPMapLoad_1");
+}
+
+LDRouteInfoStrategy::~LDRouteInfoStrategy() {
+  // 通知工作线程退出
+  {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    worker_stop_ = true;
+  }
+  map_load_cv_.notify_one();
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
+}
+
+void LDRouteInfoStrategy::MapLoadWorker() {
+  while (true) {
+    std::unique_lock<std::mutex> lock(map_load_mutex_);
+    // 等待任务或退出信号
+    map_load_cv_.wait(lock, [this] { return has_pending_task_ || worker_stop_; });
+
+    if (worker_stop_) {
+      break;
+    }
+
+    if (has_pending_task_) {
+      // 复制任务数据，释放锁后执行耗时操作
+      iflymapdata::sdpro::MapData map_data = std::move(pending_map_data_);
+      has_pending_task_ = false;
+      lock.unlock();
+
+      // 执行耗时的地图加载
+      int result = pending_ld_map_.LoadMapFromProto(map_data);
+
+      // 更新结果
+      lock.lock();
+      load_result_ = result;
+      load_done_ = true;
+    }
+  }
 }
 
 void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
@@ -94,12 +137,9 @@ bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
   }
   // 计算车道减少信息
   double search_distance = 500.0;
-  if (!merge_info_vec_.empty()) {
-    search_distance = std::min(search_distance, merge_info_vec_[0].second);
-  }
-  if (!split_info_vec_.empty()) {
-    search_distance = std::min(search_distance, split_info_vec_[0].second);
-  }
+  search_distance =
+      std::min(search_distance, route_info_output_.mlc_decider_scene_type_info
+                                    .dis_to_link_topo_change_point);
   CalculateFrontMergePointInfo(search_distance);
 
   CalculateFeasibleLaneByMergePoint(feasible_lane_graph_);
@@ -129,12 +169,30 @@ VirtualLanesRouteCost LDRouteInfoStrategy::GetVirtualLaneCostOnRoute(
 bool LDRouteInfoStrategy::UpdateLDMap() {
   const auto& ld_map_info = local_view_->sdpro_map_info;
   const auto ld_map_info_current_timestamp = ld_map_info.header().timestamp();
-  if (ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
-    int res = ld_map_.LoadMapFromProto(ld_map_info);
-    if (res == 0) {
-      ldmap_valid_ = true;
-      ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
+
+  // 检查后台加载是否完成
+  if (is_loading_) {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    if (load_done_) {
+      if (load_result_ == 0) {
+        ld_map_ = std::move(pending_ld_map_);
+        ldmap_valid_ = true;
+        ld_map_info_updated_timestamp_ = pending_timestamp_;
+      }
+      is_loading_ = false;
+      load_done_ = false;
     }
+  }
+
+  // 时间戳变化且当前没有正在进行的加载，则启动新的异步加载
+  if (!is_loading_ && ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    pending_timestamp_ = ld_map_info_current_timestamp;
+    pending_map_data_ = ld_map_info;  // 复制 proto 数据  // TODO：存在大内存复制，可以考虑优化
+    has_pending_task_ = true;
+    load_done_ = false;
+    is_loading_ = true;
+    map_load_cv_.notify_one();  // 唤醒工作线程
   }
 
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
@@ -165,6 +223,8 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   route_info_output_.current_segment_passed_distance = ego_on_cur_link_s_;
   route_info_output_.is_update_segment_success = true;
   route_info_output_.is_in_tunnel = ld_map_.isTunnel(current_link_->link_type());
+  route_info_output_.sum_dis_to_last_link_split_point =
+      CalculateDisToLastLinkSplitPoint(current_link_);
 
   const auto& sdpro_map_info = local_view_->sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
@@ -178,18 +238,24 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   CalculateSplitInfo();
 
   // 根据前方的split信息判断，自车是否走错路了
-  if (IsMissedNaviRoute()) {
-    route_info_output_.reset();
-    route_info_output_.is_missed_navi_route = true;
-    return false;
-  }
+  // if (IsMissedNaviRoute()) {
+  //   route_info_output_.reset();
+  //   route_info_output_.is_missed_navi_route = true;
+  //   return false;
+  // }
 
   // 一定要先计算split info，再计算ramp info
   CalculateRampInfo();
 
-  CaculateDistanceToRoadEnd(current_link_, ego_on_cur_link_s_);
+  CalculateDistanceToRoadEnd(current_link_, ego_on_cur_link_s_);
 
-  CaculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
+  CalculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
+
+  CalculateDistanceToServiceArea(current_link_, ego_on_cur_link_s_);
+
+  CalculateDistanceToNOAEnd(current_link_, ego_on_cur_link_s_);
+
+  UpdateDistanceToNOAExit();
 
   return true;
 }
@@ -461,8 +527,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
       (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
-      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0) {
-
+      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0 ||
+      (current_link_->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
@@ -1620,7 +1686,10 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
           route_info_output_.ego_seq ==
           current_link_->lane_num() - lane->sequence() + 1;
       bool is_accelerate_lane = IsAccelerateLane(lane) || IsEntryLane(lane);
-      if (is_accelerate_lane && is_ego_on_this_lane) {
+      bool is_leftest = false;
+      bool is_rightest = false;
+      if (is_accelerate_lane && is_ego_on_this_lane &&
+          IsTheLaneOnSide(lane, is_leftest, is_rightest)) {
         route_info_output_.is_ego_on_accelerate_lane = true;
         break;
       }
@@ -1785,8 +1854,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    bool cur_lane_on_route_link_base_map_link =
-        IsCurrentLaneOnRouteLink(feasible_lane_graph);
+    // bool cur_lane_on_route_link_base_map_link =
+    //     IsCurrentLaneOnRouteLink(feasible_lane_graph);
 
     // const bool lane_type_condition =
     //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
@@ -1796,8 +1865,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
         !forward_in_right_most && is_nearing_ramp && lane_type_condition &&
-        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route &&
-        !cur_lane_on_route_link_base_map_link) {
+        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
@@ -1807,8 +1875,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
       lc_num_task.emplace_back(1);
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp &&
-               !current_on_route && !forward_in_left_most &&
-               !cur_lane_on_route_link_base_map_link) {
+               !current_on_route && !forward_in_left_most) {
       //split场景，目标车道在最左边的情况，一直向左变道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
       if (ego_seq == avoid_link_merge_lane_seq) {
@@ -1816,7 +1883,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
 
       lc_num_task.emplace_back(-1);
-    } else if (current_on_route || cur_lane_on_route_link_base_map_link) {
+    } else if (current_on_route) {
       continue;
     } else {
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
@@ -2511,47 +2578,66 @@ std::pair<FPPoint, FPPoint> LDRouteInfoStrategy::CalculateSplitExchangeAreaFP(
 
   const iflymapdata::sdpro::LinkInfo_Link* iter_link = split_link;
   double start_fp_to_split = std::numeric_limits<double>::max();
-  // double sum_dis = 0.0;
-  // const double kMaxSearchLength = 500.0;
   uint64 start_fp_link_id = 0;
   std::vector<uint64> start_fp_lane_ids;
   iflymapdata::sdpro::FeaturePoint end_FP;
 
-  // while (iter_link) {
-  //   const auto& pre_link = ld_map_.GetPreviousLinkOnRoute(iter_link->id());
-  //   if (pre_link == nullptr) {
-  //     break;
-  //   }
-  //   if (pre_link->predecessor_link_ids_size() > 1 ||
-  //       pre_link->successor_link_ids_size() > 1) {
-  //     // link级别的拓扑已经发生变化，还没找到就认为没有fp
-  //     break;
-  //   }
-  //   sum_dis = sum_dis + iter_link->length() * 0.01;
+  const bool is_highway =
+      split_link->link_class() == iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
+  constexpr double kHighwaySearchDistance = 500.0;
+  constexpr double kUrbanSearchDistance = 300.0;
+  const double kMaxSearchLength =
+      is_highway ? kHighwaySearchDistance : kUrbanSearchDistance;
+  double sum_dis = split_link->length() * 0.01;
+  iter_link = ld_map_.GetPreviousLinkOnRoute(split_link->id());
+  while (iter_link) {
+    if (sum_dis > kMaxSearchLength) {
+      break;
+    }
 
-  //   if (sum_dis > kMaxSearchLength) {
-  //     break;
-  //   }
+    bool is_widen_link = false;
+    for (const auto lane_id : iter_link->lane_ids()) {
+      const auto* lane_info = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane_info == nullptr) {
+        continue;
+      }
+      if (lane_info->successor_lane_ids_size() > 1) {
+        bool is_leftest = false;
+        bool is_rightest = false;
+        if (!IsTheLaneOnSide(lane_info, is_leftest, is_rightest)) {
+          continue;
+        }
 
-  //   if (pre_link->lane_ids_size() < iter_link->lane_ids_size()) {
-  //     start_fp_to_split = sum_dis;
-  //     start_fp_link_id = iter_link->id();
-  //     start_fp_lane_ids.reserve(iter_link->lane_ids_size());
-  //     for (auto lane_id : iter_link->lane_ids()) {
-  //       start_fp_lane_ids.emplace_back(lane_id);
-  //     }
-  //     break;
-  //   }
+        const bool direction_match = (split_dir == SPLIT_LEFT && is_leftest) ||
+                                     (split_dir == SPLIT_RIGHT && is_rightest);
+        if (direction_match) {
+          is_widen_link = true;
+          break;
+        }
+      }
+    }
+    if (is_widen_link) {
+      start_fp_to_split = sum_dis;
+      start_fp_link_id = iter_link->id();
+      start_fp_lane_ids.clear();
+      start_fp_lane_ids.reserve(iter_link->lane_ids_size());
+      for (auto lane_id : iter_link->lane_ids()) {
+        start_fp_lane_ids.emplace_back(lane_id);
+      }
+    }
 
-  //   iter_link = pre_link;
-  // }
+    sum_dis += iter_link->length() * 0.01;
+    iter_link = ld_map_.GetPreviousLinkOnRoute(iter_link->id());
+  }
 
   const double dis_to_last_split = CalculateDisToLastLinkSplitPoint(split_link);
   const double dis_to_last_merge = CalculateDisToLastLinkMergePoint(split_link);
   const double default_dis = 300.0;
 
-  start_fp_to_split =
-      std::min(std::min(dis_to_last_split, dis_to_last_merge), default_dis);
+  if (start_fp_to_split == std::numeric_limits<double>::max()) {
+    start_fp_to_split =
+        std::min(std::min(dis_to_last_split, dis_to_last_merge), default_dis);
+  }
 
   FPPoint start_fp(start_fp_link_id, -start_fp_to_split,
                    std::move(start_fp_lane_ids), end_FP);
@@ -2775,8 +2861,17 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
           iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
         }
 
-        // 如果距离减去实线长度小于200米，则忽略这个split
-        if (distance_to_next_split - total_lsl_length < 200.0) {
+        // 阈值：下一个 split 前继 link 的 lane_num × 200m（无前继时沿用 200m）
+        constexpr double BASE_MIN_GAP_DIS = 200.0;
+        const auto* next_split_pre_link =
+            ld_map_.GetPreviousLinkOnRoute(next_split_info.first->id());
+        const double min_gap_after_lsl_m =
+            next_split_pre_link != nullptr
+                ? static_cast<double>(next_split_pre_link->lane_num()) *
+                      BASE_MIN_GAP_DIS
+                : BASE_MIN_GAP_DIS;
+
+        if (distance_to_next_split - total_lsl_length < min_gap_after_lsl_m) {
           should_skip = true;
         }
       }
@@ -3111,7 +3206,7 @@ void LDRouteInfoStrategy::ProcessLaneMapMergePoint(
   relative_id_lane->set_map_merge_point_info(std::move(map_merge_point_info));
 }
 
-void LDRouteInfoStrategy::CaculateDistanceToRoadEnd(
+void LDRouteInfoStrategy::CalculateDistanceToRoadEnd(
     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
   if (segment == nullptr) {
     return;
@@ -3127,7 +3222,7 @@ void LDRouteInfoStrategy::CaculateDistanceToRoadEnd(
   }
 }
 
-void LDRouteInfoStrategy::CaculateDistanceToTollStation(
+void LDRouteInfoStrategy::CalculateDistanceToTollStation(
     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
   if (segment == nullptr) {
     return;
@@ -4393,12 +4488,29 @@ double LDRouteInfoStrategy::CalculateLSLLengthBetweenLanes(
     if (!lane) continue;
 
     for (const auto& boundary : lane->left_boundaries()) {
-      if (boundary.divider_marking_type() ==
+      const auto type = boundary.divider_marking_type();
+      bool is_solid = false;
+      if (type ==
               iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
                   LaneBoundary_DivederMarkingType_DMT_MARKING_SINGLE_SOLID_LINE ||
-          boundary.divider_marking_type() ==
+          type ==
               iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
                   LaneBoundary_DivederMarkingType_DMT_MARKING_DOUBLE_SOLID_LINE) {
+        is_solid = true;
+      } else if (from_seq < to_seq) {
+        // 向左变道，穿越左边界右侧，右实左虚算实线
+        is_solid =
+            (type ==
+             iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                 LaneBoundary_DivederMarkingType_DMT_MARKING_RIGHT_SOLID_LINE_LEFT_DASHED_LINE);
+      } else {
+        // 向右变道，穿越左边界左侧，左实右虚算实线
+        is_solid =
+            (type ==
+             iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                 LaneBoundary_DivederMarkingType_DMT_MARKING_LEFT_SOLID_LINE_RIGHT_DASHED_LINE);
+      }
+      if (is_solid) {
         current_lane_lsl += boundary.length() * 0.01;
       }
     }
@@ -5502,7 +5614,7 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
   if (front_first_topo_change_link->successor_link_ids().size() != 2) {
     return;
   }
-  
+
   uint64 out_link_id =
       front_first_topo_change_link->successor_link_ids()[0] ==
               split_next_link->id()
@@ -5525,5 +5637,134 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
   }
 
   Erase1Split2FeasibleLane(feasible_lane_graph);
+}
+void LDRouteInfoStrategy::CalculateDistanceToNOAEnd(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+  double distance_to_enter_city = 0.0;
+  constexpr double kMaxNOAEndSearchDistance = 3000.0;
+  // 当前位于NOA状态，计算到地图信息终点/NOA
+  if (route_info_output_.is_ego_on_expressway) {
+    const auto* iter_link = segment;
+    while (iter_link) {
+      if (iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_JCT) != 0 ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
+        if (iter_link->id() == current_link_->id()) {
+          distance_to_enter_city += iter_link->length() * 0.01 - nearest_s;
+        } else {
+          distance_to_enter_city += iter_link->length() * 0.01;
+        }
+        // 大于3km直接break
+        if (distance_to_enter_city > kMaxNOAEndSearchDistance) {
+          break;
+        }
+        iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
+      } else {
+        break;
+      }
+    }
+  } else {
+    distance_to_enter_city = 0.0;
+  }
+  route_info_output_.distance_to_enter_city = distance_to_enter_city;
+}
+
+void LDRouteInfoStrategy::CalculateDistanceToServiceArea(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+
+  constexpr double kSapaServiceWindowM = 50.0;
+  const auto is_sapa_link =
+      [](const iflymapdata::sdpro::LinkInfo_Link* link) -> bool {
+    return link != nullptr &&
+           (link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
+  };
+
+  const auto contiguous_sapa_length_from =
+      [this,
+       is_sapa_link](const iflymapdata::sdpro::LinkInfo_Link* start) -> double {
+    double len = 0.0;
+    const auto* link = start;
+    while (link != nullptr && is_sapa_link(link)) {
+      len += link->length() * 0.01;
+      link = ld_map_.GetNextLinkOnRoute(link->id());
+    }
+    return len;
+  };
+
+  const auto distance_along_route_to_ego_from =
+      [this](const iflymapdata::sdpro::LinkInfo_Link* start_link,
+             const iflymapdata::sdpro::LinkInfo_Link* ego_link,
+             double ego_s_on_link) -> double {
+    double d = 0.0;
+    const auto* link = start_link;
+    while (link != nullptr && link->id() != ego_link->id()) {
+      d += link->length() * 0.01;
+      link = ld_map_.GetNextLinkOnRoute(link->id());
+    }
+    if (link != nullptr && link->id() == ego_link->id()) {
+      d += ego_s_on_link;
+    }
+    return d;
+  };
+
+  if (is_sapa_link(segment)) {
+    const iflymapdata::sdpro::LinkInfo_Link* first_sapa = segment;
+    while (true) {
+      const auto* prev = ld_map_.GetPreviousLinkOnRoute(first_sapa->id());
+      if (prev != nullptr && is_sapa_link(prev)) {
+        first_sapa = prev;
+      } else {
+        break;
+      }
+    }
+    const double l_sapa_total = contiguous_sapa_length_from(first_sapa);
+    const double window_m = std::min(kSapaServiceWindowM, l_sapa_total);
+    const double traveled_on_sapa =
+        distance_along_route_to_ego_from(first_sapa, segment, nearest_s);
+    route_info_output_.distance_to_service_area =
+        std::max(0.0, window_m - traveled_on_sapa);
+    return;
+  }
+
+  const auto& service_area_info =
+      ld_map_.GetSaPaInfo(segment->id(), nearest_s, kMaxSearchLength);
+  if (service_area_info.first == nullptr) {
+    route_info_output_.distance_to_service_area = NL_NMAX;
+    return;
+  }
+
+  const double dist_to_first_sapa = service_area_info.second;
+  const double l_sapa_total =
+      contiguous_sapa_length_from(service_area_info.first);
+  const double add_m = std::min(kSapaServiceWindowM, l_sapa_total);
+  route_info_output_.distance_to_service_area = dist_to_first_sapa + add_m;
+}
+void LDRouteInfoStrategy::UpdateDistanceToNOAExit() {
+  std::array<std::pair<double, NOAExitType>, 4> dist_type_pairs = {
+      {{route_info_output_.distance_to_route_end, NAVIGATION_END},
+       {route_info_output_.distance_to_toll_station, TOLL_STATION},
+       {route_info_output_.distance_to_service_area, SERVICE_AREA},
+       {route_info_output_.distance_to_enter_city, ENTER_CITY}}};
+
+  auto it = std::min_element(
+      dist_type_pairs.begin(), dist_type_pairs.end(),
+      [](const auto& a, const auto& b) { return a.first < b.first; });
+  double distance_to_exit_noa = it->first;
+  NOAExitType exit_type = it->second;
+  route_info_output_.noa_exit_type = exit_type;
+  route_info_output_.distance_to_exit_noa = distance_to_exit_noa;
+  if (distance_to_exit_noa < kEpsilon) {
+    route_info_output_.reset();
+  }
 }
 }  // namespace planning

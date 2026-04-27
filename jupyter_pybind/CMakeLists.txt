@@ -219,14 +219,14 @@ target_link_libraries(potential_dangerous_agent_decider_py PRIVATE
   modules_context
   modules_tasks
   legacy_c_interface)
-pybind11_add_module(gap_selector_py MODULE src/gap_selector_pybind.cc)
-target_link_libraries(gap_selector_py PRIVATE
-  # autoplt
-  modules
-  modules_common
-  modules_context
-  legacy_c_interface
-  modules_tasks)
+#pybind11_add_module(gap_selector_py MODULE src/gap_selector_pybind.cc)
+#target_link_libraries(gap_selector_py PRIVATE
+#  autoplt
+#  modules
+#  modules_common
+#  modules_context
+#  legacy_c_interface
+#  modules_tasks)
 
 pybind11_add_module(hybrid_astar_py MODULE src/hybrid_astar_path_generator_pybind.cc)
 target_link_libraries(hybrid_astar_py PRIVATE

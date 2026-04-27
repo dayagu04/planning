@@ -534,7 +534,6 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
   pnc::mathlib::spline y_s_spline;
   std::vector<double> s_vec(coarse_traj_points.size());
   if (is_use_spatio_planner_result &&
-      (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD) &&
       !lane_borrow_decider_output.is_in_lane_borrow_status && total_s > 1.0) {
     std::vector<double> x_vec(coarse_traj_points.size());
     std::vector<double> y_vec(coarse_traj_points.size());
@@ -1081,6 +1080,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
 bool GeneralLateralDecider::CalculateCruiseVelocity(
     double* const avg_cruise_v) {
   constexpr double kExtendLonDistance = 0.0;
+  // constexpr double kExtendLonDistance = 0.0;
   auto& last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -1095,6 +1095,7 @@ bool GeneralLateralDecider::CalculateCruiseVelocity(
     }
     last_traj_length += (last_traj_point.v * dt);
   }
+
   // *avg_cruise_v = (last_traj_points.back().s - last_traj_points.front().s) /
   //                 last_traj_points.back().t;
   last_traj_length += kExtendLonDistance;
@@ -3747,6 +3748,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01;  // 变化的容忍阈值
+  constexpr double kMinLatSafeDis = 0.35;  // 最小横向安全距离（逆向障碍物场景）,取hard bound的横向值
+
   // Step 1: 更新 overlap 范围，并判断是否 reset 预测时间
   if (is_nudge_left) {
     updated_overlap_min_y = std::max(overlap_min_y, limit_overlap_min_y);
@@ -3773,7 +3776,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   }
   if (is_care_reverse_ignore_obj) {
     lat_buf_dis =
-        std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, 0.);
+        std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, kMinLatSafeDis);
   }
   // Step 3: 更新历史 overlap 用于下一次比较
   double extra_pred_ts_decrease_buffer =
@@ -4172,6 +4175,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
 
 bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     const std::shared_ptr<FrenetObstacle>& obstacle) {
+  constexpr double kReverseHeadingThreshold =
+      0.75 * M_PI;  // 逆向障碍物航向角阈值
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
@@ -4205,7 +4210,10 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
       const auto crossing_map_iter = is_crossing_map.find(obstacle->id());
       bool is_cross_obj = false;
       if (crossing_map_iter != is_crossing_map.end()) {
-        is_cross_obj = crossing_map_iter->second;
+        bool is_large_relative_heading =
+            std::fabs(obstacle->obstacle()->relative_heading_angle()) >
+            kReverseHeadingThreshold;
+        is_cross_obj = crossing_map_iter->second && !is_large_relative_heading;
       }
       if (obstacle->obstacle()->is_reverse() &&
           (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
@@ -5262,6 +5270,8 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
     GeneralLateralDeciderOutput& general_lateral_decider_output) {
   // bool bound_avoid = false;
+  // constexpr int kExtendLonSize = 1;
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
     //     ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
@@ -5270,10 +5280,41 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     ref_traj_points_[i].l = std::min(
         std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
         second_frenet_soft_bounds[i].second);
+
     ref_traj_points_[i].l = std::min(
         std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
         first_frenet_soft_bounds[i].second);
+
+    // // 纵向往后扩展
+    // for (int j = i + 1; j < std::min(i + 1 + kExtendLonSize, ref_traj_points_.size()); j++) {
+    //   ref_traj_points_[j].l = std::min(
+    //     std::max(ref_traj_points_[j].l, second_frenet_soft_bounds[i].first),
+    //     second_frenet_soft_bounds[i].second);
+    //   ref_traj_points_[j].l = std::min(
+    //     std::max(ref_traj_points_[j].l, first_frenet_soft_bounds[i].first),
+    //     first_frenet_soft_bounds[i].second);
+    // }
   }
+
+  constexpr double kExp = 1e-6;
+  constexpr double kChangeRate = 0.1;
+  for (size_t i = 1; i < ref_traj_points_.size(); i++) {
+    if ((ref_traj_points_[i].l - first_frenet_soft_bounds[i].first > kExp &&
+        ref_traj_points_[i].l - second_frenet_soft_bounds[i].first > kExp) &&
+        (first_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp &&
+        second_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp)) {
+      ref_traj_points_[i].l = clip(ref_traj_points_[i].l, ref_traj_points_[i - 1].l + kChangeRate, ref_traj_points_[i - 1].l - kChangeRate);
+      ref_traj_points_[i].l = std::min(
+        std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+        second_frenet_soft_bounds[i].second);
+
+      ref_traj_points_[i].l = std::min(
+          std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+          first_frenet_soft_bounds[i].second);
+    }
+  }
+
+
   // general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 

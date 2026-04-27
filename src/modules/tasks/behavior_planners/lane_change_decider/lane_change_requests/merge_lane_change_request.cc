@@ -16,6 +16,7 @@
 #include "ego_state_manager.h"
 #include "log.h"
 #include "planning_context.h"
+#include "task_interface/ego_lane_road_right_decider_output.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
 #include "tracked_object.h"
 #include "virtual_lane_manager.h"
@@ -279,9 +280,12 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       ego_lane_road_right_decider_output.is_split_region;
   const bool cur_lane_is_continue =
       ego_lane_road_right_decider_output.cur_lane_is_continue;
+  const bool is_sharp_curve =
+      ego_lane_road_right_decider_output.is_sharp_curve;
   const int merge_lane_virtual_id =
       ego_lane_road_right_decider_output.merge_lane_virtual_id;
-
+  const RoadRightLevel road_right_level =
+      ego_lane_road_right_decider_output.road_right_level;
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
   bool target_left_boundary_exist_virtual_type = true;
@@ -523,6 +527,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     return;
   }
 
+  // 根据虚拟车道线和路权判断汇流方向
   if (target_right_boundary_exist_virtual_type &&
       target_left_boundary_exist_virtual_type &&
       left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
@@ -531,13 +536,19 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   } else if (left_boundary_exist_virtual_type &&
              !target_right_boundary_exist_virtual_type && is_merge_region &&
              (left_lane_is_on_navigation_route ||
-             (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
+              (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
     merge_lane_change_direction_ = LEFT_CHANGE;
+    if (road_right_level == RoadRightLevel::HIGH_RIGHT && is_sharp_curve == false){
+      merge_lane_change_direction_ = NO_CHANGE;
+    }
   } else if (right_boundary_exist_virtual_type &&
              !target_left_boundary_exist_virtual_type && is_merge_region &&
              (right_lane_is_on_navigation_route ||
-             (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
+              (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
+    if (road_right_level == RoadRightLevel::HIGH_RIGHT && is_sharp_curve == false){
+      merge_lane_change_direction_ = NO_CHANGE;
+    }
   } else if (!right_boundary_exist_virtual_type &&
              !left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = NO_CHANGE;
@@ -545,7 +556,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   } else {
     merge_lane_change_direction_ = NO_CHANGE;
   }
-
   JSON_DEBUG_VALUE("left_boundary_exist_virtual_type",
                    left_boundary_exist_virtual_type);
   JSON_DEBUG_VALUE("right_boundary_exist_virtual_type",
