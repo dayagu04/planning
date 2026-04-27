@@ -44,6 +44,11 @@ class STSampleSpaceBase {
       double s, double v, double t,
       planning::speed::STPointWithLateral* const lower_st_point,
       planning::speed::STPointWithLateral* const upper_st_point) const;
+  bool GetNearestGapListByAvailable(
+      double s, double v, double t,
+      std::vector<std::pair<planning::speed::STPointWithLateral,
+                            planning::speed::STPointWithLateral>>* gap_list)
+      const;
   void Init(
       const std::vector<const planning_data::DynamicAgentNode*>&
           target_lane_nodes,
