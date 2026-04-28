@@ -1,0 +1,24 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_36716_EVENT_DOWNGRADE_2026-02-11-17-12-31_no_camera.bag",
+  "description": "bug4: 应选择 order=1 的车道",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [81, 112],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 1, "expect": {"is_on_route": true}},
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": ">=2", "expect": {"is_on_route": false}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [81, 112],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 1",
+      "description": "在 is_on_route=true 的 VL 中，order=1 的 cost 应该最小"
+    }
+  ]
+}

@@ -12,6 +12,7 @@
 #include "session.h"
 #include "virtual_lane.h"
 #include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
+#include "src/modules/context/route_info_strategy/route_info_strategy.h"
 
 
 namespace planning {
@@ -328,6 +329,8 @@ class EgoLaneTrackManger {
   double raw_min_road_radius_ = 2000.0;
   double raw_max_road_radius_ = 2000.0;
   int last_lane_select_change_cmd_ = 0;
+
+  VirtualLanesRouteCost lane_cost_;
 };
 
 }  // namespace planning

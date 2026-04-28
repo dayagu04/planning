@@ -1,0 +1,23 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20250_EVENT_KEY_2026-04-19-22-04-29_no_camera.bag",
+  "description": "bug9: 匝道出口场景，应选择最右侧车道（order 最大）",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [334, 380],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": "max", "expect": {"is_on_route": true}},
+        {"order": "!max", "expect": {"is_on_route": false}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [334, 380],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == max",
+      "description": "order 最大的 VL 的 cost 应该最小"
+    }
+  ]
+}

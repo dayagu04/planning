@@ -1,0 +1,23 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_36716_EVENT_FUNEXIT_2026-04-17-22-23-19_no_camera.bag",
+  "description": "bug2: 匝道出口场景，应选择 order>=2 的车道（右侧主路）",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [236, 276],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": false}},
+        {"order": ">=2", "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [236, 276],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order >= 2"
+    }
+  ]
+}
