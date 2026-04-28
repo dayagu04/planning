@@ -13,6 +13,8 @@ constexpr double kGreenReminderEndTime = 4.6;
 constexpr double kGreenReminderLeadoneDis = 10.0;
 constexpr double kGreenBlinkIgnoreVelThred = 4.72;
 constexpr double kStoplineTFLDisValidThred = 200.0;
+constexpr int kRedLightDebounceThreshold = 20;
+constexpr int kRedLightPassConfirmThreshold = 10;
 }
 TrafficLightDecider::TrafficLightDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -89,17 +91,35 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      bool red_can_pass = false;
       if (can_pass_ && dis_to_stopline > 100.0) {
-        can_pass_ = true;
-      } else {
-        if (dis_to_stopline < 100.0 && ((is_small_front_intersection_ &&
-            !is_tfl_match_intersection_) || (!is_small_front_intersection_ &&
-            !IsIntersectionMatchTFLByDisRatio()))) {
+        red_can_pass = true;
+      } else if (dis_to_stopline < 100.0 && ((is_small_front_intersection_ &&
+          !is_tfl_match_intersection_) || (!is_small_front_intersection_ &&
+          !IsIntersectionMatchTFLByDisRatio()))) {
+        red_can_pass = true;
+      }
+
+      if (!red_can_pass) {
+        red_light_false_count_++;
+        red_light_pass_pending_count_ = 0;
+        can_pass_ = false;
+      } else if (red_light_false_count_ >= kRedLightDebounceThreshold) {
+        red_light_pass_pending_count_++;
+        if (red_light_pass_pending_count_ >= kRedLightPassConfirmThreshold) {
           can_pass_ = true;
+          red_light_false_count_ = 0;
+          red_light_pass_pending_count_ = 0;
         } else {
           can_pass_ = false;
         }
+      } else {
+        can_pass_ = true;
+        red_light_false_count_ = 0;
+        red_light_pass_pending_count_ = 0;
       }
+      JSON_DEBUG_VALUE("red_light_false_count", red_light_false_count_);
+      JSON_DEBUG_VALUE("red_light_pass_pending_count", red_light_pass_pending_count_);
 
     } else if (traffic_status.go_straight == 3 ||
                traffic_status.go_straight == 43) {
@@ -107,6 +127,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ += 0.1;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else if (traffic_status.go_straight == 2 ||
@@ -129,6 +151,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ += 0.1;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
 
     } else if (traffic_status.go_straight == 30 ||
                traffic_status.go_straight == 32 ||
@@ -152,6 +176,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ += 0.1;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
 
     } else if (traffic_status.go_straight == 20 ||
                traffic_status.go_straight == 22) {
@@ -159,6 +185,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else {
@@ -168,6 +196,8 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       if (dis_to_stopline > 200.0 || !is_first_car_) {
         can_pass_ = true;
+        red_light_false_count_ = 0;
+        red_light_pass_pending_count_ = 0;
       }
       // can_pass_ = true;
     }
@@ -180,6 +210,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ += 0.1;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else if (traffic_status.go_straight == 20 ||
@@ -188,6 +220,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
     } else {
       green_light_timer_ = 0.0;
@@ -195,6 +229,8 @@ bool TrafficLightDecider::Execute() {
     }
 
   } else {
+    red_light_false_count_ = 0;
+    red_light_pass_pending_count_ = 0;
     can_pass_ = true;
   }
 

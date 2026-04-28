@@ -61,5 +61,7 @@ class TrafficLightDecider : public Task {
   bool is_small_front_intersection_ = false;
   bool is_tfl_match_intersection_ = true;
   bool is_green_start_no_lead_ = true;
+  int red_light_false_count_ = 0;
+  int red_light_pass_pending_count_ = 0;
 };
 }  // namespace planning
