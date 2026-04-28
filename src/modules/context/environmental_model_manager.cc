@@ -28,6 +28,7 @@
 #include "ifly_localization_c.h"
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
+#include "log_glog.h"
 #include "math/linear_interpolation.h"
 #include "modules/common/config_context.h"
 #include "obstacle_manager.h"
@@ -1213,7 +1214,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.relative_ego_speed =
             std::hypot(cur_predicion_obj.relative_speed_x,
                        cur_predicion_obj.relative_speed_y);
-        ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
+        ILOG_WARN_EVERY(25) << "The cur_predicion_obj " << cur_predicion_obj.id
                   << "s trajectory is empty!";
       } else {
         trajectory_point.relative_time = point_relative_time;

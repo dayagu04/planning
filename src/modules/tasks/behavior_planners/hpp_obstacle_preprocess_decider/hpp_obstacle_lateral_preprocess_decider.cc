@@ -477,8 +477,8 @@ bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
     const ObstacleItemMap& obs_item_map,
     const std::vector<ObstacleClusterCandicate>& cluster_candidates,
     ObstacleClusterGraph& cluster_graph) {
-  constexpr double kMergeLonLargeThr = 3.0;
-  constexpr double kMergeLatLargeThr = 2.0;
+  constexpr double kMergeLonLargeThr = 2.0;
+  constexpr double kMergeLatLargeThr = 1.0;
   constexpr double kMergeLonSmallThr = 0.5;
   constexpr double kMergeLatSmallThr = 0.2;
   constexpr double kMergeAbsDisThr = 2.0;
