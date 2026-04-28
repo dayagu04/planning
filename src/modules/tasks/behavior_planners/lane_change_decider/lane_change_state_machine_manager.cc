@@ -836,12 +836,17 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if(!risk_side_agents_nodes_.empty()) {
+    const auto& ref_path =
+        session_->environmental_model()
+            .get_reference_path_manager()
+            ->get_reference_path_by_lane(lc_req_mgr_->target_lane_virtual_id());
+    const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
-            continue;
+        continue;
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
-      bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
+      bool is_front_car = side_obs->node_s() + side_obs->node_length() * 0.5 > ego_sl_bd.s_end;
       CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (!lc_state_info.gap_insertable) {
         return lc_state_info;
@@ -1101,12 +1106,17 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     }
   }
   if(!risk_side_agents_nodes_.empty()) {
+    const auto& ref_path =
+        session_->environmental_model()
+            .get_reference_path_manager()
+            ->get_reference_path_by_lane(lc_req_mgr_->target_lane_virtual_id());
+    const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
             continue;
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
-      bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
+      bool is_front_car = side_obs->node_s() + side_obs->node_length() * 0.5 > ego_sl_bd.s_end;
       CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (lc_state_info.lc_should_back) {
         return lc_state_info;
