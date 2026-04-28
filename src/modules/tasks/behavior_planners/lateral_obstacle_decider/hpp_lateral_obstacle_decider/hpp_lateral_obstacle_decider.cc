@@ -791,34 +791,40 @@ void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithOverlap(
     const std::pair<double, double>& obs_overlap_l_range,
     const std::pair<double, double>& ego_overlap_s_range,
     LatObstacleDecisionType& decision) {
-  constexpr double kOverlapBuffer = 6.0;
   const auto& ego_state = reference_path_ptr->get_frenet_ego_state();
-  // 障碍车/人到达与自车多边形第一次碰撞位置的时间
-  const double tty_l_first_overlap =
-      std::fabs(obs_overlap_l_range.first - obstacle->frenet_polygon_sequence()
-                                                .front()
-                                                .second.center_point()
-                                                .y()) /
-      std::fabs(obstacle->frenet_velocity_l());
-  // 障碍车/人到达与自车多边形最后一次碰撞位置的时间
-  const double tty_l_last_overlap =
-      std::fabs(obs_overlap_l_range.second - obstacle->frenet_polygon_sequence()
-                                                 .front()
-                                                 .second.center_point()
-                                                 .y()) /
-      std::fabs(obstacle->frenet_velocity_l());
-  // 自车到达障碍物与自车多边形第一次碰撞位置的时间
-  const double tte_s_first_overlap =
-      (ego_overlap_s_range.first - ego_state.s()) / ego_state.velocity_s();
-  // 自车到达障碍物与自车多边形最后一次碰撞位置的时间
-  const double tte_s_last_overlap =
-      (ego_overlap_s_range.second - ego_state.s()) / ego_state.velocity_s();
-  //TODO:是否考虑加上距离约束，保证决策的时候纵向距离满足绕行
-  if (kOverlapBuffer < std::fabs(tty_l_first_overlap - tte_s_first_overlap) &&
-      kOverlapBuffer < std::fabs(tty_l_last_overlap - tte_s_last_overlap)) {
-    MakeDecisonForDynamicObsWithoutOverlap(obstacle, decision);
-  } else {
+  if (std::fabs(ego_state.velocity_s()) <= 0.01) {  // 自车静止
     decision = LatObstacleDecisionType::IGNORE;
+  } else {
+    constexpr double kOverlapBuffer = 6.0;
+    // 障碍车/人到达与自车多边形第一次碰撞位置的时间
+    const double tty_l_first_overlap =
+        std::fabs(obs_overlap_l_range.first -
+                  obstacle->frenet_polygon_sequence()
+                      .front()
+                      .second.center_point()
+                      .y()) /
+        std::fabs(obstacle->frenet_velocity_l());
+    // 障碍车/人到达与自车多边形最后一次碰撞位置的时间
+    const double tty_l_last_overlap =
+        std::fabs(obs_overlap_l_range.second -
+                  obstacle->frenet_polygon_sequence()
+                      .front()
+                      .second.center_point()
+                      .y()) /
+        std::fabs(obstacle->frenet_velocity_l());
+    // 自车到达障碍物与自车多边形第一次碰撞位置的时间
+    const double tte_s_first_overlap =
+        (ego_overlap_s_range.first - ego_state.s()) / ego_state.velocity_s();
+    // 自车到达障碍物与自车多边形最后一次碰撞位置的时间
+    const double tte_s_last_overlap =
+        (ego_overlap_s_range.second - ego_state.s()) / ego_state.velocity_s();
+    // TODO:是否考虑加上距离约束，保证决策的时候纵向距离满足绕行
+    if (kOverlapBuffer < std::fabs(tty_l_first_overlap - tte_s_first_overlap) &&
+        kOverlapBuffer < std::fabs(tty_l_last_overlap - tte_s_last_overlap)) {
+      MakeDecisonForDynamicObsWithoutOverlap(obstacle, decision);
+    } else {
+      decision = LatObstacleDecisionType::IGNORE;
+    }
   }
 }
 
