@@ -278,7 +278,7 @@ class LaneChangeStateMachineManager {
   void CheckTargetRearNode(int64_t target_lane_rear_node_id);
   FrenetObstacleBoundary GetSLboundaryFromAgent(
       const std::shared_ptr<ReferencePath> ref_path,
-      const planning_math::Box2d& obs_box);
+      const planning_math::Box2d& obs_box) const;
   bool PassInLane(double lane_width, const FrenetObstacleBoundary& obs_bd,
                   const double car_width, const double safety_margin,
                   const RequestType direction);

@@ -5427,13 +5427,30 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
    (std::abs(inertial_lateral_offset) < std::abs(in_origin_lane_offset))
       ? inertial_lateral_offset
       : in_origin_lane_offset; //小偏移
-  if(lane_change_stage_info_.lc_back_reason == "side view back"
-    && rear_agent_overtaking_) {
+  const auto& ego_boundary = fix_ref_path->get_ego_frenet_boundary();
+  const int back_agent_id = lc_back_track_.track_id;
+  const auto& dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto& agent_mgr = dynamic_world->agent_manager();
+  bool is_side_obs_back = false; //侧方位置有车
+  if (back_agent_id > 0) {
+    const auto& lc_back_agent = agent_mgr->GetAgent(back_agent_id);
+    if(lc_back_agent != nullptr){
+      const auto& lc_back_agent_sl = GetSLboundaryFromAgent(fix_ref_path, lc_back_agent->box());
+      is_side_obs_back = !(lc_back_agent_sl.s_start > ego_boundary.s_end ||
+                            lc_back_agent_sl.s_end < ego_boundary.s_start);
+    }
+  }
+  bool is_rear_lc_back = false;//后方有快车
+  if(target_lane_rear_node_ != nullptr){
+    is_rear_lc_back = rear_agent_overtaking_ &&
+                              target_lane_rear_node_->node_agent_id() == back_agent_id;
+  }
+  if(is_rear_lc_back || is_side_obs_back) {
     return small_lateral_offset; //小偏移
   }else{
     return large_lateral_offset; //大偏移
   }
-
 }
 ThirdOrderTimeOptimalTrajectory
 LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(
@@ -5712,7 +5729,7 @@ void LaneChangeStateMachineManager::UpdateLCPath(
 }
 FrenetObstacleBoundary LaneChangeStateMachineManager::GetSLboundaryFromAgent(
     const std::shared_ptr<ReferencePath> ref_path,
-    const planning_math::Box2d& obs_box) {
+    const planning_math::Box2d& obs_box) const {
   std::vector<planning_math::Vec2d> obs_corners;
   obs_corners = obs_box.GetAllCorners();
   std::vector<double> agent_sl_boundary(4);
