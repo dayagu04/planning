@@ -3032,6 +3032,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       continue;
     }
     bool is_need_avoid = false;
+    const iflymapdata::sdpro::Lane* avoid_feasible_lane = nullptr;
     for (const auto merge_link_lane_id : merge_ptr->lane_ids()) {
       const auto* merge_link_lane = ld_map_.GetLaneInfoByID(merge_link_lane_id);
       if (merge_link_lane == nullptr) {
@@ -3067,7 +3068,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
         continue;
       }
       // 判断需要躲避的feasible_lane前继link是否在route上
-      const auto* avoid_feasible_lane = ld_map_.GetLaneInfoByID(it->id);
+      avoid_feasible_lane = ld_map_.GetLaneInfoByID(it->id);
       if (avoid_feasible_lane == nullptr) {
         continue;
       }
@@ -3110,8 +3111,14 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           break;
         }
       }
+
+      // 一次满足就行
+      if (is_need_avoid) {
+        break;
+      }
     }
-    if (!is_need_avoid) {
+
+    if (!is_need_avoid || avoid_feasible_lane == nullptr) {
       continue;
     }
     // 4. 更新该合流点之前所有link的车道可行距离
@@ -3120,6 +3127,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       if (feasible_lane_graph.lane_topo_groups[t].topo_lanes.size() < 2) {
         continue;
       }
+      
       for (auto& lane : feasible_lane_graph.lane_topo_groups[t].topo_lanes) {
         const auto lane_info = ld_map_.GetLaneInfoByID(lane.id);
         const auto link_info = ld_map_.GetLinkOnRoute(lane.link_id);
@@ -3127,24 +3135,15 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           continue;
         }
 
-        bool is_leftest = false;
-        bool is_rightest = false;
-        IsTheLaneOnSide(lane_info, is_leftest, is_rightest);
-
-        // 判定是否属于需要躲避的侧向车道
-        bool should_reduce = false;
-        if (merge_direction == RAMP_ON_LEFT && is_rightest) {
-          should_reduce = true;
-        } else if (merge_direction == RAMP_ON_RIGHT && is_leftest) {
-          should_reduce = true;
+        if (!IsSuccussorConnectLane(lane_info, avoid_feasible_lane,
+                                    feasible_lane_graph)) {
+          continue;
         }
 
-        if (should_reduce) {
-          double link_distance = 0.0;
-          if (CalculateDistanceToCertainLink(merge_ptr, link_info,
-                                             link_distance)) {
-            lane.front_feasible_distance = link_distance - 500.0;
-          }
+        double link_distance = 0.0;
+        if (CalculateDistanceToCertainLink(merge_ptr, link_info,
+                                            link_distance)) {
+          lane.front_feasible_distance = link_distance - 500.0;
         }
       }
     }
@@ -5552,4 +5551,59 @@ void LDRouteInfoStrategy::ExportFrameData(
   ofs.close();
 }
 
+bool LDRouteInfoStrategy::IsSuccussorConnectLane(
+    const iflymapdata::sdpro::Lane* cur_lane,
+    const iflymapdata::sdpro::Lane* suc_lane,
+    const TopoLinkGraph& feasible_lane_graph) const {
+  if (cur_lane == nullptr || suc_lane == nullptr) {
+    return false;
+  }
+
+  // 构建 lane_id 到 TopoLane 的映射
+  std::unordered_map<uint64, const TopoLane*> lane_map;
+  for (const auto& lane_topo_group : feasible_lane_graph.lane_topo_groups) {
+    for (const auto& topo_lane : lane_topo_group.topo_lanes) {
+      lane_map[topo_lane.id] = &topo_lane;
+    }
+  }
+
+  // 查找 cur_lane 对应的 TopoLane
+  auto cur_it = lane_map.find(cur_lane->id());
+  if (cur_it == lane_map.end()) {
+    return false;
+  }
+
+  // 使用 BFS 搜索从 cur_lane 到 suc_lane 的可达性
+  std::queue<uint64> queue;
+  std::unordered_set<uint64> visited;
+
+  queue.push(cur_lane->id());
+  visited.insert(cur_lane->id());
+
+  while (!queue.empty()) {
+    uint64 current_id = queue.front();
+    queue.pop();
+
+    auto it = lane_map.find(current_id);
+    if (it == lane_map.end()) {
+      continue;
+    }
+
+    const TopoLane* current_topo = it->second;
+
+    // 遍历当前 lane 的所有 successor
+    for (uint64 successor_id : current_topo->successor_lane_ids) {
+      if (successor_id == suc_lane->id()) {
+        return true;
+      }
+
+      if (visited.find(successor_id) == visited.end()) {
+        visited.insert(successor_id);
+        queue.push(successor_id);
+      }
+    }
+  }
+
+  return false;
+}
 }  // namespace planning
