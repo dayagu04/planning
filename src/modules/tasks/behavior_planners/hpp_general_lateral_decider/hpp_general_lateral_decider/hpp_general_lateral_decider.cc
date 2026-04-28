@@ -1553,10 +1553,13 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
                                     ? ego_cart_state_manager_->ego_v()
                                     : 0.0;
   double ref_s_length = ref_traj_points_.back().s;
+  constexpr double kCareStaticObjectSThreshold = 25.0;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
-    if (t > config_.care_static_object_t_threshold) {
+    const double s_from_ego = traj_point.s - ref_traj_points_.front().s;
+    if (t > config_.care_static_object_t_threshold &&
+        s_from_ego > kCareStaticObjectSThreshold) {
       continue;
     }
 
