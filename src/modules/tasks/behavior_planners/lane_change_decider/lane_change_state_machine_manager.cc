@@ -346,6 +346,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
   JSON_DEBUG_VALUE("enable_overtake_confirm",
                    config_.enable_overtake_lane_change_confirmation)
   // update history
+  if (target_lane_front_node_) {
+    last_target_front_agent_id_ = target_lane_front_node_->node_agent_id();
+  } else {
+    last_target_front_agent_id_ = -1;
+  }
   if (target_lane_rear_node_) {
     last_target_rear_agent_id_ = target_lane_rear_node_->node_id();
   } else {
@@ -2527,8 +2532,17 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       if (pass_in_lane) {
         continue;
       }
-    } else if (target_lane_node->is_static_type()) {  // 静止
-      safety_buff = 0.7;
+    } else if (target_lane_node->is_static_type() || target_lane_node->node_speed() < 0.3) {  // 静止
+      // 纵向重合或TTC过小的静止障碍物不作为前车
+      double lon_gap = std::max(0.0, agent_start_bd.s_start - ego_sl_bd.s_end);
+      double ego_v = ego_sl_state.velocity_s();
+      double ttc = (ego_v > 1.0) ? (lon_gap / ego_v) : 100.0;
+      if (is_side || ttc < 2.0) {
+        continue;
+      }
+      // 横向滞回：上一帧已是前车用宽松阈值，否则用严格阈值
+      bool was_front = (target_lane_node->node_agent_id() == last_target_front_agent_id_);
+      safety_buff = was_front ? 0.7 : 0.9;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
       if (pass_in_lane) {
