@@ -590,12 +590,11 @@ void HppLateralObstacleDecider::MakeDecisionBasedReferPath(
   }
 }
 
-
 void HppLateralObstacleDecider::MakeFrameFinalDecision(
-    LatObstacleDecisionInfo &passage_width_info,
-    LatObstacleDecisionInfo &relative_pos_info,
-    LatObstacleDecisionInfo &last_path_info,
-    LatObstacleDecisionInfo &decision_info) {
+    LatObstacleDecisionInfo& passage_width_info,
+    LatObstacleDecisionInfo& relative_pos_info,
+    LatObstacleDecisionInfo& last_path_info,
+    LatObstacleDecisionInfo& decision_info) {
   ILOG_INFO << "FrameFinalDecision passage_width_info.decision = "
             << static_cast<int>(passage_width_info.decision)
             << "  passage_width_info.left_nudge_level = "
@@ -625,31 +624,23 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
         relative_pos_info.left_nudge_level ==
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.left_nudge_level !=
-          relative_pos_info.left_nudge_level) {
+      if (passage_width_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+          relative_pos_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
         decision_info.decision = LatObstacleDecisionType::IGNORE;
         decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+        decision_info.right_nudge_level =
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
       } else {
         decision_info.decision = LatObstacleDecisionType::RIGHT;
         decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
         decision_info.right_nudge_level = passage_width_info.right_nudge_level;
       }
-    }
-    if (passage_width_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
-        relative_pos_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.right_nudge_level !=
-          relative_pos_info.right_nudge_level) {
-        decision_info.decision = LatObstacleDecisionType::IGNORE;
-        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-      } else {
-        decision_info.decision = LatObstacleDecisionType::LEFT;
-        decision_info.left_nudge_level = passage_width_info.left_nudge_level;
-        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-      }
+    } else {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+      decision_info.left_nudge_level = passage_width_info.left_nudge_level;
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
     }
   } else {
     if (passage_width_info.decision == relative_pos_info.decision) {
@@ -695,7 +686,8 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
       }
     }
   }
-  ILOG_INFO << "FrameFinalDecision final decision = " << static_cast<int>(decision_info.decision);
+  ILOG_INFO << "FrameFinalDecision final decision = "
+            << static_cast<int>(decision_info.decision);
 }
 
 void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithoutOverlap(
@@ -800,24 +792,31 @@ void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithOverlap(
     const std::pair<double, double>& ego_overlap_s_range,
     LatObstacleDecisionType& decision) {
   constexpr double kOverlapBuffer = 6.0;
-  const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
-  //障碍车/人到达与自车多边形第一次碰撞位置的时间
+  const auto& ego_state = reference_path_ptr->get_frenet_ego_state();
+  // 障碍车/人到达与自车多边形第一次碰撞位置的时间
   const double tty_l_first_overlap =
-      std::fabs(obs_overlap_l_range.first -
-       obstacle->frenet_polygon_sequence().front().second.center_point().y()) /
+      std::fabs(obs_overlap_l_range.first - obstacle->frenet_polygon_sequence()
+                                                .front()
+                                                .second.center_point()
+                                                .y()) /
       std::fabs(obstacle->frenet_velocity_l());
-  //障碍车/人到达与自车多边形最后一次碰撞位置的时间
+  // 障碍车/人到达与自车多边形最后一次碰撞位置的时间
   const double tty_l_last_overlap =
-      std::fabs(obs_overlap_l_range.second -
-       obstacle->frenet_polygon_sequence().front().second.center_point().y()) /
+      std::fabs(obs_overlap_l_range.second - obstacle->frenet_polygon_sequence()
+                                                 .front()
+                                                 .second.center_point()
+                                                 .y()) /
       std::fabs(obstacle->frenet_velocity_l());
-  //自车到达障碍物与自车多边形第一次碰撞位置的时间
-  const double tte_s_first_overlap = (ego_overlap_s_range.first - ego_state.s()) / ego_state.velocity_s();
-  //自车到达障碍物与自车多边形最后一次碰撞位置的时间
-  const double tte_s_last_overlap = (ego_overlap_s_range.first - ego_state.s()) / ego_state.velocity_s();
-  if (kOverlapBuffer < std::fabs(tty_l_first_overlap - tte_s_first_overlap) && kOverlapBuffer < std::fabs(tty_l_last_overlap - tte_s_last_overlap))
-  {
-    MakeDecisonForDynamicObsWithoutOverlap(obstacle,decision);
+  // 自车到达障碍物与自车多边形第一次碰撞位置的时间
+  const double tte_s_first_overlap =
+      (ego_overlap_s_range.first - ego_state.s()) / ego_state.velocity_s();
+  // 自车到达障碍物与自车多边形最后一次碰撞位置的时间
+  const double tte_s_last_overlap =
+      (ego_overlap_s_range.second - ego_state.s()) / ego_state.velocity_s();
+  //TODO:是否考虑加上距离约束，保证决策的时候纵向距离满足绕行
+  if (kOverlapBuffer < std::fabs(tty_l_first_overlap - tte_s_first_overlap) &&
+      kOverlapBuffer < std::fabs(tty_l_last_overlap - tte_s_last_overlap)) {
+    MakeDecisonForDynamicObsWithoutOverlap(obstacle, decision);
   } else {
     decision = LatObstacleDecisionType::IGNORE;
   }
@@ -831,6 +830,8 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
   if (obstacle->frenet_dynamic_obs_polygones().empty()) {
     return false;
   }
+  const double obs_length = obstacle->frenet_obstacle_boundary().s_end -
+                            obstacle->frenet_obstacle_boundary().s_start;
   const auto& obs_polygon_sequence = obstacle->frenet_dynamic_obs_polygones();
   const uint32 obs_polygon_sequence_size = obs_polygon_sequence.size();
   const uint32 last_traj_points_size = last_traj_points.size();
@@ -852,54 +853,88 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   bool has_overlap = false, first_overlap_flag_front = false,
        first_overlap_flag_back = false;
+
   for (uint32 i = 0; i < last_traj_points_size; i++) {
-    const double ego_s = last_traj_points[i].s;
+    const double ego_rear_axle_s = last_traj_points[i].s;
     const double ego_l = last_traj_points[i].l;
-    if (ego_s + vehicle_param.front_edge_to_rear_axle < min_obs_s - 3) {
+
+    // 正向提前跳过
+    const bool skip_front =
+        (ego_rear_axle_s + vehicle_param.front_edge_to_rear_axle < min_obs_s - 6) ||
+        (ego_rear_axle_s - vehicle_param.rear_edge_to_rear_axle > max_obs_s + 6);
+    // 反向提前跳过
+    const double back_rear_axle_s = last_traj_points[last_traj_points_size - i - 1].s;
+    const bool skip_back =
+        (back_rear_axle_s + vehicle_param.front_edge_to_rear_axle < min_obs_s - 6) ||
+        (back_rear_axle_s - vehicle_param.rear_edge_to_rear_axle > max_obs_s + 6);
+    if (skip_front && skip_back) {
       continue;
     }
-    if (ego_s - vehicle_param.rear_axle_to_center > max_obs_s + 3) {
-      break;
-    }
-    const Vec2d center_front(ego_s, ego_l);
-    const Vec2d center_back(last_traj_points[last_traj_points_size - i - 1].s,
+
+    // 计算前后相邻点距离
+    const double ds_front = (i + 1 < last_traj_points_size)
+        ? std::fabs(last_traj_points[i + 1].s - last_traj_points[i].s)
+        : 0.0;
+    const double ds_back = (i > 0)
+        ? std::fabs(last_traj_points[i].s - last_traj_points[i - 1].s)
+        : 0.0;
+
+    const double ego_center_s =
+        ego_rear_axle_s + vehicle_param.rear_axle_to_center;
+    const double ego_rear_axle_s_back =
+        last_traj_points[last_traj_points_size - i - 1].s;
+    const double ego_center_s_back =
+        ego_rear_axle_s_back + vehicle_param.rear_axle_to_center;
+
+    // 前向 box：车长 + 前向扩展
+    const double ego_box_front_length = vehicle_param.length + ds_front;
+
+    // 后向 box：车长 + 后向扩展
+    const double ego_box_back_length = vehicle_param.length + ds_back;
+
+    const Vec2d center_front(ego_center_s, ego_l);
+    const Vec2d center_back(ego_center_s_back,
                             last_traj_points[last_traj_points_size - i - 1].l);
-    // TODO:需要引入速度环境信息计算Buffer
-    Box2d ego_box_front(
-        center_front, 0.0,
-        hpp_general_lateral_decider_config_.dynamic_scene_ego_traj_expand_s,
-        vehicle_param.width);
-    Box2d ego_box_back(
-        center_back, 0.0,
-        hpp_general_lateral_decider_config_.dynamic_scene_ego_traj_expand_s,
-        vehicle_param.width);
+
+    Box2d ego_box_front(center_front, 0.0, ego_box_front_length,
+                        vehicle_param.width);
+    Box2d ego_box_back(center_back, 0.0, ego_box_back_length,
+                       vehicle_param.width);
     Polygon2d ego_ploygon2d_front(ego_box_front);
     Polygon2d ego_ploygon2d_back(ego_box_back);
 
     for (uint32 j = 0; j < obs_polygon_sequence_size; j++) {
-      Polygon2d expand_obj_ploygon2d_front =
-          obs_polygon_sequence[j].ExpandByDistance(1.0);
-      Polygon2d expand_obj_ploygon2d_back =
-          obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
-              .ExpandByDistance(1.0);
-      const auto ret_front =
-          expand_obj_ploygon2d_front.HasOverlap(ego_ploygon2d_front);
-      const auto ret_back =
-          expand_obj_ploygon2d_back.HasOverlap(ego_ploygon2d_front);
-      if (ret_front && !first_overlap_flag_front) {
-        first_overlap_flag_front = true;
-        ego_overlap_s_range.first = last_traj_points[i].s;
-        ego_overlap_s_range.second =
-            last_traj_points[i].s + vehicle_param.length;
-        obs_overlap_l_range.first = obs_polygon_sequence[j].center_point().y();
-        has_overlap = true;
+      if (!skip_front && !first_overlap_flag_front) {
+        Polygon2d expand_obj_ploygon2d_front =
+            obs_polygon_sequence[j].ExpandByDistance(1.0);
+        if (expand_obj_ploygon2d_front.HasOverlap(ego_ploygon2d_front)) {
+          first_overlap_flag_front = true;
+          ego_overlap_s_range.first =
+              obs_polygon_sequence[j].center_point().x() - obs_length * 0.5 -
+              vehicle_param.front_edge_to_rear_axle;
+          obs_overlap_l_range.first = obs_polygon_sequence[j].center_point().y();
+          has_overlap = true;
+        }
       }
-      if (ret_back && !first_overlap_flag_back) {
-        first_overlap_flag_back = true;
-        obs_overlap_l_range.second =
+      if (!skip_back && !first_overlap_flag_back) {
+        Polygon2d expand_obj_ploygon2d_back =
             obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
-                .center_point()
-                .y();
+                .ExpandByDistance(1.0);
+        if (expand_obj_ploygon2d_back.HasOverlap(ego_ploygon2d_back)) {
+          first_overlap_flag_back = true;
+          obs_overlap_l_range.second =
+              obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
+                  .center_point()
+                  .y();
+          ego_overlap_s_range.second =
+              obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
+                  .center_point()
+                  .x() +
+              obs_length * 0.5 + vehicle_param.rear_edge_to_rear_axle;
+        }
+      }
+      if (first_overlap_flag_front && first_overlap_flag_back) {
+        break;
       }
     }
   }
@@ -908,11 +943,11 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
 
 // TODO:动态障碍物暂时先使用旧版基于规则的决策，后续方案确定再更改
 void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
-    const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    const std::shared_ptr<FrenetObstacle> &obstacle,
-    const ObstacleClassificationResult &obs_classification_result,
-    LatObstacleDecisionType &decision) {
-  const VehicleParam &vehicle_param =
+    const std::shared_ptr<ReferencePath>& reference_path_ptr,
+    const std::shared_ptr<FrenetObstacle>& obstacle,
+    const ObstacleClassificationResult& obs_classification_result,
+    LatObstacleDecisionType& decision) {
+  const VehicleParam& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   // Step 1. 判断障碍物位置
   if (obs_classification_result.id_to_rel_pos_type.find(obstacle->id()) ==
@@ -923,26 +958,31 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
     return;
   }
 
-  const auto rel_pos_type_base = obs_classification_result.id_to_rel_pos_type.at(obstacle->id());
-  const auto rel_motion_type = obs_classification_result.id_to_motion_type.at(obstacle->id());
+  const auto rel_pos_type_base =
+      obs_classification_result.id_to_rel_pos_type.at(obstacle->id());
+  const auto rel_motion_type =
+      obs_classification_result.id_to_motion_type.at(obstacle->id());
 
-  const bool obj_is_front_base = (rel_pos_type_base == ObstacleRelPosType::MID_FRONT) ||
-                            (rel_pos_type_base == ObstacleRelPosType::LEFT_FRONT)||
-                            (rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT);
-  const bool obj_is_side_base = (rel_pos_type_base == ObstacleRelPosType::LEFT_SIDE) ||
-                            (rel_pos_type_base == ObstacleRelPosType::RIGHT_SIDE);
+  const bool obj_is_front_base =
+      (rel_pos_type_base == ObstacleRelPosType::MID_FRONT) ||
+      (rel_pos_type_base == ObstacleRelPosType::LEFT_FRONT) ||
+      (rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT);
+  const bool obj_is_side_base =
+      (rel_pos_type_base == ObstacleRelPosType::LEFT_SIDE) ||
+      (rel_pos_type_base == ObstacleRelPosType::RIGHT_SIDE);
 
-  if(!obj_is_front_base && !obj_is_side_base) {
+  if (!obj_is_front_base && !obj_is_side_base) {
     decision = LatObstacleDecisionType::IGNORE;
     return;
   }
 
   // Step 2. 自车掌握路权，判断是否可优先通过
-  const double obs_vel_angle = std::fabs(obstacle->frenet_relative_velocity_angle()) * 57.3;
-
-  if (/*(obs_vel_angle > 45 || obs_vel_angle < 135) &&*/ (obstacle->frenet_velocity_l() > 0.f) && !obstacle->b_frenet_polygon_sequence_invalid()) {
-    //横穿TODO:判断是否为横穿场景还需要再细化
-    const auto &last_traj_points = session_->mutable_planning_context()
+  if (rel_motion_type == ObstacleMotionType::CROSSING_MOVING &&
+      (std::fabs(obstacle->frenet_velocity_l()) > 0.2) &&
+      std::fabs(obstacle->frenet_velocity_l()) >
+          std::fabs(obstacle->frenet_velocity_s()) &&
+      !obstacle->b_frenet_polygon_sequence_invalid()) {
+    const auto& last_traj_points = session_->mutable_planning_context()
                                        ->mutable_last_planning_result()
                                        .raw_traj_points;
     std::pair<double, double> obs_overlap_l_range = {0.0, 0.0},
@@ -957,10 +997,11 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
       MakeDecisonForDynamicObsWithoutOverlap(obstacle, decision);
     }
   } else {
-    //纵向
+    // 纵向
     if ((rel_pos_type_base == ObstacleRelPosType::MID_FRONT ||
          rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT) &&
-        !obstacle->is_static() && rel_motion_type == ObstacleMotionType::SAME_DIR_MOVING) {
+        !obstacle->is_static() &&
+        rel_motion_type == ObstacleMotionType::SAME_DIR_MOVING) {
       decision = LatObstacleDecisionType::FOLLOW;
       return;
     } else {
@@ -969,17 +1010,17 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
   }
 }
 void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
-    const ObstacleCluster &cluster,
-    const ObstacleConsistencyMap &obstacle_consistency_map,
-    const ObstacleClassificationResult &obs_classification_result,
-    LatObstacleDecisionType &decision) {
+    const ObstacleCluster& cluster,
+    const ObstacleConsistencyMap& obstacle_consistency_map,
+    const ObstacleClassificationResult& obs_classification_result,
+    LatObstacleDecisionType& decision) {
   LatObstacleDecisionInfo passage_width_info;
   LatObstacleDecisionInfo relative_pos_info;
   LatObstacleDecisionInfo last_path_info;
   std::vector<PathPoint> refer_path;
 
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
-  const VehicleParam &vehicle_param =
+  const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const VehicleParam& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   constexpr double kReferEndFrontIgnoreThr = 0.5;
   if (cluster.frenet_boundary.s_start >
@@ -1027,8 +1068,8 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
                       relative_pos_info, last_path_info, decision);
   }
   SerializeStaticObsDecideResultToDebugInfo(
-      cluster, passage_width_info, relative_pos_info, last_path_info, obs_classification_result,decision
-      );
+      cluster, passage_width_info, relative_pos_info, last_path_info,
+      obs_classification_result, decision);
 }
 
 void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
