@@ -2523,6 +2523,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
                            std::fabs(l_mid) - std::fabs(l_start) < -0.5);
     bool is_side = !(agent_start_bd.s_start > ego_boundary.s_end ||
                         agent_start_bd.s_end < ego_boundary.s_start);
+    if(is_side){
+      continue; // 纵向重合的车作为前车会导致idm异常大减速，作为侧方车进行安全检查即可。
+    }
     const double target_lane_width = target_lane->width_by_s(agent_s);
     double safety_buff = 0.8;
     if(is_reverse){
@@ -2537,7 +2540,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       double lon_gap = std::max(0.0, agent_start_bd.s_start - ego_sl_bd.s_end);
       double ego_v = ego_sl_state.velocity_s();
       double ttc = (ego_v > 1.0) ? (lon_gap / ego_v) : 100.0;
-      if (is_side || ttc < 2.0) {
+      if (ttc < 2.0) {
         continue;
       }
       // 横向滞回：上一帧已是前车用宽松阈值，否则用严格阈值
