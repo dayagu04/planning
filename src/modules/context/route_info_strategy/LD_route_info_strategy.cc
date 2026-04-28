@@ -15,7 +15,6 @@
 namespace planning {
 namespace {
 constexpr double kEpsilon = 1.0e-4;
-constexpr double kMinFrontSearchDis = 500.0;
 }
 
 LDRouteInfoStrategy::LDRouteInfoStrategy(
@@ -969,6 +968,11 @@ size_t LDRouteInfoStrategy::GetTargetRampIndex() {
     }
 
     // 场景1：匝道距离≥最小搜索距离
+    double kMinFrontSearchDis =
+        current_link_->link_class() ==
+                iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
+            ? 800.
+            : 500.;
     if (ramp_dis > kMinFrontSearchDis) {
       if (ramp_idx == 0) {
         return 0;
