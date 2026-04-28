@@ -154,19 +154,22 @@ int OdCrossingScenario::SelcetInterestObject(MebTempObj &temp_obj) {
   }
 
   /*bit_7*/
-  // 判断自车三秒前是表显速度比当前大于等于3kph,且当前表显速度为 5kph及以下
+  // 判断自车三帧前是表显速度比当前大于等于3kph,且当前表显速度为 5kph及以下
 
-  int display_speed_kph_error =
-      abs(meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph -
-          meb_pre.GetInstance().GetHistoryFrame(3)->vehicle_speed_display_kph);
-  if (meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph <=
-          5 &&
-      display_speed_kph_error >= 3) {
-    temp_interest_code += uint16_bit[7];
+  const auto *cur_frame = meb_pre.GetInstance().GetHistoryFrame(0);
+  const auto *hist_frame =
+      meb_pre.GetInstance().GetHistoryFrame(3);  // 若要3秒前应改为30
+  if (cur_frame != nullptr && hist_frame != nullptr) {
+    int display_speed_kph_error =
+        std::abs(static_cast<int>(cur_frame->vehicle_speed_display_kph) -
+                 static_cast<int>(hist_frame->vehicle_speed_display_kph));
+    if (cur_frame->vehicle_speed_display_kph <= 5 &&
+        display_speed_kph_error >= 3) {
+      temp_interest_code += uint16_bit[7];
+    }
   } else {
-    // do nothing
+    // 历史帧不足，跳过该判定
   }
-
   return temp_interest_code;
 };
 
