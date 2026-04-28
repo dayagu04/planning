@@ -527,7 +527,18 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
-      decision_info.decision = LatObstacleDecisionType::LEFT;
+      if (decision_info.left_nudge_level == decision_info.right_nudge_level) {
+        decision_info.decision = previous_decision_info.decision;
+      } else {
+        if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::LEFT;
+        }
+        if (decision_info.right_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::RIGHT;
+        }
+      }
     } else {
       decision_info.decision = LatObstacleDecisionType::RIGHT;
     }
@@ -811,23 +822,16 @@ void HppLateralObstacleDecider::MakeFinalDecision(
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
         relative_pos_info.left_nudge_level ==
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.left_nudge_level !=
-          relative_pos_info.left_nudge_level) {
+      if (passage_width_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+          relative_pos_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
         decision = LatObstacleDecisionType::IGNORE;
       } else {
         decision = LatObstacleDecisionType::RIGHT;
       }
-    }
-    if (passage_width_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
-        relative_pos_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.right_nudge_level !=
-          relative_pos_info.right_nudge_level) {
-        decision = LatObstacleDecisionType::IGNORE;
-      } else {
-        decision = LatObstacleDecisionType::LEFT;
-      }
+    } else {
+      decision = LatObstacleDecisionType::LEFT;
     }
   } else {
     if (passage_width_info.decision == relative_pos_info.decision) {
