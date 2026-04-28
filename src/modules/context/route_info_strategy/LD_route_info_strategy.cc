@@ -2685,8 +2685,18 @@ std::pair<FPPoint, FPPoint> LDRouteInfoStrategy::CalculateSplitExchangeAreaFP(
         const bool direction_match = (split_dir == SPLIT_LEFT && is_leftest) ||
                                      (split_dir == SPLIT_RIGHT && is_rightest);
         if (direction_match) {
-          is_widen_link = true;
-          break;
+          bool has_decelerate_successor = false;
+          for (const auto& succ_id : lane_info->successor_lane_ids()) {
+            const auto* succ_lane = ld_map_.GetLaneInfoByID(succ_id);
+            if (IsDecelerateLane(succ_lane)) {
+              has_decelerate_successor = true;
+              break;
+            }
+          }
+          if (has_decelerate_successor) {
+            is_widen_link = true;
+            break;
+          }
         }
       }
     }
