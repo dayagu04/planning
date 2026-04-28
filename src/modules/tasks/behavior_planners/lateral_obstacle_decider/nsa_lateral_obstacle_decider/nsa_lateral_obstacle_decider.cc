@@ -226,7 +226,7 @@ void NSALateralObstacleDecider::UpdateLatDecision(
   std::unordered_set<uint32_t> current_frame_obstacle_ids;
   for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      if (std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
         continue;
       }
@@ -245,7 +245,7 @@ void NSALateralObstacleDecider::UpdateLatDecision(
   // 主循环：进行决策计算
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      if (std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
         continue;
       }
@@ -410,7 +410,7 @@ void NSALateralObstacleDecider::UpdateLatDecisionWithARAStar(
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      if (std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
         continue;
       }
