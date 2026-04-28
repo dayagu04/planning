@@ -381,9 +381,7 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
 
-  if (scan_dist_out) {
-    scan_dist_out = scan_distance;
-  }
+  scan_dist_out = scan_distance;
 
   // 2. consider the instantaneous curvature corresponding to the steering wheel
   // angle (the vehicle is currently turning)
