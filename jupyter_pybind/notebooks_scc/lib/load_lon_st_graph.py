@@ -1231,6 +1231,14 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
 
+  # Older generated Python protos may not expose V3 extend position bounds even
+  # when the C++ proto has them. Keep the ColumnDataSource columns the same
+  # length so the other longitudinal curves still render.
+  if len(extend_pos_max_vec) != len(time_vec):
+    extend_pos_max_vec = [np.nan] * len(time_vec)
+  if len(extend_pos_min_vec) != len(time_vec):
+    extend_pos_min_vec = [np.nan] * len(time_vec)
+
   weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
   # print(weight_maker_replay_info)
   s_weight_vec = []
