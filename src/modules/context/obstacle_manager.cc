@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -18,6 +19,25 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
+namespace {
+
+bool ShouldOccBypassCluster(
+    const iflyauto::FusionOccupancyObject &occ_obj,
+    const std::vector<int> &solo_types) {
+  const auto motion = occ_obj.additional_occupancy_info.motion_pattern_current;
+  if (motion == iflyauto::OBJECT_MOTION_TYPE_MOVING ||
+      motion == iflyauto::OBJECT_MOTION_TYPE_ONCOME ||
+      motion == iflyauto::OBJECT_MOTION_TYPE_CROSS) {
+    return true;
+  }
+  const int type_val = static_cast<int>(occ_obj.common_occupancy_info.type);
+  for (int t : solo_types) {
+    if (t == type_val) return true;
+  }
+  return false;
+}
+
+}  // namespace
 
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
@@ -836,10 +856,7 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
     }
   }
 
-  // --- Collect OCC raw points (only when enabled) ---
-  // TODO: Some OCC types (e.g., dynamic objects, specific motion attributes)
-  //       should bypass clustering and be processed directly as obstacles.
-  //       Add type/motion filtering here when requirements are clarified.
+  // --- Collect OCC raw points with OD ID pre-grouping and type/motion filtering ---
   std::vector<planning_math::Vec2d> occ_points;
   if (config_.enable_fusion_occupancy_objects &&
       local_view.fusion_occupancy_objects_info.local_point_valid) {
@@ -847,16 +864,121 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
         local_view.fusion_occupancy_objects_info.fusion_object_size;
     const auto *occ_objects =
         local_view.fusion_occupancy_objects_info.fusion_object;
+
+    // Step 1: Pre-group OCC by sensor_source_id (OD ID)
+    std::unordered_map<uint32_t, std::vector<size_t>> od_id_to_occ_indices;
+    std::vector<size_t> no_od_id_indices;
     for (size_t i = 0; i < occ_size; ++i) {
+      uint32_t od_id = occ_objects[i].additional_occupancy_info.sensor_source_id;
+      if (od_id > 0) {
+        od_id_to_occ_indices[od_id].push_back(i);
+      } else {
+        no_od_id_indices.push_back(i);
+      }
+    }
+
+    // Step 2: Process OCC groups with OD ID (highest priority)
+    for (const auto& [od_id, indices] : od_id_to_occ_indices) {
+      if (indices.empty()) continue;  // Safety check (should never happen)
+
+      // Calculate total capacity for performance
+      size_t total_capacity = 0;
+      for (size_t idx : indices) {
+        total_capacity += occ_objects[idx].additional_occupancy_info.polygon_points_size;
+      }
+
+      std::vector<planning_math::Vec2d> merged_points;
+      merged_points.reserve(total_capacity);
+
+      const auto &first_occ = occ_objects[indices[0]];
+      size_t contributing_occ_count = 0;
+
+      // Merge all polygon_points from OCCs with same OD ID
+      for (size_t idx : indices) {
+        const auto &occ_obj = occ_objects[idx];
+        const size_t pt_size = occ_obj.additional_occupancy_info.polygon_points_size;
+        const auto *pts = occ_obj.additional_occupancy_info.polygon_points;
+
+        int valid_in_this_occ = 0;
+        for (size_t j = 0; j < pt_size; ++j) {
+          if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+          merged_points.emplace_back(pts[j].x, pts[j].y);
+          valid_in_this_occ++;
+        }
+        if (valid_in_this_occ > 0) {
+          contributing_occ_count++;
+        } else {
+          ILOG_DEBUG << "[UnifiedStatic] OCC track_id="
+                     << occ_obj.additional_occupancy_info.track_id
+                     << " in OD group " << od_id << " has no valid points";
+        }
+      }
+
+      // Validate and create obstacle
+      if (merged_points.empty()) {
+        ILOG_DEBUG << "[UnifiedStatic] OD-bound OCC od_id=" << od_id
+                   << " has no valid points after merging";
+        continue;
+      }
+
+      if (static_cast<int>(merged_points.size()) >= config_.cluster_min_points) {
+        int obs_id = kOccupancyObjectIdOffset +
+                     first_occ.additional_occupancy_info.track_id;
+        Obstacle obstacle(obs_id, merged_points,
+                          first_occ.common_occupancy_info.type);
+        obstacle.set_object_detection_id(static_cast<int>(od_id));
+
+        if (obstacle.is_vaild()) {
+          ILOG_DEBUG << "[UnifiedStatic] OD-bound OCC od_id=" << od_id
+                     << " track_id=" << first_occ.additional_occupancy_info.track_id
+                     << " type=" << static_cast<int>(first_occ.common_occupancy_info.type)
+                     << " merged_points=" << merged_points.size()
+                     << " from " << contributing_occ_count << "/" << indices.size()
+                     << " OCC objects";
+          add_unified_static_obstacle(obstacle);
+        }
+      }
+    }
+
+    // Step 3: Process OCC without OD ID (existing flow)
+    for (size_t idx : no_od_id_indices) {
+      const auto &occ_obj = occ_objects[idx];
       const size_t pt_size =
-          occ_objects[i].additional_occupancy_info.polygon_points_size;
-      const auto *pts =
-          occ_objects[i].additional_occupancy_info.polygon_points;
-      for (size_t j = 0; j < pt_size; ++j) {
-        if (pts[j].x == 0.0f && pts[j].y == 0.0f) {
+          occ_obj.additional_occupancy_info.polygon_points_size;
+      if (pt_size == 0) continue;
+      const auto *pts = occ_obj.additional_occupancy_info.polygon_points;
+
+      if (ShouldOccBypassCluster(occ_obj, config_.cluster_occ_standalone_types)) {
+        std::vector<planning_math::Vec2d> standalone_occ_points;
+        standalone_occ_points.reserve(pt_size);
+        for (size_t j = 0; j < pt_size; ++j) {
+          if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+          standalone_occ_points.emplace_back(pts[j].x, pts[j].y);
+        }
+        if (standalone_occ_points.empty()) {
+          ILOG_DEBUG << "[UnifiedStatic] OCC track_id="
+                     << occ_obj.additional_occupancy_info.track_id
+                     << " has no valid points (all 0,0)";
           continue;
         }
-        occ_points.emplace_back(pts[j].x, pts[j].y);
+        if (static_cast<int>(standalone_occ_points.size()) >= config_.cluster_min_points) {
+          int obs_id = kOccupancyObjectIdOffset +
+                       occ_obj.additional_occupancy_info.track_id;
+          Obstacle obstacle(obs_id, standalone_occ_points,
+                            occ_obj.common_occupancy_info.type);
+          if (obstacle.is_vaild()) {
+            ILOG_DEBUG << "[UnifiedStatic] standalone OCC track_id="
+                       << occ_obj.additional_occupancy_info.track_id
+                       << " type="
+                       << static_cast<int>(occ_obj.common_occupancy_info.type);
+            add_unified_static_obstacle(obstacle);
+          }
+        }
+      } else {
+        for (size_t j = 0; j < pt_size; ++j) {
+          if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+          occ_points.emplace_back(pts[j].x, pts[j].y);
+        }
       }
     }
   }
@@ -865,10 +987,13 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   auto cluster_results = unified_cluster_->Process(gl_points, occ_points);
 
   // --- Add results as groundline obstacles with frame-to-frame ID matching ---
-  // Step 1: Filter valid clusters (>= 3 points)
+  // Step 1: Filter valid clusters (>= min_points)
+  const int min_pts = config_.cluster_min_points;
   cluster_results.erase(
       std::remove_if(cluster_results.begin(), cluster_results.end(),
-                     [](const auto &obs) { return obs.points.size() < 3; }),
+                     [min_pts](const auto &obs) {
+                       return static_cast<int>(obs.points.size()) < min_pts;
+                     }),
       cluster_results.end());
 
   // Step 2: Build match candidates (new cluster <-> prev cluster)

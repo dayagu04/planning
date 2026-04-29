@@ -5536,6 +5536,7 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
                      "cluster_curvature_threshold");
     ReadItem<double>(json, cluster_bisect_stop_ratio,
                      "cluster_bisect_stop_ratio");
+    ReadVector<int>(json, cluster_occ_standalone_types, "cluster_occ_standalone_types");
   }
   double frenet_obstacle_range_s_min = -50.0;
   double frenet_obstacle_range_s_max = 180.0;
@@ -5560,6 +5561,9 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double cluster_density_threshold      = 4.0;
   double cluster_curvature_threshold    = 0.05;
   double cluster_bisect_stop_ratio      = 0.85;
+  // OCC types that bypass unified clustering and are processed as standalone obstacles.
+  // Dynamic OCC objects (MOVING/ONCOME/CROSS) always bypass regardless of this list.
+  std::vector<int> cluster_occ_standalone_types = {52, 53, 54};  // OCC_CAR, OCC_CYCLIST, OCC_PEOPLE
 };
 
 struct EgoPlanningEdtManagerConfig : public EgoPlanningConfig {
