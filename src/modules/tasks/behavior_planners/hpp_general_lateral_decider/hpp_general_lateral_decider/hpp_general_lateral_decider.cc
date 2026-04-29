@@ -2014,7 +2014,7 @@ void HppGeneralLateralDecider::AddObstacleDecisionBound(
         !lbuffer_s_spline_.get_y().empty()) {
       Vec2d key_point = overlap_polygon.GetAllVertices()[0];
       for (const auto &vertice : overlap_polygon.GetAllVertices()) {
-        if (vertice.y() < key_point.y()) {
+        if (vertice.y() > key_point.y()) {
           key_point = vertice;
         }
       }
@@ -2030,7 +2030,7 @@ void HppGeneralLateralDecider::AddObstacleDecisionBound(
         !rbuffer_s_spline_.get_y().empty()) {
       Vec2d key_point = overlap_polygon.GetAllVertices()[0];
       for (const auto &vertice : overlap_polygon.GetAllVertices()) {
-        if (vertice.y() > key_point.y()) {
+        if (vertice.y() < key_point.y()) {
           key_point = vertice;
         }
       }
