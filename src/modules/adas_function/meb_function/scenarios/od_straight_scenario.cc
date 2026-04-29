@@ -376,10 +376,29 @@ uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
         suppe_code += uint32_bit[15];
       }
     }
+
+    // if ((obj.type_for_meb == OdObjGroup::kPeople ||
+    //      obj.type_for_meb == OdObjGroup::kMotor) &&
+    //     (front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
+    //   if ((distance > 4.0) && (distance < 8.0) &&
+    //       fabs(front_radar_key_obj_info.key_obj_relative_y) <
+    //           0.5 * param.ego_width) {
+    //     suppe_code += uint32_bit[15];
+    //   }
+    // }
+  }
+
+  /*bit_15*/
+  // 障碍物在历史帧中是否一直处于车宽边缘
+  int check_frames = obj.age / (MEB_CYCLE_TIME_SEC * 1000);
+  check_frames = std::min(40, check_frames);
+  if (!meb_pre.ObjectLoggerCheckHistoryWithinEgoWidth(
+          obj.track_id, check_frames, 0.5 * param.ego_width)) {
+    suppe_code += uint32_bit[15];
   }
 
   /*bit_16*/
-  // 防止出地库在坡道上时,因感知误识别导致误触发
+  // 防止泊车场景出地库在坡道上时,因感知误识别导致误触发
   if (vehicle_service.shift_lever_state ==
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
     if ((vehicle_service.vehicle_speed > 2.5) &&

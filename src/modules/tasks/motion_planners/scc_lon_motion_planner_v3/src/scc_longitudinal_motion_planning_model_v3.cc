@@ -9,11 +9,12 @@ static const double kOneSix = 1.0 / 6.0;
 namespace pnc {
 namespace scc_longitudinal_planning_v3 {
 
-ilqr_solver::State SccLongitudinalMotionPlanningModelV3::UpdateDynamicsOneStep(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
+al_ilqr_solver::State
+SccLongitudinalMotionPlanningModelV3::UpdateDynamicsOneStep(
+    const al_ilqr_solver::State &x, const al_ilqr_solver::Control &u,
     const size_t &) const {
   const double dt = solver_config_ptr_->model_dt;
-  ilqr_solver::State x1 = x;
+  al_ilqr_solver::State x1 = x;
 
   const auto &s = x[POS];
   const auto &v = x[VEL];
@@ -33,8 +34,9 @@ ilqr_solver::State SccLongitudinalMotionPlanningModelV3::UpdateDynamicsOneStep(
 }
 
 void SccLongitudinalMotionPlanningModelV3::GetDynamicsDerivatives(
-    const ilqr_solver::State &, const ilqr_solver::Control &,
-    ilqr_solver::FxMT &f_x, ilqr_solver::FuMT &f_u, const size_t &) const {
+    const al_ilqr_solver::State &, const al_ilqr_solver::Control &,
+    al_ilqr_solver::FxMT &f_x, al_ilqr_solver::FuMT &f_u,
+    const size_t &) const {
   const double dt = solver_config_ptr_->model_dt;
   const auto dt2 = dt * dt;
   const auto dt3 = dt2 * dt;

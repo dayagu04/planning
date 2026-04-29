@@ -10,6 +10,7 @@
 #include "behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "common/st_graph/st_boundary.h"
 #include "common/st_graph/st_graph_input.h"
+#include "context/vehicle_config_context.h"
 #include "ego_planning_config.h"
 #include "session.h"
 #include "st_graph_searcher.pb.h"
@@ -31,10 +32,10 @@ class StGraphSearcher : public Task {
 
   struct AStarSearchConfig {
     double planning_time_horizon = 0.1;
-    double max_accel_limit = 5.0;
-    double min_accel_limit = -6.0;
-    double max_jerk_limit = 10.0;
-    double min_jerk_limit = -10.0;
+    double max_accel_limit = 2.0;
+    double min_accel_limit = -5.0;
+    double max_jerk_limit = 6.0;
+    double min_jerk_limit = -5.0;
     double accel_sample_num = 20.0;
     double s_step = 0.5;
     double t_step = 0.5;
@@ -163,6 +164,9 @@ class StGraphSearcher : public Task {
   int32_t candidate_rear_agent_id_ = -1;
   int rear_agent_consecutive_cnt_ = 0;
   static constexpr int kRearAgentHysteresisFrames = 5;
+
+  const VehicleParam& vehicle_param_ =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
 };
 
 }  // namespace planning

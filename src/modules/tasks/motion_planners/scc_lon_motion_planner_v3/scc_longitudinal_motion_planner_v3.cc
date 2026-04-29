@@ -28,7 +28,7 @@ void SccLongitudinalMotionPlannerV3::Init() {
 
   // init planning input and output
   auto const N =
-      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
+      planning_problem_ptr_->GetAliLqrCorePtr()->GetSolverConfigPtr()->horizon +
       1;
 
   // init planning input
@@ -108,7 +108,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   // 1. set ref_pos and ref_vel
   for (size_t i = 0; i < s_refs.size(); ++i) {
     auto const &dt =
-        planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+        planning_problem_ptr_->GetAliLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
     auto const &v_ref = v_refs[i].first;
     auto const &v_weight = v_refs[i].second;
@@ -180,9 +180,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   const auto &planning_init_point =
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
 
-  // init s uses frenet state
-  // planning_input_.mutable_init_state()->set_s(planning_init_point.frenet_state.s);
-  // scc planner纵向使用相对关系，init s = 0.0
+  // init s = 0.0
   planning_input_.mutable_init_state()->set_s(0.0);
   planning_input_.mutable_init_state()->set_v(
       planning_init_point.lon_init_state.v());
@@ -251,15 +249,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_safe_distance(0.0);
   }
 
-  // if (lane_change_info.is_emergency_scene) {
-  //   planning_input_.set_q_acc(1.0);
-  //   planning_input_.set_q_acc_start(0.0);
-  //   planning_input_.set_q_jerk(10.0);
-  //   planning_input_.set_q_jerk_start(0.0);
-  // }
-
-  // what is s_stop?
-  planning_input_.set_s_stop(1.0e4);  // TBD: hack for input;
+  planning_input_.set_s_stop(1.0e4);
 }
 
 void SccLongitudinalMotionPlannerV3::Update() {
@@ -269,17 +259,16 @@ void SccLongitudinalMotionPlannerV3::Update() {
   const auto &planning_init_point =
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
 
-  // assembling planning output proto
   auto start_time = IflyTime::Now_ms();
   planning_problem_ptr_->Update(planning_input_);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lon_update_time", end_time - start_time);
 
   const size_t N =
-      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
+      planning_problem_ptr_->GetAliLqrCorePtr()->GetSolverConfigPtr()->horizon +
       1;
   const auto &dt =
-      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+      planning_problem_ptr_->GetAliLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
   auto start_stop_info =
       session_->planning_context().start_stop_result().state();
@@ -381,11 +370,7 @@ void SccLongitudinalMotionPlannerV3::Update() {
     traj_points[i].x = motion_planner_output.x_s_spline(s);
     traj_points[i].y = motion_planner_output.y_s_spline(s);
     traj_points[i].heading_angle = motion_planner_output.theta_s_spline(s);
-    // 相对自车的s需要还原成相对参考线起点的s
     traj_points[i].s = s + init_point_s;
-    // frenet state is not considered
-
-    // reassembling lateral path by long traj
     assembled_x[i] = traj_points[i].x;
     assembled_y[i] = traj_points[i].y;
 
@@ -401,11 +386,5 @@ void SccLongitudinalMotionPlannerV3::Update() {
   motion_planner_output.theta_t_spline.set_points(t_vec, assembled_theta);
   motion_planner_output.delta_t_spline.set_points(t_vec, assembled_delta);
   motion_planner_output.omega_t_spline.set_points(t_vec, assembled_omega);
-
-  // JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
-  // JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
-  // JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
-  // JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
-  // JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 }
 }  // namespace planning

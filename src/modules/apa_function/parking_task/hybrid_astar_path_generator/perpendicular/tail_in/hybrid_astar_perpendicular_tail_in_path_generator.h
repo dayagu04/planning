@@ -30,22 +30,22 @@ class HybridAStarPerpendicularTailInPathGenerator
   const bool RunPreSearch(const PathColDetBuffer& pre_path_col_det_buffer);
   void RestoreFormalSearchConfig(const SearchConfigSnapshot& snapshot);
   const float CalcGearChangePoseCost(
-      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+      const common_math::PathPt<float>& gear_switch_pose,
       const float gear_switch_penalty, const float length_penalty);
   const float CalcGearSwitchPoseHeuDist(
-      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+      const common_math::PathPt<float>& gear_switch_pose,
       const float gear_switch_penalty);
   const float CalcGearSwitchPoseBaseCost(
       const common_math::PathPt<float>& gear_switch_pose, const float heu_dist,
       const float length_penalty) const;
   const float CalcGearSwitchPoseCollisionCost(
-      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+      const common_math::PathPt<float>& gear_switch_pose,
       const float length_penalty) const;
   const float CalcGearSwitchPoseRangeCost(
       const common_math::PathPt<float>& gear_switch_pose,
       const float gear_switch_penalty) const;
   const float CalcGearSwitchPosePreferXCost(
-      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+      const common_math::PathPt<float>& gear_switch_pose,
       const float gear_switch_penalty) const;
 
   virtual void PrepareFormalSearch(

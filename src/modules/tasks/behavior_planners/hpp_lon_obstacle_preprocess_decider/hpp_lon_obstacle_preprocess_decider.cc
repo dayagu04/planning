@@ -191,6 +191,7 @@ HppLonObstaclePreprocessDecider::HppLonObstaclePreprocessDecider(
 
 bool HppLonObstaclePreprocessDecider::Execute() {
   ProcessGroundLines();
+  ProcessCrossObstacles();
   //ProcessDynamicObstacles();
   return true;
 }
@@ -418,6 +419,81 @@ void HppLonObstaclePreprocessDecider::GenerateCurrentPoseTrajectory(
   std::vector<trajectory::Trajectory> trajectories;
   trajectories.push_back(std::move(traj));
   agent->set_trajectories_used_by_st_graph(trajectories);
+}
+
+void HppLonObstaclePreprocessDecider::ProcessCrossObstacles() {
+  if (!lon_config_.enable_cross_obstacle_virtual_agent) {
+    return;
+  }
+
+  const auto &reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto &reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  if (reference_path == nullptr) {
+    return;
+  }
+
+  const auto &lateral_output =
+      session_->planning_context().lateral_obstacle_decider_output();
+  const auto &cross_obstacle_info = lateral_output.Cross_obstacle_info;
+  if (cross_obstacle_info.empty()) {
+    return;
+  }
+
+  for (const auto &[obstacle_id, cross_info] : cross_obstacle_info) {
+    if (!cross_info.has_overlap) {
+      continue;
+    }
+
+    ReferencePathPoint ref_point;
+    const double stop_s = cross_info.overlap_position_s +
+                          lon_config_.cross_obstacle_stop_buffer;
+    if (!reference_path->get_reference_point_by_lon(stop_s, ref_point)) {
+      ILOG_WARN << "Failed to get reference point for cross obstacle id="
+                << obstacle_id << " at s=" << stop_s;
+      continue;
+    }
+
+    const int32_t virtual_agent_id =
+        agent::AgentDefaultInfo::kHppCrossObstacleVirtualAgentId_Base +
+        obstacle_id;
+
+    agent::Agent virtual_agent;
+    virtual_agent.set_agent_id(virtual_agent_id);
+    virtual_agent.set_type(agent::AgentType::VIRTUAL);
+    virtual_agent.set_is_tfl_virtual_obs(false);
+    virtual_agent.set_is_stop_destination_virtual_obs(false);
+    virtual_agent.set_is_turnstile_virtual_obs(false);
+    virtual_agent.set_x(ref_point.path_point.x());
+    virtual_agent.set_y(ref_point.path_point.y());
+    virtual_agent.set_theta(ref_point.path_point.theta());
+    virtual_agent.set_length(kGroundLineVirtualAgentLength);
+    virtual_agent.set_width(kGroundLineVirtualAgentWidth);
+    virtual_agent.set_fusion_source(OBSTACLE_SOURCE_CAMERA);
+    virtual_agent.set_is_static(true);
+    virtual_agent.set_speed(0.0);
+    virtual_agent.set_accel(0.0);
+    virtual_agent.set_time_range({0.0, kPredictionHorizon});
+
+    planning_math::Box2d box(
+        planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),
+        virtual_agent.theta(), virtual_agent.length(), virtual_agent.width());
+    virtual_agent.set_box(box);
+    virtual_agent.set_timestamp_s(0.0);
+    virtual_agent.set_timestamp_us(0.0);
+
+    auto &agent_manager =
+        session_->mutable_environmental_model()->mutable_agent_manager();
+    std::unordered_map<int32_t, agent::Agent> agent_table;
+    agent_table.insert({virtual_agent.agent_id(), virtual_agent});
+    agent_manager->Append(agent_table);
+
+    ILOG_INFO << "Created cross obstacle virtual agent id=" << virtual_agent_id
+              << " for obstacle_id=" << obstacle_id
+              << " at overlap_s=" << cross_info.overlap_position_s
+              << " stop_s=" << stop_s;
+  }
 }
 
 }  // namespace planning

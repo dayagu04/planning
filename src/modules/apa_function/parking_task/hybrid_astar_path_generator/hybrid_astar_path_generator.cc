@@ -439,9 +439,10 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     path.point_sizes[i] = single_rs_path.size;
     path.ptss[i].resize(single_rs_path.size);
     for (int j = 0; j < single_rs_path.size; j++) {
-      path.ptss[i][j].SetPos(single_rs_path.points[j].x,
-                             single_rs_path.points[j].y);
-      path.ptss[i][j].SetTheta(single_rs_path.points[j].theta);
+      path.ptss[i][j].SetPose(single_rs_path.points[j].x,
+                              single_rs_path.points[j].y,
+                              single_rs_path.points[j].theta);
+      path.ptss[i][j].SetGear(single_rs_path.gear);
     }
     if (i > 0) {
       if (IsGearDifferent(path.gears[i], path.gears[i - 1])) {
@@ -678,9 +679,10 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
         if (current_node->GetGearSwitchNum() > 0 ||
             curve_search_node_gear_change) {
           cur_gear_length = gear_switch_node->GetDistToStart();
-          gear_switch_pose.SetX(gear_switch_node->GetX());
-          gear_switch_pose.SetY(gear_switch_node->GetY());
-          gear_switch_pose.SetTheta(gear_switch_node->GetPhi());
+          gear_switch_pose.SetPose(gear_switch_node->GetX(),
+                                   gear_switch_node->GetY(),
+                                   gear_switch_node->GetPhi());
+          gear_switch_pose.SetGear(cur_gear);
         } else {
           cur_gear_length = gear_switch_node->GetDistToStart() + seg_length[0];
           gear_switch_pose = path.ptss[first_gear_switch_index][0];
@@ -713,9 +715,10 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
             next_gear_switch_pose = path.ptss[first_gear_switch_index][0];
           }
         } else {
-          next_gear_switch_pose.SetX(next_gear_switch_node->GetX());
-          next_gear_switch_pose.SetY(next_gear_switch_node->GetY());
-          next_gear_switch_pose.SetTheta(next_gear_switch_node->GetPhi());
+          next_gear_switch_pose.SetPose(next_gear_switch_node->GetX(),
+                                        next_gear_switch_node->GetY(),
+                                        next_gear_switch_node->GetPhi());
+          next_gear_switch_pose.SetGear(next_gear_switch_node->GetGearType());
         }
       }
     }
@@ -1803,28 +1806,56 @@ const bool HybridAStarPathGenerator::UpdateOnce(
 
     for (const CarMotion& car_motion : car_motion_vec) {
       GenerateNextNode(&new_node, current_node, car_motion);
+      PopulateChildNodeState(&new_node, current_node, car_motion);
+
+      const auto node_it = node_set_.find(new_node.GetGlobalID());
+      const bool has_existing_node = node_it != node_set_.end();
+      if (has_existing_node) {
+        next_node_in_pool = node_it->second;
+        vis_type = next_node_in_pool->GetVisitedType();
+      } else {
+        next_node_in_pool = nullptr;
+        vis_type = AstarNodeVisitedType::NOT_VISITED;
+      }
+
+      CalcNodeGCost(current_node, &new_node);
+
+      if (has_existing_node) {
+        const float old_g_cost = next_node_in_pool->GetGCost();
+        const float new_g_cost = new_node.GetGCost();
+        if ((vis_type == AstarNodeVisitedType::IN_OPEN &&
+             new_g_cost >= old_g_cost) ||
+            (vis_type == AstarNodeVisitedType::IN_CLOSE &&
+             new_g_cost >= old_g_cost + 1e-1)) {
+          continue;
+        }
+      }
 
       ConfigureNodeDeleteRequestForChildNode(new_node, current_node, car_motion,
                                              default_gear_request,
                                              node_del_request);
 
-      PopulateChildNodeState(&new_node, current_node, car_motion);
-
       if (CheckNodeShouldDelete(node_del_request)) {
         continue;
       }
 
-      UpdateCulDeSacLimitByNewNode(new_node);
-
-      if (!FindOrAllocateSearchNode(new_node.GetGlobalID(), vis_type,
+      if (!has_existing_node &&
+          !FindOrAllocateSearchNode(new_node.GetGlobalID(), vis_type,
                                     next_node_in_pool)) {
         continue;
       }
 
+      if (vis_type == AstarNodeVisitedType::IN_CLOSE) {
+        node_del_request.old_node = next_node_in_pool;
+        if (CheckNodeShouldDelete(node_del_request)) {
+          continue;
+        }
+      }
+
+      UpdateCulDeSacLimitByNewNode(new_node);
+
       ConfigureAnalyticExpansionRequestForNewNode(new_node,
                                                   analytic_expansion_request);
-
-      CalcNodeGCost(current_node, &new_node);
 
 #if DEBUG_CHILD_NODE
       if (search_loop_stats_.gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
@@ -1835,32 +1866,15 @@ const bool HybridAStarPathGenerator::UpdateOnce(
       }
 #endif
 
+      if (vis_type == AstarNodeVisitedType::IN_OPEN) {
+        open_pq_.erase(next_node_in_pool->GetMultiMapIter());
+      }
+
+      CalcNodeHCost(&new_node, analytic_expansion_request);
+      ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
+
       if (vis_type == AstarNodeVisitedType::NOT_VISITED) {
-        CalcNodeHCost(&new_node, analytic_expansion_request);
-        ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
-      }
-
-      else if (vis_type == AstarNodeVisitedType::IN_OPEN) {
-        // in open set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
-          CalcNodeHCost(&new_node, analytic_expansion_request);
-          open_pq_.erase(next_node_in_pool->GetMultiMapIter());
-          ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
-        }
-      }
-
-      else if (vis_type == AstarNodeVisitedType::IN_CLOSE) {
-        // in close set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost() + 1e-1) {
-          node_del_request.old_node = next_node_in_pool;
-          if (CheckNodeShouldDelete(node_del_request)) {
-            continue;
-          }
-
-          CalcNodeHCost(&new_node, analytic_expansion_request);
-          ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
-        }
       }
 
 #if DEBUG_CHILD_NODE

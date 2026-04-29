@@ -73,7 +73,7 @@ class TsrCore {
   double no_end_of_speed_limit_duration_time_ = 0.0;
   bool end_of_speed_limit_out_flag_ = false;
   bool end_of_speed_limit_ever_appeared_ = false;  // 解除限速牌是否曾经出现过
-
+  double tsr_end_of_speed_limit_alert_map_time_ = 0.0;  // 发出解除限速后需要抑制地图使用的时间
   // 当前道路限速信息 (道路信息)
   bool current_map_speed_limit_valid_ = false;
 

@@ -92,7 +92,7 @@ bool HPPSpeedLimitDecider::Execute() {
 
   CalculateIntersectionRoadLimit();
 
-  // 构建平滑限速曲线
+  // construct a smooth speed limit curve
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -257,14 +257,14 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     return;
   }
 
-  // --- 遍历绕避 Agent ---
   for (const auto avoid_id : hpp_lateral_output.avoid_ids) {
     const auto* agent = agent_manager->GetAgent(avoid_id);
     if (!agent) {
       continue;
     }
 
-    // 1. 纵向过滤：障碍物需在自车前方
+    // 1. longitudinal filtering: Obstacles must be ahead of the self-driving
+    // vehicle
     double agent_s = 0.0, agent_l = 0.0;
     const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
     if (!frenet_coord) {
@@ -274,7 +274,8 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 障碍物后沿到自车头部的距离
+    // the distance from the rear edge of the obstacle to the front of the
+    // self-driving vehicle
     const double longitudinal_dist =
         agent_s - 0.5 * agent->length() - ego_head_s;
     if (longitudinal_dist < 0.0) {
@@ -1007,9 +1008,9 @@ double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
   const double passage_clearance = width - vehicle_width;
 
   // 基础限速
-  constexpr double kW1 = 1.0;         // m
+  constexpr double kW1 = 0.0;         // m
   constexpr double kV1 = 10.0 / 3.6;  // m/s (10 km/h)
-  constexpr double kW2 = 1.5;         // m
+  constexpr double kW2 = 1.0;         // m
   constexpr double kV2 = 15.0 / 3.6;  // m/s (15 km/h)
 
   const double v_base =

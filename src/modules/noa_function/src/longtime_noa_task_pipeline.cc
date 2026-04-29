@@ -11,8 +11,8 @@ LongtimeNoaTaskPipeline::LongtimeNoaTaskPipeline(
       std::make_unique<SccLateralObstacleDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
-  gap_selector_decider_ =
-      std::make_unique<GapSelectorDecider>(config_builder, session);
+  // gap_selector_decider_ =
+  //     std::make_unique<GapSelectorDecider>(config_builder, session);
   general_lateral_decider_ =
       std::make_unique<GeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
@@ -44,11 +44,11 @@ bool LongtimeNoaTaskPipeline::Run() {
     return false;
   }
 
-  ok = gap_selector_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(gap_selector_decider_->Name());
-    return false;
-  }
+  // ok = gap_selector_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(gap_selector_decider_->Name());
+  //   return false;
+  // }
 
   ok = general_lateral_decider_->Execute();
   if (!ok) {

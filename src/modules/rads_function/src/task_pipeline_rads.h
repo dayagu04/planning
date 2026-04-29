@@ -57,7 +57,7 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<RADSLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
-  std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
+//   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<RADSGeneralLateralDecider> rads_general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;

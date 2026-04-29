@@ -289,6 +289,23 @@ void LongRefPathDecider::UpdateLonRefPath() {
       lon_behavior_output_.dds_refs[i].first = ego_trajs_future[i].a;
     }
   }
+
+  //rads bound_s by collision check
+  if (session_->is_rads_scene()) {
+    const auto bound_s = session_->planning_context().
+                 stop_destination_decider_output().rads_bound_s_by_collision_check();
+    for (size_t i = 0; i < bound_s.size(); i++) {
+      if (bound_s[i] < lon_behavior_output_.hard_bounds_v3[i].upper) {
+        lon_behavior_output_.hard_bounds_v3[i].upper = bound_s[i];
+      }
+    }
+    if (session_->planning_context().stop_destination_decider_output().
+        rads_collision_check_sref_set_flag()) {
+      for (size_t i = 0; i < plan_points_num_; i++) {
+        lon_behavior_output_.s_refs[i].first = 0.0;
+      }
+    }
+  }
 }
 
 void LongRefPathDecider::Reset() {

@@ -31,8 +31,8 @@ void MebCore::InitOnce(void) {
 
 void MebCore::UpdateMebEnableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  auto meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
-  auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto& meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
+  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
                                               ->mutable_environmental_model()
@@ -109,8 +109,8 @@ void MebCore::UpdateMebEnableCode(void) {
 
 void MebCore::UpdateMebDisableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  auto meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
-  auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto& meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
+  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
                                               ->mutable_environmental_model()
                                               ->get_local_view()
@@ -266,7 +266,7 @@ void MebCore::UpdateMebSuppCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
-  auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   uint32 supp_code = 0;
   if (meb_cooling_time_remain_ > 0.1) {
@@ -535,16 +535,21 @@ void MebCore::SetMebOutputInfo(void) {
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
     }
+
+    if (GetContext.get_param()->meb_request_status_const_switch == true) {
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+          GetContext.get_param()->meb_request_status_const;
+    }
 #endif
   }
 }  // namespace meb_core
 
 void MebCore::Log(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260409);
+  JSON_DEBUG_VALUE("meb_version", (double)260413);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);

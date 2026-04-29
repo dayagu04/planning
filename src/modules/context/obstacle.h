@@ -70,6 +70,11 @@ class Obstacle {
   }
 
   int id() const { return id_; }
+  bool has_object_detection_id() const { return object_detection_id_ != -1; }
+  int object_detection_id() const { return object_detection_id_; }
+  void set_object_detection_id(int objecyt_detection_id) {
+    object_detection_id_ = objecyt_detection_id;
+  }
   double timestamp() const { return timestamp_; }
   void set_x_center(const double x_center) {
     x_center_ = x_center;
@@ -161,6 +166,7 @@ class Obstacle {
  private:
   int id_{};
   int perception_id_ = 0;
+  int object_detection_id_ = -1; // 针对 HPP, 记录 OCC 障碍物绑定的 OD 障碍物 id
   double timestamp_ = 0;  // 单位：s
   bool is_static_ = false;
   double x_center_;

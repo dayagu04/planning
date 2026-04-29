@@ -16,7 +16,7 @@
 #include "adas_function/mrc_condition.h"
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
-#include "ilqr_core.h"
+#include "al_ilqr_core.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "math_lib.h"
 #include "obstacle_manager.h"

@@ -754,18 +754,33 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
 
   // bit 1
   // 判断是否处于允许左侧报警区域内
-  if (left_line_valid == true) {
-    if (GetContext.mutable_state_info()->fl_wheel_distance_to_line < 0.0) {
-      ldw_left_suppression_code += uint16_bit[1];
-    } else if (GetContext.mutable_state_info()->fl_wheel_distance_to_line >
-               ldw_param_.earliest_warning_line) {
-      ldw_left_suppression_code += uint16_bit[1];
-    } else {
-      /*do nothing*/
-    }
+  bool in_left_line_aera_flag = false;
+  if ((GetContext.get_road_info()->current_lane.left_line.valid == true) &&
+      (GetContext.mutable_state_info()->fl_wheel_distance_to_line >
+      ldw_param_.latest_warning_line) &&
+      (GetContext.mutable_state_info()->fl_wheel_distance_to_line <
+        ldw_param_.earliest_warning_line)) {
+    in_left_line_aera_flag = true;
   } else {
-    ldw_left_suppression_code += uint16_bit[1];
+    in_left_line_aera_flag = false;
   }
+  if ((in_left_line_aera_flag == false)) {
+    ldw_left_suppression_code += uint16_bit[1];
+  } else {
+  /*do nothing*/
+  }
+  // if (left_line_valid == true) {
+  //   if (GetContext.mutable_state_info()->fl_wheel_distance_to_line < 0.0) {
+  //     ldw_left_suppression_code += uint16_bit[1];
+  //   } else if (GetContext.mutable_state_info()->fl_wheel_distance_to_line >
+  //              ldw_param_.earliest_warning_line) {
+  //     ldw_left_suppression_code += uint16_bit[1];
+  //   } else {
+  //     /*do nothing*/
+  //   }
+  // } else {
+  //   ldw_left_suppression_code += uint16_bit[1];
+  // }
 
   // bit 2
   // 距上次触发报警后,越过了重置线
@@ -1160,18 +1175,32 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
 
   // bit 1
   // 判断是否处于允许右侧报警区域内
-  if (right_line_valid == true) {
-    if (GetContext.mutable_state_info()->fr_wheel_distance_to_line > 0.0) {
-      ldw_right_suppression_code += uint16_bit[1];
-    } else if (GetContext.mutable_state_info()->fr_wheel_distance_to_line <
-               (-1.0 * ldw_param_.earliest_warning_line)) {
-      ldw_right_suppression_code += uint16_bit[1];
-    } else {
-      /*do nothing*/
-    }
+  bool in_right_line_aera_flag = false;
+  if ((GetContext.get_road_info()->current_lane.right_line.valid == true) &&
+      (GetContext.mutable_state_info()->fr_wheel_distance_to_line <
+       (-1.0 * ldw_param_.latest_warning_line)) &&
+      (GetContext.mutable_state_info()->fr_wheel_distance_to_line >
+       (-1.0 * ldw_param_.earliest_warning_line))) {
+    in_right_line_aera_flag = true;
   } else {
+    in_right_line_aera_flag = false;
+  }
+
+  if ((in_right_line_aera_flag == false)) {
     ldw_right_suppression_code += uint16_bit[1];
   }
+  // if (right_line_valid == true) {
+  //   if (GetContext.mutable_state_info()->fr_wheel_distance_to_line > 0.0) {
+  //     ldw_right_suppression_code += uint16_bit[1];
+  //   } else if (GetContext.mutable_state_info()->fr_wheel_distance_to_line <
+  //              (-1.0 * ldw_param_.earliest_warning_line)) {
+  //     ldw_right_suppression_code += uint16_bit[1];
+  //   } else {
+  //     /*do nothing*/
+  //   }
+  // } else {
+  //   ldw_right_suppression_code += uint16_bit[1];
+  // }
 
   // bit 2
   // 距上次触发报警后,越过了重置线
@@ -1796,7 +1825,11 @@ void LdwCore::RunOnce(void) {
   // 更新ldw_left_intervention_
   double preview_left_y_gap =
       adas_function::LkasLineLeftIntervention(ldw_tlc_threshold_);
-  if ((preview_left_y_gap + y_gap_dec_by_curv + left_y_gap_dec_by_vy) < 0.0) {
+
+  if((GetContext.get_road_info()->current_lane.left_line.valid == true) &&
+     (GetContext.mutable_state_info()->fl_wheel_distance_to_line < 0.0)){
+      ldw_left_intervention_ = true;
+  }else if ((preview_left_y_gap + y_gap_dec_by_curv + left_y_gap_dec_by_vy) < 0.0) {
     ldw_left_intervention_ = true;
   } else {
     ldw_left_intervention_ = false;
@@ -1805,7 +1838,11 @@ void LdwCore::RunOnce(void) {
   // 更新ldw_right_intervention_
   double preview_right_y_gap =
       adas_function::LkasLineRightIntervention(ldw_tlc_threshold_);
-  if ((preview_right_y_gap - preview_y_gap_Vy_offset - right_y_gap_dec_by_vy) > 0.0) {
+  
+  if((GetContext.get_road_info()->current_lane.right_line.valid == true) &&
+     (GetContext.mutable_state_info()->fr_wheel_distance_to_line > 0.0)){
+      ldw_right_intervention_ = true;
+  }else if ((preview_right_y_gap - preview_y_gap_Vy_offset - right_y_gap_dec_by_vy) > 0.0) {
     ldw_right_intervention_ = true;
   } else {
     ldw_right_intervention_ = false;
