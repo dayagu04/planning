@@ -1346,6 +1346,7 @@ void GeneralLateralDecider::GenerateRoadBoundary(
   double uncertain_decrease_buffer = 0.0;
   double uncertain_decrease_slope = 0.2;
   uncertain_decrease_slope += last_uncertain_decrease_slope_;
+  constexpr double kEps = 1e-4;
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound bound_road{-init_dist_to_bound, init_dist_to_bound};
@@ -1368,65 +1369,69 @@ void GeneralLateralDecider::GenerateRoadBoundary(
       // 构建自车膨胀区域的polygon
       const double ego_s = ref_traj_points_[i].s;
       const double s_start = ego_s - vehicle_param.rear_edge_to_rear_axle -rear_lon_buf_dis;
-      const double s_end = ego_s + vehicle_param.length -
+      double s_end = ego_s + vehicle_param.length -
                            vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
+      s_end = std::min(s_end,
+                       ego_frenet_state_.planning_init_point().frenet_state.s +
+                           config_.care_lon_area_road_border);
+      if (s_end - s_start > kEps) {
+        const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
+        const double ego_length = s_end - s_start;
+        const auto ego_box =
+            Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
+        const auto ego_polygon = Polygon2d(ego_box);
 
-      const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
-      const double ego_length = s_end - s_start;
-      const auto ego_box =
-          Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
-      const auto ego_polygon = Polygon2d(ego_box);
+        // 计算到路沿的最小距离
+        double min_left_road_dist = kDefaultDistanceToRoad;
+        double min_right_road_dist = kDefaultDistanceToRoad;
 
-      // 计算到路沿的最小距离
-      double min_left_road_dist = kDefaultDistanceToRoad;
-      double min_right_road_dist = kDefaultDistanceToRoad;
+        for (const auto& segment_info : road_segments_frenet_) {
+          const LineSegment2d& road_segment = segment_info.first;
+          const bool is_left = segment_info.second;
 
-      for (const auto& segment_info : road_segments_frenet_) {
-        const LineSegment2d& road_segment = segment_info.first;
-        const bool is_left = segment_info.second;
+          // 只处理与自车膨胀区域纵向重叠的路沿线段
+          const double seg_s_min =
+              std::min(road_segment.start().x(), road_segment.end().x());
+          const double seg_s_max =
+              std::max(road_segment.start().x(), road_segment.end().x());
+          if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
+            continue;
+          }
 
-        // 只处理与自车膨胀区域纵向重叠的路沿线段
-        const double seg_s_min =
-            std::min(road_segment.start().x(), road_segment.end().x());
-        const double seg_s_max =
-            std::max(road_segment.start().x(), road_segment.end().x());
-        if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
-          continue;
+          const double dist = ego_polygon.DistanceTo(road_segment);
+
+          if (is_left) {
+            min_left_road_dist = std::fmin(min_left_road_dist, dist);
+          } else {
+            min_right_road_dist = std::fmin(min_right_road_dist, dist);
+          }
         }
 
-        const double dist = ego_polygon.DistanceTo(road_segment);
-
-        if (is_left) {
-          min_left_road_dist = std::fmin(min_left_road_dist, dist);
-        } else {
-          min_right_road_dist = std::fmin(min_right_road_dist, dist);
-        }
-      }
-
-      // 根据计算出的距离生成 bound
-      bound_road.upper =
-          std::fmin(std::max(config_.hard_min_distance_road2center,
-                             min_left_road_dist - config_.hard_buffer2road),
-                    bound_road.upper);
-      bound_road.lower =
-          std::fmax(std::min(-config_.hard_min_distance_road2center,
-                             -min_right_road_dist + config_.hard_buffer2road),
-                    bound_road.lower);
-      if (bound_hierarchy != BoundHierarchy::HARD_BOUND) {
+        // 根据计算出的距离生成 bound
         bound_road.upper =
-            std::fmin(std::max(config_.soft_min_distance_road2center,
-                               bound_road.upper - left_road_extra_buffer_ +
-                                   uncertain_decrease_buffer),
-                      init_dist_to_bound);
+            std::fmin(std::max(config_.hard_min_distance_road2center,
+                               min_left_road_dist - config_.hard_buffer2road),
+                      bound_road.upper);
         bound_road.lower =
-            std::fmax(std::min(-config_.soft_min_distance_road2center,
-                               bound_road.lower + right_road_extra_buffer_ -
-                                   uncertain_decrease_buffer),
-                      -init_dist_to_bound);
-        max_care_lon_area_road_border =
-            std::max(map_obstacle_decision.tp.s -
-                         ego_frenet_state_.planning_init_point().frenet_state.s,
-                     max_care_lon_area_road_border);
+            std::fmax(std::min(-config_.hard_min_distance_road2center,
+                               -min_right_road_dist + config_.hard_buffer2road),
+                      bound_road.lower);
+        if (bound_hierarchy != BoundHierarchy::HARD_BOUND) {
+          bound_road.upper =
+              std::fmin(std::max(config_.soft_min_distance_road2center,
+                                 bound_road.upper - left_road_extra_buffer_ +
+                                     uncertain_decrease_buffer),
+                        init_dist_to_bound);
+          bound_road.lower =
+              std::fmax(std::min(-config_.soft_min_distance_road2center,
+                                 bound_road.lower + right_road_extra_buffer_ -
+                                     uncertain_decrease_buffer),
+                        -init_dist_to_bound);
+          max_care_lon_area_road_border = std::max(
+              map_obstacle_decision.tp.s -
+                  ego_frenet_state_.planning_init_point().frenet_state.s,
+              max_care_lon_area_road_border);
+        }
       }
     }
     if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
