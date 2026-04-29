@@ -1459,6 +1459,9 @@ bool HybridARAStar::Init(const SearchResult search_result) {
            ;
 
   // prepare for edt
+  if(session_->is_hpp_scene()){
+    session_->environmental_model().get_edt_manager()->update();
+  }
   edt_ = session_->environmental_model()
              .get_edt_manager()
              ->GetEulerDistanceTransform();
