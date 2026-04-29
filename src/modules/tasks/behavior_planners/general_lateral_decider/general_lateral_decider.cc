@@ -112,6 +112,9 @@ bool GeneralLateralDecider::InitInfo() {
   ref_curve_info_.Clear();
   current_desire_final_nudge_l_map_.clear();
   min_road_radius_ = 20.0;
+  left_road_extra_buffer_ = 0.0;
+  right_road_extra_buffer_ = 0.0;
+  road_segments_frenet_.clear();
   return true;
 }
 
@@ -1292,8 +1295,6 @@ void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
 
 void GeneralLateralDecider::PreProcessRoadInformation() {
   // buffer
-  left_road_extra_buffer_ = 0.0;
-  right_road_extra_buffer_ = 0.0;
   GetDesireRoadExtraBuffer(&left_road_extra_buffer_, &right_road_extra_buffer_);
   JSON_DEBUG_VALUE("left_road_extra_buffer", left_road_extra_buffer_);
   JSON_DEBUG_VALUE("right_road_extra_buffer", right_road_extra_buffer_);
@@ -1314,7 +1315,6 @@ void GeneralLateralDecider::PreProcessRoadInformation() {
            last_uncertain_decrease_slope_ - change_rate);
 
   // 预处理：获取路沿边界并转换到frenet坐标系（只做一次）
-  road_segments_frenet_.clear();
   ConvertRoadBoundariesToFrenet();
 
   // init
