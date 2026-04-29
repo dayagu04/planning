@@ -437,6 +437,11 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_q_obs_jerk_weight(lc_decision_config_.q_obs_jerk_weight);
   planning_input.set_q_obs_omega_weight(lc_decision_config_.q_obs_omega_weight);
 
+  planning_input.set_q_obs_acc_bound_weight(
+      lc_decision_config_.q_obs_acc_bound_weight);
+  planning_input.set_obs_acc_max(lc_decision_config_.obs_acc_max);
+  planning_input.set_obs_acc_min(lc_decision_config_.obs_acc_min);
+
   planning_input.set_q_ego_acc_bound_weight(
       lc_decision_config_.q_ego_acc_bound_weight);
   planning_input.clear_ego_acc_max();

@@ -916,6 +916,60 @@ void EgoVelBoundCostTerm::GetGradientHessian(
   }
 }
 
+double ObsAccBoundCostTerm::GetCost(const ilqr_solver::State& x,
+                                    const ilqr_solver::Control&) {
+  const int obs_num = cost_config_ptr_->at(OBS_NUM);
+  double weight = cost_config_ptr_->at(W_OBS_ACC_BOUND);
+  double acc_max = cost_config_ptr_->at(OBS_ACC_MAX);
+  double acc_min = cost_config_ptr_->at(OBS_ACC_MIN);
+
+  double cost = 0.0;
+
+  for (int i = 0; i < obs_num; ++i) {
+    const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    double obs_acc = x[state_base_idx + OBS_ACC];
+
+    if (obs_acc > acc_max) {
+      double violation = obs_acc - acc_max;
+      cost += weight * violation * violation;
+    }
+
+    if (obs_acc < acc_min) {
+      double violation = acc_min - obs_acc;
+      cost += weight * violation * violation;
+    }
+  }
+
+  return cost;
+}
+
+void ObsAccBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
+  const int obs_num = cost_config_ptr_->at(OBS_NUM);
+  double weight = cost_config_ptr_->at(W_OBS_ACC_BOUND);
+  double acc_max = cost_config_ptr_->at(OBS_ACC_MAX);
+  double acc_min = cost_config_ptr_->at(OBS_ACC_MIN);
+
+  for (int i = 0; i < obs_num; ++i) {
+    const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    double obs_acc = x[state_base_idx + OBS_ACC];
+
+    if (obs_acc > acc_max) {
+      double violation = obs_acc - acc_max;
+      lx(state_base_idx + OBS_ACC) += 2.0 * weight * violation;
+      lxx(state_base_idx + OBS_ACC, state_base_idx + OBS_ACC) += 2.0 * weight;
+    }
+
+    if (obs_acc < acc_min) {
+      double violation = acc_min - obs_acc;
+      lx(state_base_idx + OBS_ACC) -= 2.0 * weight * violation;
+      lxx(state_base_idx + OBS_ACC, state_base_idx + OBS_ACC) += 2.0 * weight;
+    }
+  }
+}
+
 std::vector<HardHalfplaneCostTerm::HardHalfplaneResult>
 HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
   std::vector<HardHalfplaneResult> results;

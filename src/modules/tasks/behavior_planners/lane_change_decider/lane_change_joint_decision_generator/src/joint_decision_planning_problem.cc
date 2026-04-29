@@ -43,6 +43,7 @@ void JointDecisionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<ObsReferenceCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<ObsJerkCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<ObsOmegaCostTerm>());
+  ilqr_core_ptr_->AddCost(std::make_shared<ObsAccBoundCostTerm>());
   ilqr_core_ptr_->InitAdvancedInfo();
   const auto &N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   planning_output_.mutable_time_vec()->Resize(N, 0.0);
@@ -204,6 +205,11 @@ uint8_t JointDecisionPlanningProblem::Update(
     double obs_omega_decay_factor = std::exp(-obs_omega_decay_rate * i);
     cost_config_vec.at(i)[W_OBS_OMEGA] =
         planning_input.q_obs_omega_weight() * obs_omega_decay_factor;
+
+    cost_config_vec.at(i)[W_OBS_ACC_BOUND] =
+        planning_input.q_obs_acc_bound_weight();
+    cost_config_vec.at(i)[OBS_ACC_MAX] = planning_input.obs_acc_max();
+    cost_config_vec.at(i)[OBS_ACC_MIN] = planning_input.obs_acc_min();
 
     // 高斯型权重曲线: 前3个时刻权重为0，后续先增后减
     double hard_halfplane_bound_decay = 0.0;

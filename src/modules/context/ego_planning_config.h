@@ -4700,6 +4700,11 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_obs_omega_weight, "lane_change_joint_decision",
                      "q_obs_omega_weight");
 
+    ReadItem<double>(json, q_obs_acc_bound_weight, "lane_change_joint_decision",
+                     "q_obs_acc_bound_weight");
+    ReadItem<double>(json, obs_acc_max, "lane_change_joint_decision", "obs_acc_max");
+    ReadItem<double>(json, obs_acc_min, "lane_change_joint_decision", "obs_acc_min");
+
     ReadItem<double>(json, q_ego_acc_bound_weight, "lane_change_joint_decision",
                      "q_ego_acc_bound_weight");
     ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision", "ego_acc_max");
@@ -4769,6 +4774,10 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double q_ego_delta_weight = 50.0;
   double q_obs_jerk_weight = 30.0;
   double q_obs_omega_weight = 5.0;
+
+  double q_obs_acc_bound_weight = 100.0;
+  double obs_acc_max = 3.0;
+  double obs_acc_min = -1.0;
 
   double q_ego_acc_bound_weight = 100.0;
   double ego_acc_max = 1.35;

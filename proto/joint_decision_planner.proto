@@ -149,6 +149,13 @@ message JointDecisionPlanningInput {
   // 障碍物角速度权重
   optional double q_obs_omega_weight = 38;
 
+  // 障碍物加速度边界权重
+  optional double q_obs_acc_bound_weight = 59;
+
+  // 障碍物加速度边界
+  optional double obs_acc_max = 60;
+  optional double obs_acc_min = 61;
+
   // 自车加速度边界权重
   optional double q_ego_acc_bound_weight = 39;
 
