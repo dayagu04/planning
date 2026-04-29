@@ -32,8 +32,8 @@ using namespace pnc::spline;
 HppGeneralLateralDecider::HppGeneralLateralDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseGeneralLateralDecider(config_builder, session) {
-
   name_ = "HppGeneralLateralDecider";
+  config_ = config_builder->cast<HppGeneralLateralDeciderConfig>();
   second_frenet_soft_bounds_.resize(config_.num_step + 1);
   first_frenet_soft_bounds_.resize(config_.num_step + 1);
   frenet_hard_bounds_.resize(config_.num_step + 1);
@@ -487,7 +487,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
       reference_path_ptr_->get_static_analysis_storage();
 
   is_point_in_turning_ = false;
-  
+
   constexpr double kPreviewBeforeTurn = 5.0;
   constexpr double kExitRecoverDist = 5.0;
 
@@ -594,10 +594,10 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
             auto t = std::clamp((s_ref - back_turn_range.second) /
                                   kExitRecoverDist, 0.0, 1.0);
             ref_len_in_turn = kTurnInnerPreview + t *
-                (kStraightCheckLength - kTurnInnerPreview);                      
+                (kStraightCheckLength - kTurnInnerPreview);
           }
           ref_len_based_on_straight =
-              std::max(min_len_base_straight, ref_len_in_turn);     
+              std::max(min_len_base_straight, ref_len_in_turn);
         } else {
           const auto back_turn_range =
               static_analysis_storage->GetBackSRange(turn_query, s_ref);
@@ -681,7 +681,7 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
 
       auto &v_curr = ref_sample_vel_vec[i];
       auto &v_next = ref_sample_vel_vec[i + 1];
-      
+
       if (t_reach > t_next) {
         v_next = v_curr + kMaxAcc * config_.delta_t;
       } else {
@@ -966,7 +966,7 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
   } else if (t_delay > 1e-2) {
     for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
       plan_history_traj_[i].t -= t_delay;
-    }  
+    }
   }
 
 

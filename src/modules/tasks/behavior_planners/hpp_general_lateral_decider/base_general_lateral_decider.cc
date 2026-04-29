@@ -4,7 +4,6 @@ namespace planning {
 BaseGeneralLateralDecider::BaseGeneralLateralDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session) {
-  config_ = config_builder->cast<HppGeneralLateralDeciderConfig>();
   session_ = session;
 }
 

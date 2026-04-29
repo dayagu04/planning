@@ -33,6 +33,7 @@ NSAGeneralLateralDecider::NSAGeneralLateralDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : BaseGeneralLateralDecider(config_builder, session) {
   name_ = "NSAGeneralLateralDecider";
+  config_ = config_builder->cast<NSAGeneralLateralDeciderConfig>();
   second_frenet_soft_bounds_.resize(config_.num_step + 1);
   first_frenet_soft_bounds_.resize(config_.num_step + 1);
   frenet_hard_bounds_.resize(config_.num_step + 1);
