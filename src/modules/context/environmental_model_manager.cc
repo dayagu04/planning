@@ -1195,6 +1195,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
     cur_predicion_obj.trajectory_valid = trajectory_point_size >= 1;
+    if(cur_predicion_obj.trajectory_valid == false) {
+      ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
+                << "s trajectory is empty!";
+    }
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto& point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
@@ -1214,8 +1218,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.relative_ego_speed =
             std::hypot(cur_predicion_obj.relative_speed_x,
                        cur_predicion_obj.relative_speed_y);
-        ILOG_WARN_EVERY(25) << "The cur_predicion_obj " << cur_predicion_obj.id
-                  << "s trajectory is empty!";
       } else {
         trajectory_point.relative_time = point_relative_time;
         trajectory_point.x = point.position.x;
