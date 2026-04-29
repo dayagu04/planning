@@ -117,6 +117,8 @@ bool HppTaskPipeline::Run() {
     AddErrorInfo(hpp_obstacle_lateral_preprocess_decider_->Name());
     return false;
   }
+  auto time10 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("HppObstacleLateralPreprocessDecider", time10 - time2);
 
   ok = lateral_obstacle_decider_->Execute();
   if (!ok) {
@@ -124,7 +126,7 @@ bool HppTaskPipeline::Run() {
     return false;
   }
   auto time3 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("LateralObstacleDeciderTime", time3 - time2);
+  JSON_DEBUG_VALUE("HppLateralObstacleDeciderTime", time3 - time10);
 
   ok = hpp_general_lateral_decider_->Execute();
   if (!ok) {
