@@ -58,6 +58,7 @@ class SideNudgeLateralOffsetDecider {
   const NudgeInfo& nudge_info() const { return nudge_info_; }
   void Reset();
   SideNudgeState nudge_state() const { return current_state_; }
+  double side_offset_change_rate() const { return offset_change_rate_; }
 
  private:
   void RunStateMachine();
@@ -86,5 +87,7 @@ class SideNudgeLateralOffsetDecider {
   std::unordered_map<int, int> count_map_;
   LaneInfo lane_info_;
   std::array<AvoidObstacleInfo, 2> avd_obstacle_;
+  NudgeInfo last_nudge_info_;
+  double offset_change_rate_ = 0.0;
 };
 }  // namespace planning

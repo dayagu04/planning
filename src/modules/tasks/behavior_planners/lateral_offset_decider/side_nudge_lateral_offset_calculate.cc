@@ -19,6 +19,16 @@ constexpr double kExtendLonDistance = 10;
 constexpr double kExtendLatDistance = 10;
 constexpr double kMaxNudgeDistance = 0.3;
 constexpr int kMaxConfirmCount = 2;
+// 危险等级判定阈值（进入）
+constexpr double kLatDistanceHigh = 0.6;
+constexpr double kLatDistanceMedium = 0.8;
+constexpr double kLatApproachVHigh = 0.5;
+constexpr double kLatApproachVMedium = 0.3;
+// 危险等级释放阈值（滞回，需比进入阈值更宽松才允许降级）
+constexpr double kLatDistanceReleaseHigh = 0.8;
+constexpr double kLatDistanceReleaseMedium = 1.0;
+constexpr double kLatApproachVReleaseHigh = 0.4;
+constexpr double kLatApproachVReleaseMedium = 0.2;
 SideNudgeLateralOffsetDecider::SideNudgeLateralOffsetDecider(
     framework::Session* session,
     const EgoPlanningConfigBuilder* config_builder) {
@@ -30,6 +40,7 @@ bool SideNudgeLateralOffsetDecider::Process(
     const LaneInfo& lane_info,
     const std::array<AvoidObstacleInfo, 2>& avd_obstacle) {
   if (!Init(lane_info, avd_obstacle)) {
+    last_nudge_info_.Reset();
     return false;
   }
 
@@ -51,6 +62,7 @@ bool SideNudgeLateralOffsetDecider::Init(
       session_->environmental_model().get_ego_state_manager();
   lane_info_ = lane_info;
   avd_obstacle_ = avd_obstacle;
+  offset_change_rate_ = 0.0;
   return true;
 }
 
@@ -104,6 +116,7 @@ void SideNudgeLateralOffsetDecider::RunStateMachine() {
   }
 
   UpdateCurrentState();
+  last_nudge_info_ = nudge_info_;
 }
 
 bool SideNudgeLateralOffsetDecider::IsStartNudge() {
@@ -450,7 +463,21 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
   //                    lane_info_.normal_left_avoid_threshold);
 
   // smooth
-  double offset_change_rate = kOffsetChangeRateLow;
+  // 只在避让幅度增大时按危险等级放大变化率，回退时始终用低速率
+  offset_change_rate_ = kOffsetChangeRateLow;
+  if (std::fabs(desire_lateral_offset) > std::fabs(lateral_offset_)) {
+    switch (nudge_info_.emergency_level) {
+      case EmergecyLevel::HIGH:
+        offset_change_rate_ = kOffsetChangeRateHigh;
+        break;
+      case EmergecyLevel::MEDIUM:
+        offset_change_rate_ = kOffsetChangeRateMedium;
+        break;
+      default:
+        offset_change_rate_ = kOffsetChangeRateLow;
+        break;
+    }
+  }
 
   if ((desire_lateral_offset < lateral_offset_ &&
        desire_lateral_offset > ego_init_l) ||
@@ -462,18 +489,18 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
              (lateral_offset_ > desire_lateral_offset &&
               lateral_offset_ < ego_init_l)) {
     lateral_offset_ =
-        clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-             lateral_offset_ - offset_change_rate);
+        clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+             lateral_offset_ - offset_change_rate_);
   } else {
     if (desire_lateral_offset > ego_init_l) {
       lateral_offset_ = std::max(
-          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-               lateral_offset_ - offset_change_rate),
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+               lateral_offset_ - offset_change_rate_),
           ego_init_l);
     } else {
       lateral_offset_ = std::min(
-          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-               lateral_offset_ - offset_change_rate),
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+               lateral_offset_ - offset_change_rate_),
           ego_init_l);
     }
   }
@@ -519,7 +546,49 @@ void SideNudgeLateralOffsetDecider::UpdateNudgeInfo() {
 
   nudge_info_.min_l_to_ref = limit_overlap_min_y;
   nudge_info_.max_l_to_ref = limit_overlap_max_y;
+
+  double lat_distance = 0.0;
+  double lat_approach_v = 0.0;
+  if (nudge_info_.nudge_direction == NudgeDirection::LEFT) {
+    lat_distance = nudge_info_.min_l_to_ref - ego_boundary.l_end;
+    lat_approach_v = -frenet_obstacle->frenet_velocity_l();
+  } else {
+    lat_distance = ego_boundary.l_start - nudge_info_.max_l_to_ref;
+    lat_approach_v = frenet_obstacle->frenet_velocity_l();
+  }
+
+  EmergecyLevel raw_level = EmergecyLevel::LOW;
+  if (lat_distance <= kLatDistanceMedium ||
+      lat_approach_v >= kLatApproachVMedium) {
+    raw_level = EmergecyLevel::MEDIUM;
+  }
+  if (lat_distance <= kLatDistanceHigh || lat_approach_v >= kLatApproachVHigh) {
+    raw_level = EmergecyLevel::HIGH;
+  }
+
+  EmergecyLevel last_level = last_nudge_info_.emergency_level;
+  EmergecyLevel level = raw_level;
+  if (raw_level < last_level) {
+    // 降级需满足释放阈值，否则保持当前等级
+    if (last_level == EmergecyLevel::HIGH) {
+      if (lat_distance > kLatDistanceReleaseHigh &&
+          lat_approach_v < kLatApproachVReleaseHigh) {
+        level = EmergecyLevel::MEDIUM;
+      } else {
+        level = EmergecyLevel::HIGH;
+      }
+    } else if (last_level == EmergecyLevel::MEDIUM) {
+      if (lat_distance > kLatDistanceReleaseMedium &&
+          lat_approach_v < kLatApproachVReleaseMedium) {
+        level = EmergecyLevel::LOW;
+      } else {
+        level = EmergecyLevel::MEDIUM;
+      }
+    }
+  }
+  nudge_info_.emergency_level = level;
 }
+
 bool SideNudgeLateralOffsetDecider::IsStopNudge() {
   if (nudge_info_.id == 0) {
     nudge_info_.cancel_nudge_reason = CancelNudgeReason::OTHER;
