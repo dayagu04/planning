@@ -559,8 +559,8 @@ double RoadTypeExtraBufferAtSForObs(
   }
   max_extra_buffer += buffer_bas_obs_vel;
 
-  double roadtype_gain_base_obs_vel =
-      std::min(std::fabs(obstacle->velocity()) / KLonVThrd, 1.0);
+  double roadtype_gain_base_obs_vel = 
+      obstacle->is_static() ? 0.5 : std::min(std::fabs(obstacle->velocity()) / KLonVThrd, 1.0);
   double road_type_buffer_max = 0.1 * roadtype_gain_base_obs_vel;
   double road_type_buffer_min = 0.05 * roadtype_gain_base_obs_vel;
   const auto is_road_type_max = [](const CRoadType road_type) {
