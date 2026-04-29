@@ -16,13 +16,13 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
-                                HppGeneralLateralDeciderConfig &config);
+                                RADSGeneralLateralDeciderConfig &config);
 
 double CalDesireLonDistance(double ego_vel, double agent_vel, double base_dist);
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
-                                      bool is_update_hard_bound, HppGeneralLateralDeciderConfig &config);
+                                      bool is_update_hard_bound, RADSGeneralLateralDeciderConfig &config);
 double GetBoundWeight(
     BoundType type,
     const std::unordered_map<BoundType, double> &map_bound_weight);

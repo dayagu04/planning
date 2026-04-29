@@ -14,7 +14,6 @@ class BaseGeneralLateralDecider : public Task {
   virtual bool Execute();
 
  protected:
-  HppGeneralLateralDeciderConfig config_;
   planning::framework::Session *session_;
 };
 }  // namespace planning

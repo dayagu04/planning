@@ -14,7 +14,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
-                                HppGeneralLateralDeciderConfig& config) {
+                                NSAGeneralLateralDeciderConfig& config) {
   double base_dis = 0.8;
   if (IsVRU(obstacle->type())) {
     base_dis = 1.0;
@@ -37,7 +37,7 @@ double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
                                       bool is_update_hard_bound,
-                                      HppGeneralLateralDeciderConfig& config) {
+                                      NSAGeneralLateralDeciderConfig& config) {
   const double kStaticVRUMaxExtraLateralBuffer = 0.65;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.45;

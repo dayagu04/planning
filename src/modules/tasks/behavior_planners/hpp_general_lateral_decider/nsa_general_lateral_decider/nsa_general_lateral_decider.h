@@ -177,6 +177,7 @@ class NSAGeneralLateralDecider : public BaseGeneralLateralDecider {
   bool HandleAraPath(TrajectoryPoints &traj_points);
 
  private:
+  NSAGeneralLateralDeciderConfig config_;
   bool is_ego_reverse_;
   double min_road_radius_;
   // VelocityLimitInfo vel_limit_info_;

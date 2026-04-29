@@ -195,6 +195,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
         std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info);
 
  private:
+  HppGeneralLateralDeciderConfig config_;
   bool is_ego_reverse_;
   double min_road_radius_;
   double lon_sample_length_ = 0.0;
