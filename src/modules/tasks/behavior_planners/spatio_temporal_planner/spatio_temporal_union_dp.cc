@@ -2478,11 +2478,16 @@ bool SpatioTemporalUnionDp::PrebuildLastFrameToCurrentSpline() {
 void SpatioTemporalUnionDp::PostProcessLateralProfile(
     std::vector<SpeedInfo>& speed_profile, std::vector<double>& l_vec) {
   // 后处理：防止横向超调（在插值前对稀疏DP点修正，使插值结果更平滑）
-  // 条件：自车当前在参考线左侧(l0>0)，未来某点超调到右侧(l<0)，且该点左侧无障碍物cost
+  // 逐点约束：当前点不应比前一个点更偏离参考线
+  // 自车在左侧(ego_init_l>0)时，当前点l不应比前一个点的l更大
+  // 扫描当前点到前一个点l之间所有采样点的obstacle_cost，将l回退到最近的无障碍物采样点
   const double ego_init_l = cost_table_[0][0][0].point().l();
+  const auto& lat_samples = lateral_distance_by_index_;
+  const int lat_size = static_cast<int>(lat_samples.size());
   if (ego_init_l > 0.0) {
     for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l >= 0.0) {
+      const double prev_l = speed_profile[i - 1].l;
+      if (speed_profile[i].l <= prev_l) {
         continue;
       }
       const double point_t = speed_profile[i].t;
@@ -2498,30 +2503,40 @@ void SpatioTemporalUnionDp::PostProcessLateralProfile(
       if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
         continue;
       }
-      bool left_has_obstacle = false;
       const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.end()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr));
-        if (ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          left_has_obstacle = true;
+      const int cost_row_size = static_cast<int>(cost_row.size());
+      const auto pt_l_itr = std::lower_bound(lat_samples.begin(),
+                                             lat_samples.end(), speed_profile[i].l);
+      int pt_l_idx = std::min(
+          static_cast<int>(std::distance(lat_samples.begin(), pt_l_itr)),
+          lat_size - 1);
+      const auto prev_l_itr = std::lower_bound(lat_samples.begin(),
+                                               lat_samples.end(), prev_l);
+      const int prev_l_idx = std::min(
+          static_cast<int>(std::distance(lat_samples.begin(), prev_l_itr)),
+          lat_size - 1);
+      int target_l_idx = -1;
+      for (int k = pt_l_idx; k >= prev_l_idx; --k) {
+        if (k < cost_row_size && cost_row[k].obstacle_cost() <= 1e-3) {
+          target_l_idx = k;
+          break;
         }
       }
-      if (!left_has_obstacle) {
+      if (target_l_idx >= 0) {
+        const double new_l = std::min(lat_samples[target_l_idx], prev_l);
         ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
+                   << " l=" << speed_profile[i].l << " -> " << new_l;
+        speed_profile[i].l = new_l;
+        l_vec[i] = new_l;
       }
     }
   }
-  // 条件：自车当前在参考线右侧(l0<0)，未来某点超调到左侧(l>0)，且该点右侧无障碍物cost
+  // 自车在右侧(ego_init_l<0)时，当前点l不应比前一个点的l更小
+  // 扫描当前点到前一个点l之间所有采样点的obstacle_cost，将l回退到最近的无障碍物采样点
   if (ego_init_l < 0.0) {
     for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l <= 0.0) {
+      const double prev_l = speed_profile[i - 1].l;
+      if (speed_profile[i].l >= prev_l) {
         continue;
       }
       const double point_t = speed_profile[i].t;
@@ -2537,23 +2552,29 @@ void SpatioTemporalUnionDp::PostProcessLateralProfile(
       if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
         continue;
       }
-      bool right_has_obstacle = false;
       const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.begin()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr)) - 1;
-        if (ref_l_idx >= 0 && ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          right_has_obstacle = true;
+      const int cost_row_size = static_cast<int>(cost_row.size());
+      const auto pt_l_itr = std::upper_bound(lat_samples.begin(),
+                                             lat_samples.end(), speed_profile[i].l);
+      int pt_l_idx = std::max(
+          static_cast<int>(std::distance(lat_samples.begin(), pt_l_itr)) - 1, 0);
+      const auto prev_l_itr = std::upper_bound(lat_samples.begin(),
+                                               lat_samples.end(), prev_l);
+      const int prev_l_idx = std::max(
+          static_cast<int>(std::distance(lat_samples.begin(), prev_l_itr)) - 1, 0);
+      int target_l_idx = -1;
+      for (int k = pt_l_idx; k <= prev_l_idx && k < cost_row_size; ++k) {
+        if (cost_row[k].obstacle_cost() <= 1e-3) {
+          target_l_idx = k;
+          break;
         }
       }
-      if (!right_has_obstacle) {
+      if (target_l_idx >= 0) {
+        const double new_l = std::max(lat_samples[target_l_idx], prev_l);
         ILOG_DEBUG << "[PostProcess] Overshoot correction (right) at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
+                   << " l=" << speed_profile[i].l << " -> " << new_l;
+        speed_profile[i].l = new_l;
+        l_vec[i] = new_l;
       }
     }
   }
