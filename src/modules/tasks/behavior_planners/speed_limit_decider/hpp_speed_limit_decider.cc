@@ -1008,9 +1008,9 @@ double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
   const double passage_clearance = width - vehicle_width;
 
   // 基础限速
-  constexpr double kW1 = 1.0;         // m
+  constexpr double kW1 = 0.0;         // m
   constexpr double kV1 = 10.0 / 3.6;  // m/s (10 km/h)
-  constexpr double kW2 = 1.5;         // m
+  constexpr double kW2 = 1.0;         // m
   constexpr double kV2 = 15.0 / 3.6;  // m/s (15 km/h)
 
   const double v_base =

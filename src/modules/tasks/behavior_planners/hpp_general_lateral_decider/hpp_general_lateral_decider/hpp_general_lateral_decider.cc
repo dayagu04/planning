@@ -2501,7 +2501,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
       }
       const double recover_dist =
           ref_traj_points_[i].s - ref_traj_points_[recover_window_start].s;
-      if (recover_dist >= kRecoverConfirmDist) {
+      const bool is_last_point = (i == n - 1);
+      if (recover_dist >= kRecoverConfirmDist || is_last_point) {
         break_recover_ranges.emplace_back(cur_break_start, recover_window_start);
         in_break = false;
         cur_break_start = n;
