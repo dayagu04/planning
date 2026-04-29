@@ -71,6 +71,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       ObstacleDecisions &obstacle_decisions);
   void GenerateStaticObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
+      const Polygon2d &obstacle_sl_polygon,
       ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
   void GenerateDynamicObstaclesBoundary(
       const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
