@@ -1474,7 +1474,6 @@ bool SccHybridARAStar::Init(const SearchResult search_result) {
             //;
 
   // prepare for edt
-  session_->environmental_model().get_edt_manager()->update();
   edt_ = session_->environmental_model()
              .get_edt_manager()
              ->GetEulerDistanceTransform();
