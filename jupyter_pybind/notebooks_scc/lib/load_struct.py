@@ -2465,16 +2465,6 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
     # 绝对坐标系下的数据
     long_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.x
     lat_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.y
-    if obstacle_list[i].fusion_obstacle.common_info.type == 28:
-      long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
-      lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
-
-    if abs(long_pos) < 0.1 and abs(lat_pos) < 0.1:
-      long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
-      lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
-
-    long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
-    lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
 
     theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
     cos_heading = math.cos(theta)
