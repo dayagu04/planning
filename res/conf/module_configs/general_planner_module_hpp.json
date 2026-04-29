@@ -223,6 +223,8 @@
   "turnstile_emergency_opening_status_stable_frame_threshold": 3,
   "turnstile_emergency_stop_velocity_threshold": 0.1,
   "turnstile_emergency_stop_stable_frame_threshold": 3,
+  "enable_cross_obstacle_virtual_agent": true,
+  "cross_obstacle_stop_buffer": 0.0,
   "lon_care_length": 120.0,
   "lon_max_ignore_relative_time": 2.0,
   "urban_max_lat_acceleration": 1.8,
