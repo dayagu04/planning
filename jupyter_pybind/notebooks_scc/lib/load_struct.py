@@ -1827,11 +1827,19 @@ def load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_en
         lat_decision = "RIGHT"
       elif (2 == obstacle.lat_decision):
         lat_decision = "IGNORE"
-      else:
-        lat_decision = "NotSet"
+      elif (3 == obstacle.lat_decision):
+        lat_decision = "FOLLOW"
+      elif (4 == obstacle.lat_decision):
+        lat_decision = "PRE_FOLLOW_WITHIN_LANE"
+      elif (5 == obstacle.lat_decision):
+        lat_decision = "PRE_NUDGE"
+      elif (6 == obstacle.lat_decision):
+        lat_decision = "NOT_SET"
       obstacles_lat_decision_vec.append([lat_decision])
       if obstacle.is_static:
-        is_static = "Static"
+        is_static = "true"
+      else:
+        is_static = "false"
       obstacles_is_static_vec.append([is_static])
       polygon_x = []
       polygon_y = []

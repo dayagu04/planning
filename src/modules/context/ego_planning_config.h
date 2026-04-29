@@ -2378,11 +2378,38 @@ struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
     ego_detour_safe_dis = read_json_keys<double>(
         json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
                                        "ego_detour_safe_dis"});
+
+    dynamic_obs_relative_nudge_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "dynamic_obs_relative_nudge_buffer"});
+
+    dynamic_obs_absolute_nudge_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "dynamic_obs_absolute_nudge_buffer"});
+
+    dynamic_obs_ego_detour_safe_dis = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "dynamic_obs_ego_detour_safe_dis"});
+
+    dynamic_scene_obs_traj_expand_s = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "dynamic_scene_obs_traj_expand_s"});
+
+    dynamic_scene_ego_traj_expand_s = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "dynamic_scene_ego_traj_expand_s"});
   }
 
   double relative_nudge_buffer = 0.8;
   double absolute_nudge_buffer = 2.0;
   double ego_detour_safe_dis = 0.3;
+
+  double dynamic_obs_relative_nudge_buffer = 0.8;
+  double dynamic_obs_absolute_nudge_buffer = 2.0;
+  double dynamic_obs_ego_detour_safe_dis = 0.5;
+
+  double dynamic_scene_obs_traj_expand_s = 1.5;
+  double dynamic_scene_ego_traj_expand_s = 1.5;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {

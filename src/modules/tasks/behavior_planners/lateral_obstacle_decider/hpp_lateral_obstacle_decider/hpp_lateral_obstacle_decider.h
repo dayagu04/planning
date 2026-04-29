@@ -20,6 +20,7 @@ struct ObstacleConsistencyInfo {
   LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
   double last_seen_timestamp = 0.0;
 };
+
 using ObstacleConsistencyMap =
     std::unordered_map<uint32_t, ObstacleConsistencyInfo>;
 using ObstacleLateralDecisionMap =
@@ -41,6 +42,46 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool ARAStar();
   bool CheckARAStarPath(const ara_star::HybridARAStarResult& result);
 
+  void JudgePassageWidthForSingleDynamicObs(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
+    const double LeftkPositionJumpThreshold = 0.0, const double RightkPositionJumpThreshold = 0.0);
+
+  void AnalyzeNudgeLevelBaseCurve(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary,
+    const LatObstacleDecisionInfo &previous_decision_info,
+    LatObstacleDecisionInfo &decision_info);
+
+  bool JudgeObsAndEgoInSameStraightLane(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const std::shared_ptr<FrenetObstacle> &obstacle);
+
+  void MakeDecisionBasedLastTrajRelativePos(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary,
+    const FrenetBoundary &ego_frenet_boundary,
+    const LatObstacleDecisionInfo &previous_decision_info,
+    LatObstacleDecisionInfo& decision_info);
+
+  bool MakeDecisionBasedTrajSLForDynamicObs(
+      const std::vector<LatObstacleDecisionInfo> &passage_width_info_vec,
+      const double min_obs_2left_road_boundary_mindis,
+      const double min_obs_2right_road_boundary_mindis,
+      LatObstacleDecisionInfo &relative_pos_result);
+
+
+
+  void MakeDecisionBasedReferPath(
+    const std::shared_ptr<FrenetObstacle> &obstacle,
+    LatObstacleDecisionInfo &decision_info);
+
+  void MakeFrameFinalDecision(
+    LatObstacleDecisionInfo &passage_width_info,
+    LatObstacleDecisionInfo &relative_pos_info,
+    LatObstacleDecisionInfo &last_path_info,
+    LatObstacleDecisionInfo &decision_info);
+
+  void MakeDecisonForDynamicObsWithoutOverlap(
+    const std::shared_ptr<FrenetObstacle> &obstacle, LatObstacleDecisionType &decision);
+
   void UpdateLatDecision(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const ObstacleConsistencyMap& obstacle_consistency_map,
@@ -49,9 +90,19 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   //辅助函数1：处理单个 Cluster 的决策逻辑
   // 该函数被下面的函数替代
+  void MakeDecisonForDynamicObsWithOverlap(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      const std::pair<double, double>& obs_overlap_l_range,
+      const std::pair<double, double> &ego_overlap_s_range, LatObstacleDecisionType& decision);
+  bool CheckEgoAndObjPolygonHaveOverlap(
+      const TrajectoryPoints& last_traj_points,
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      std::pair<double, double>& obs_overlap_l_range, std::pair<double, double> &ego_overlap_s_range);
   void MakeDecisionForSingleDynamicObs(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::shared_ptr<FrenetObstacle>& obstacle,
+      const ObstacleClassificationResult& obs_classification_result,
       LatObstacleDecisionType& decision);
 
   void MakeDecisionForTurnstile(

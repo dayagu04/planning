@@ -923,7 +923,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("intersection_state: ", intersection_state)
     except:
       print("no intersection_state")
-
+    # try:
+    #   clusters = plan_debug_msg.hpp_lateral_obstacle_decider_result.static_obstacle_clusters
+    #   for j in range(len(clusters)):
+    #     cluster = clusters[j]
+    #     for i in range(len(cluster.original_obstacle)):
+    #       obstacle = cluster.original_obstacle[i]
+    #       if obstacle.original_id == 112:
+    #         print("dis2left:", cluster.cluster_obstacle_frenet_boundary.obs_2left_road_boundary_mindis)
+    #         print("dis2right:", cluster.cluster_obstacle_frenet_boundary.obs_2right_road_boundary_mindis)
+    # except Exception as e:
+    #   print("cluster print error:", e)
     try:
       print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - bag_loader.plan_debug_msg['data'][0].frame_info.frame_num)
     except:
