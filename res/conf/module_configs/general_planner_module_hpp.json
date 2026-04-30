@@ -36,6 +36,7 @@
   "enable_fusion_intersection_objects": true,
   "enable_bbox_mode": true,
   "enable_unified_static_cluster": true,
+  "enable_merge_occ_and_ground_line": false,
   "cluster_grid_resolution": 0.15,
   "cluster_neighbor_range": 1,
   "cluster_aspect_ratio_threshold": 3.0,

@@ -5518,6 +5518,8 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         json, "max_heading_diff_threshold_deg", max_heading_diff_threshold_deg);
     ReadItem<bool>(json, enable_unified_static_cluster,
                    "enable_unified_static_cluster");
+    ReadItem<bool>(json, enable_merge_occ_and_ground_line,
+                   "enable_merge_occ_and_ground_line");
     ReadItem<double>(json, cluster_grid_resolution, "cluster_grid_resolution");
     ReadItem<int>(json, cluster_neighbor_range, "cluster_neighbor_range");
     ReadItem<double>(json, cluster_aspect_ratio_threshold,
@@ -5550,6 +5552,7 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double processed_trajectory_acc_thr = -0.5;
   double max_heading_diff_threshold_deg = 90.0;
   bool   enable_unified_static_cluster  = false;
+  bool   enable_merge_occ_and_ground_line  = false;
   double cluster_grid_resolution        = 0.25;
   int    cluster_neighbor_range         = 1;
   double cluster_aspect_ratio_threshold = 3.0;
