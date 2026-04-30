@@ -340,12 +340,20 @@ void ProcessLaneMapMergePoint(
       const iflymapdata::sdpro::LinkInfo_Link& target_link,
       const double dis_to_target_link);
 
-  void EraseFeasibleLaneIfNeeded(
-      uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
-      TopoLinkGraph& feasible_lane_graph);
-  std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* split_link, const SplitDirection& split_dir);
-  std::pair<FPPoint, FPPoint> CalculateMergeExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* merge_link, const SplitDirection& merge_dir);
-  std::tuple<size_t, size_t> CountAccAndEntryLanes(const iflymapdata::sdpro::LinkInfo_Link* link) const;
+  // 递归检查后继车道是否最终到达 split_next_link
+  bool IsSuccessorReachingSplitNextLink(
+      const iflymapdata::sdpro::Lane* lane,
+      const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
+      const std::unordered_set<uint64_t>& out_link_ids,
+      std::unordered_set<uint64_t>& visited) const;
+  std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(
+      const iflymapdata::sdpro::LinkInfo_Link* split_link,
+      const SplitDirection& split_dir);
+  std::pair<FPPoint, FPPoint> CalculateMergeExchangeAreaFP(
+      const iflymapdata::sdpro::LinkInfo_Link* merge_link,
+      const SplitDirection& merge_dir);
+  std::tuple<size_t, size_t> CountAccAndEntryLanes(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
   void CalculateFrontMergePointInfo(double search_dis);
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
