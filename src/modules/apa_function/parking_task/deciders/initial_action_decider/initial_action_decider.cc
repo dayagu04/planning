@@ -66,17 +66,17 @@ const double InitalActionDecider::GenerateRefPathLength(
 
   ColResult res;
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward, 0.0, true, path);
-  res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
+  res = edt_col_det_ptr->Update(path, ColDetBuffer(lon_buffer, lat_buffer, lat_buffer));
   ref_length = std::min(ref_length, res.remain_dist);
 
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward,
                apa_param.GetParam().min_turn_radius, true, path);
-  res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
+  res = edt_col_det_ptr->Update(path, ColDetBuffer(lon_buffer, lat_buffer, lat_buffer));
   ref_length = std::min(ref_length, res.remain_dist);
 
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward,
                -apa_param.GetParam().min_turn_radius, true, path);
-  res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
+  res = edt_col_det_ptr->Update(path, ColDetBuffer(lon_buffer, lat_buffer, lat_buffer));
   ref_length = std::min(ref_length, res.remain_dist);
 
   return ref_length;

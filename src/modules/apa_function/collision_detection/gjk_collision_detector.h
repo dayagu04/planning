@@ -19,6 +19,7 @@ struct GJKColDetRequest {
   bool use_obs_base_slot = true;
   bool use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud;
   bool use_limiter = true;
+  bool use_tyre = false;
   CarBodyType car_body_type = CarBodyType::NORMAL;
   ApaObsMovementType movement_type = ApaObsMovementType::ALL;
   UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
@@ -32,9 +33,9 @@ struct GJKColDetRequest {
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
       const UseObsHeightMethod _use_obs_height_method =
           UseObsHeightMethod::HIGH,
-      const bool _use_limiter = true) {
+      const bool _use_limiter = true, const bool _use_tyre = false) {
     Set(_use_obs_base_slot, _use_uss_pt, _car_body_type, _movement_type,
-        _use_obs_height_method, _use_limiter);
+        _use_obs_height_method, _use_limiter, _use_tyre);
   }
 
   void Set(
@@ -44,13 +45,14 @@ struct GJKColDetRequest {
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
       const UseObsHeightMethod _use_obs_height_method =
           UseObsHeightMethod::HIGH,
-      const bool _use_limiter = true) {
+      const bool _use_limiter = true, const bool _use_tyre = false) {
     use_obs_base_slot = _use_obs_base_slot;
     use_uss_pt = _use_uss_pt;
     car_body_type = _car_body_type;
     movement_type = _movement_type;
     use_obs_height_method = _use_obs_height_method;
     use_limiter = _use_limiter;
+    use_tyre = _use_tyre;
   }
 };
 
@@ -64,16 +66,12 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
   ~GJKCollisionDetector() {}
 
   const ColResult Update(const geometry_lib::PathSegment& path_seg,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const GJKColDetRequest gjk_col_det_request,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer& col_det_buffer,
+                         const GJKColDetRequest gjk_col_det_request);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint>& pt_vec,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const GJKColDetRequest gjk_col_det_request,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer& col_det_buffer,
+                         const GJKColDetRequest gjk_col_det_request);
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const GJKColDetRequest gjk_col_det_request);

@@ -84,6 +84,19 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
 
   const double CalRemainDistBySlotJump();
 
+  size_t GetHybridSegmentPointSize(const HybridAStarResult& result,
+                                   size_t index) const;
+  void WriteHybridSegmentFromPathPoints(
+      const std::vector<geometry_lib::PathPoint>& path_points,
+      HybridAStarResult* result, size_t index) const;
+  std::vector<geometry_lib::PathPoint> BuildHybridSegmentPathPoints(
+      const HybridAStarResult& result, size_t index) const;
+  void AppendHybridSegmentGlobalPathPoints(
+      const HybridAStarResult& result, size_t index,
+      const geometry_lib::LocalToGlobalTf& l2g_tf,
+      std::vector<geometry_lib::PathPoint>* current_path_points,
+      std::vector<geometry_lib::PathPoint>* complete_path_points) const;
+  void OptimizeHybridFirstSegment(HybridAStarResult* result);
   void FillPathPointGlobalFromHybridPath(const HybridAstarResponse& response);
 
   virtual const bool PostProcessPathAccordingLimiter() override;
