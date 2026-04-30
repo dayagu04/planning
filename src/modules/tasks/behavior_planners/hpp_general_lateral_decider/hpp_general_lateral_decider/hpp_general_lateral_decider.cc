@@ -2508,32 +2508,46 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
            ref_traj_points_[idx].l > hard_bounds[idx].second;
   };
 
-  size_t break_start = n;
+  bool has_any_break = false;
   for (size_t i = 0; i < n; ++i) {
     if (is_break_hard_bound(i)) {
-      break_start = std::max(i, kBlendRadius);
+      has_any_break = true;
       break;
     }
   }
 
-  if (break_start == n) {
+  if (!has_any_break) {
     return;
   }
-
+  // 连续 break 0.5m 以上，则认为 break
+  // 持续 recover 3.0m 以上，则认为 recover
+  // 如果 recover 直到终点忽略 3m 条件
   constexpr double kRecoverConfirmDist = 3.0;
+  constexpr double kBreakConfirmDist = 0.5;
   std::vector<std::pair<size_t, size_t>> break_recover_ranges;
   break_recover_ranges.reserve(4);
 
   bool in_break = false;
   size_t cur_break_start = n;
+  size_t tentative_break_start = n;
   size_t recover_window_start = n;
   for (size_t i = 0; i < n; ++i) {
     const bool is_break = is_break_hard_bound(i);
     if (!in_break) {
       if (is_break) {
-        cur_break_start = std::max(i, kBlendRadius);
-        in_break = true;
-        recover_window_start = n;
+        if (tentative_break_start == n) {
+          tentative_break_start = i;
+        }
+        const double break_dist =
+            ref_traj_points_[i].s - ref_traj_points_[tentative_break_start].s;
+        if (break_dist >= kBreakConfirmDist) {
+          cur_break_start = std::max(tentative_break_start, kBlendRadius);
+          in_break = true;
+          recover_window_start = n;
+          tentative_break_start = n;
+        }
+      } else {
+        tentative_break_start = n;
       }
       continue;
     }
@@ -2561,7 +2575,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   if (break_recover_ranges.empty()) {
-    break_recover_ranges.emplace_back(break_start, n - 1);
+    return;
   }
 
   TrajectoryPoints merged = ref_traj_points_;
