@@ -7,135 +7,6 @@
 
 namespace planning {
 
-// Obstacle::Obstacle(int id,
-//                    const iflyauto::PredictionObject &prediction_object,
-//                    const bool is_static, double start_relative_timestamp)
-//     : id_(id),
-//       perception_id_(prediction_object.fusion_obstacle().additional_info().track_id()),
-//       is_static_(is_static),
-//       perception_bounding_box_(
-//           {prediction_object.fusion_obstacle().common_info().center_position().x(),
-//           prediction_object.fusion_obstacle().common_info().center_position().y()},
-//           prediction_object.fusion_obstacle().common_info().heading_angle(),
-//           prediction_object.fusion_obstacle().common_info().shape().length(),
-//           prediction_object.fusion_obstacle().common_info().shape().width())
-//           {
-
-//   perception_obstacle_.CopyFrom(prediction_object.fusion_obstacle());
-//   x_center_ = perception_obstacle_.common_info().center_position().x();
-//   y_center_ = perception_obstacle_.common_info().center_position().y();
-//   perception_velocity_ = perception_obstacle_.common_info().velocity().x();
-//   velocity_angle_ = perception_obstacle_.common_info().heading_angle();
-//   // perception_obstacle_.heading_yaw =
-//   //
-//   planning_math::NormalizeAngle(prediction_object.perception_obstacle().heading_angle());
-
-//   std::vector<planning_math::Vec2d> polygon_points;
-//   if
-//   (prediction_object.fusion_obstacle().additional_info().polygon().points_size()
-//   < 3) {
-//     perception_bounding_box_.GetAllCorners(&polygon_points);
-//   } else {
-//     for (int i = 0; i <
-//     prediction_object.fusion_obstacle().additional_info().polygon().points_size()
-//     - 1;
-//          ++i) {
-//       auto &point =
-//       prediction_object.fusion_obstacle().additional_info().polygon().points(i);
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
-//       point.y()));
-//     }
-//   }
-
-//   auto extracted_polygon_points = polygon_points;
-//   extract_point_at_specified_resolution(extracted_polygon_points);
-//   if (extracted_polygon_points.size() < 3) {
-//     extracted_polygon_points = polygon_points;
-//   }
-//   if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
-//                                                    &perception_polygon_)) {
-//     LOG_DEBUG("polygon_debug invalid cart polygon");
-//   }
-//   std::vector<planning_math::Vec2d> ego_polygon_points;
-//   for (const auto &point : perception_polygon_.points()) {
-//     ego_polygon_points.emplace_back(
-//         planning_math::Vec2d(point.x() -
-//         perception_obstacle_.common_info().center_position().x(),
-//                              point.y() -
-//                              perception_obstacle_.common_info().center_position().y()));
-//   }
-//   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
-//   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
-//                                                    &obstacle_ego_polygon_)) {
-//     LOG_DEBUG("polygon_debug invalid ego polygon");
-//   }
-
-//   velocity_ =
-//   prediction_object.fusion_obstacle().common_info().velocity().x(); acc_ =
-//   prediction_object.fusion_obstacle().common_info().acceleration().x();
-//   // acc_signed_ = acc_ > 0 ? 1 : -1 ;
-
-//   if (is_static) {
-//     return;
-//   }
-
-//   auto &prediction_trajectory = prediction_object.trajectory(0);
-
-//   if (prediction_trajectory.trajectory_point_size() == 0) {
-//     return;
-//   }
-
-//   trajectory_.clear();
-//   double relative_time = start_relative_timestamp;
-//   double cumulative_s = 0.0;
-//   for (int i = 0; i < prediction_trajectory.trajectory_point_size(); ++i) {
-//     PncTrajectoryPoint tp;
-//     auto &traj_point = prediction_trajectory.trajectory_point(i);
-//     tp.v = traj_point.velocity ();
-//     tp.a = 0;
-//     tp.prediction_prob = traj_point.confidence ();
-//     tp.path_point.x = traj_point.position().x();
-//     tp.path_point.y = traj_point.position().y();
-//     tp.sigma_x = traj_point.gaussian_info().sigma_x();
-//     tp.sigma_y = traj_point.gaussian_info().sigma_y();
-//     tp.path_point.theta = planning_math::NormalizeAngle(traj_point.yaw());
-//     tp.velocity_direction =
-//     planning_math::NormalizeAngle(traj_point.theta()); tp.relative_ego_x =
-//     traj_point.relative_position().x(); tp.relative_ego_y =
-//     traj_point.relative_position().y(); tp.relative_ego_yaw =
-//     traj_point.relative_yaw(); tp.relative_ego_speed =
-//     traj_point.relative_velocity().x(); //TODO：补成相对绝对速度
-//     tp.relative_ego_std_dev_x = 0.; // hack
-//     tp.relative_ego_std_dev_y = 0.;
-//     tp.relative_ego_std_dev_yaw = 0.;
-//     tp.relative_ego_std_dev_speed = 0.;
-//     tp.path_point.s = cumulative_s;
-//     tp.relative_time = relative_time;
-//     // todo: get relative time from prediction msg !!!
-//     relative_time += 0.2;  // prediction time step
-//     if (i >= 1) {
-//       cumulative_s +=
-//           planning_math::fast_hypot(trajectory_[i - 1].path_point.x -
-//           tp.path_point.x,
-//                           trajectory_[i - 1].path_point.y - tp.path_point.y);
-//     }
-//     trajectory_.push_back(tp);
-//     //    trajectory_.emplace_back(tp);
-//   }
-//   is_static_ = std::fabs(trajectory_.back().path_point.s -
-//                          trajectory_.front().path_point.s) < 5.e-3;
-//   // DiscretizedTrajectory::CompensateTrajectory(trajectory_,
-//   //                                             5.0);
-
-//   // reset perception info matched with current timestamp
-//   auto init_point = get_point_at_time(0.0);
-//   x_center_ = init_point.path_point.x;
-//   y_center_ = init_point.path_point.y;
-//   perception_polygon_ = get_polygon_at_point(init_point);
-//   perception_bounding_box_ = get_bounding_box(init_point);
-//   velocity_angle_ = init_point.velocity_direction;
-// }
-
 Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
                    const bool is_static, double start_timestamp)
     : id_(id),
@@ -305,171 +176,39 @@ Obstacle::Obstacle(const Obstacle *obstacle) {
   source_type_ = obstacle->source_type();
 }
 
-// Obstacle::Obstacle(int id,
-//                    const iflyauto::FusionObject &perception_obstacle,
-//                    const bool is_static)
-//     : id_(id),
-//     perception_id_(perception_obstacle.additional_info().track_id()),
-//       is_static_(is_static),
-//       perception_bounding_box_(
-//           {perception_obstacle.common_info().center_position().x(),
-//           perception_obstacle.common_info().center_position().y()},
-//           perception_obstacle.common_info().heading_angle(),
-//           perception_obstacle.common_info().shape().length(),
-//           perception_obstacle.common_info().shape().width()) {
-//   perception_obstacle_.CopyFrom(perception_obstacle);
-//   auto speed = perception_obstacle.common_info().velocity();
-//   // todo: add priority for obstacle
-
-//   std::vector<planning_math::Vec2d> polygon_points;
-//   if (perception_obstacle.additional_info().polygon().points_size() < 3) {
-//     perception_bounding_box_.GetAllCorners(&polygon_points);
-//   } else {
-//     for (const auto &point :
-//     perception_obstacle.additional_info().polygon().points()) {
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
-//       point.y()));
-//     }
-//     polygon_points.erase(polygon_points.begin());
-//     for (size_t i = 0; i <
-//     perception_obstacle.additional_info().polygon().points_size()-1; ++i) {
-//       auto &point =
-//       perception_obstacle.additional_info().polygon().points(i);
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
-//       point.y()));
-//     }
-//   }
-//   // LOG_DEBUG("cone type %d points raw size %d static: %d",
-//   perception_obstacle.type, polygon_points.size(), is_static); auto
-//   extracted_polygon_points = polygon_points;
-//   extract_point_at_specified_resolution(extracted_polygon_points);
-//   if (extracted_polygon_points.size() < 3) {
-//     extracted_polygon_points = polygon_points;
-//   }
-//   // for (auto point : extracted_polygon_points) {
-//   //   LOG_DEBUG("cone after remove redundant point x %f y %f", point.x(),
-//   point.y());
-//   //   LOG_DEBUG("cone after remove redundant rel point x %f y %f", point.x()
-//   - perception_obstacle_.position.x,
-//   //         point.y()-perception_obstacle_.position.y);
-//   // }
-//   if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
-//                                                      &perception_polygon_)) {
-//     LOG_DEBUG("invalid cone polygon");
-//   }
-//   std::vector<planning_math::Vec2d> ego_polygon_points;
-//   for (const auto &point : perception_polygon_.points()) {
-//     ego_polygon_points.emplace_back(planning_math::Vec2d(
-//                                     point.x() -
-//                                     perception_obstacle.common_info().center_position().x(),
-//                                     point.y() -
-//                                     perception_obstacle.common_info().center_position().y()));
-//   }
-//   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
-//                                                      &car_ego_polygon_)) {
-//     LOG_DEBUG("invalid ego cone polygon");
-//   }
-
-//   is_virtual_ = id_ < 0;
-//   prob_ = 1.0;
-//   speed_ = perception_obstacle.common_info().velocity().x(); // TODO:绝对速度
-//   acc_ = std::hypot(0.,
-//                       std::hypot(perception_obstacle.common_info().acceleration().x(),
-//                                  perception_obstacle.common_info().acceleration().y()));
-//                                  //加速度需要有z信息
-// }
-
-// Obstacle::Obstacle(int id, const std::vector<Point3d> &points)
-//     : id_(id), perception_id_(id), is_static_(true) {
-//   type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
-//   perception_velocity_ = 0.0;
-//   velocity_ = 0.0;
-//   if (points.size() > 2) {
-//     x_center_ = (points[0].x + points[1].x) / 2;
-//     y_center_ = (points[0].y + points[1].y) / 2;
-//   }
-//   std::vector<planning_math::Vec2d> pillar_points(points.size());
-//   for (size_t i = 0; i < points.size(); i++) {
-//     pillar_points[i].set_x(points[i].x);
-//     pillar_points[i].set_y(points[i].y);
-//   }
-//   perception_points_ = pillar_points;
-//   planning_math::Polygon2d::ComputeConvexHull(pillar_points,
-//                                               &perception_polygon_);
-// }
-
 Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
     : id_(id),
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
-  velocity_ = 0.0;
-  acc_ = 0.0;
-  accel_fusion_ = 0.0;
-  fusion_source_ = 1;
-  if (id_ >= 12000000) {  // unified static cluster (OCC + GroundLine)
-    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
+
+  if (id_ >= kUnifiedStaticIdOffset) {
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL;
     source_type_ = SourceType::GroundLine;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
-  } else if (id_ >= 10000000) {  // intersection
+  } else if (id_ >= kUssObjectIdOffset) {
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL;
+    source_type_ = SourceType::USS;
+  } else if (id_ >= kIntersectionIdOffset) {
     type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
     source_type_ = SourceType::RoadFusion;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
-  } else if (id_ >= 9000000) {  // speed bump
+  } else if (id_ >= kSpeedBumpIdOffset) {
     type_ = iflyauto::ObjectType::OBJECT_TYPE_DECELER;
     source_type_ = SourceType::SpeedBump;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
-  } else if (id_ >= 8000000) {  // ehr column box
+  } else if (id_ >= kEHRColumnIdOffset) {
     type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN;
     source_type_ = SourceType::MAP;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
-  } else if (id_ >= 6000000) {  // parking space
+  } else if (id_ > kOccupancyObjectIdOffset) {
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL;
+    source_type_ = SourceType::OCC;
+  } else if (id_ >= kParkingSlotIdOffset) {
     type_ = iflyauto::ObjectType::OBJECT_TYPE_SOLT;
     source_type_ = SourceType::ParkingSlot;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
-  } else if (id_ >= 5000000) {  // ground line
+  } else if (id_ >= kGroundLineIdOffset) {
     type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
     source_type_ = SourceType::GroundLine;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
   }
-  if (perception_polygon_.is_convex() &&
-      perception_polygon_.points().size() >= 3) {
-    perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
-    if (perception_polygon_.area() < 0.01) {
-      valid_ = false;
-    }
-  } else {
-    valid_ = false;
-    planning_math::LineSegment2d axis(
-        planning_math::Vec2d(perception_points_.front().x(),
-                             perception_points_.front().y()),
-        planning_math::Vec2d(perception_points_.back().x(),
-                             perception_points_.back().y()));
-    perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
-    perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
-  }
-  x_center_ = perception_bounding_box_.center_x();
-  y_center_ = perception_bounding_box_.center_y();
-  width_ = perception_bounding_box_.width();
-  length_ = perception_bounding_box_.length();
-  yaw_ = perception_bounding_box_.heading();
-  velocity_angle_ = perception_bounding_box_.heading();
-  std::vector<planning_math::Vec2d> ego_polygon_points;
-  ego_polygon_points.reserve(perception_polygon_.points().size());
-  for (const auto &point : perception_polygon_.points()) {
-    ego_polygon_points.emplace_back(
-        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
-  }
-  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
-                                                   &obstacle_ego_polygon_)) {
-    ILOG_INFO << "polygon_debug invalid ego polygon";
-  }
+  ground_line_type_ = iflyauto::GroundLineType::GROUND_LINE_TYPE_UNKNOWN;
+  InitFromPoints();
 }
 
 Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
@@ -478,19 +217,62 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
+  if (id_ >= kUnifiedStaticIdOffset) {
+    source_type_ = SourceType::GroundLine;
+  } else if (id_ >= kUssObjectIdOffset) {
+    source_type_ = SourceType::USS;
+  } else if (id_ >= kIntersectionIdOffset) {
+    source_type_ = SourceType::RoadFusion;
+  } else if (id_ >= kSpeedBumpIdOffset) {
+    source_type_ = SourceType::SpeedBump;
+  } else if (id_ >= kEHRColumnIdOffset) {
+    source_type_ = SourceType::MAP;
+  } else if (id_ > kOccupancyObjectIdOffset) {
+    source_type_ = SourceType::OCC;
+  } else if (id_ >= kParkingSlotIdOffset) {
+    source_type_ = SourceType::ParkingSlot;
+  } else if (id_ >= kGroundLineIdOffset) {
+    source_type_ = SourceType::GroundLine;
+  }
+  type_ = type;
+  ground_line_type_ = iflyauto::GroundLineType::GROUND_LINE_TYPE_UNKNOWN;
+  InitFromPoints();
+}
+
+Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
+                   iflyauto::ObjectType type,
+                   iflyauto::GroundLineType ground_line_type)
+    : id_(id),
+      perception_id_(id),
+      is_static_(true),
+      perception_points_(points) {
+  if (id_ >= kUnifiedStaticIdOffset) {
+    source_type_ = SourceType::GroundLine;
+  } else if (id_ >= kUssObjectIdOffset) {
+    source_type_ = SourceType::USS;
+  } else if (id_ >= kIntersectionIdOffset) {
+    source_type_ = SourceType::RoadFusion;
+  } else if (id_ >= kSpeedBumpIdOffset) {
+    source_type_ = SourceType::SpeedBump;
+  } else if (id_ >= kEHRColumnIdOffset) {
+    source_type_ = SourceType::MAP;
+  } else if (id_ > kOccupancyObjectIdOffset) {
+    source_type_ = SourceType::OCC;
+  } else if (id_ >= kParkingSlotIdOffset) {
+    source_type_ = SourceType::ParkingSlot;
+  } else if (id_ >= kGroundLineIdOffset) {
+    source_type_ = SourceType::GroundLine;
+  }
+  type_ = type;
+  ground_line_type_ = ground_line_type;
+  InitFromPoints();
+}
+
+void Obstacle::InitFromPoints() {
   velocity_ = 0.0;
   acc_ = 0.0;
   accel_fusion_ = 0.0;
   fusion_source_ = 1;
-
-  if (id > kUssObjectIdOffset) {  // uss object
-    type_ = type;
-    source_type_ = SourceType::USS;
-  } else if (id_ > 7000000) {  // occupancy object
-    type_ = type;
-    source_type_ = SourceType::OCC;
-  }
-
   planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                               &perception_polygon_);
   if (perception_polygon_.is_convex() &&
@@ -514,12 +296,13 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
     perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
     perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
   }
+
   x_center_ = perception_bounding_box_.center_x();
   y_center_ = perception_bounding_box_.center_y();
   width_ = perception_bounding_box_.width();
   length_ = perception_bounding_box_.length();
-
-  acc_ = 0;
+  yaw_ = perception_bounding_box_.heading();
+  velocity_angle_ = perception_bounding_box_.heading();
   is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
             (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
   is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);

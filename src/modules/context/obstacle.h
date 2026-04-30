@@ -41,30 +41,18 @@ static constexpr int kUnifiedStaticIdOffset = 12000000;  // Unified OCC+GroundLi
 }  // namespace
 class Obstacle {
  public:
-  // explicit Obstacle(int id,
-  //                   const iflyauto::PredictionObject &prediction_object,
-  //                   bool is_static, double start_relative_timestamp);
-
   explicit Obstacle(int id, const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
   explicit Obstacle(const Obstacle *obstacle);
 
-  // explicit Obstacle(int id,
-  //                   const iflyauto::FusionObject &perception_obstacle,
-  //                   bool is_static);
-
-  // explicit Obstacle(int id, double x, double y, double heading_angle,
-  //                   double length, double width, double height,
-  //                   iflyauto::ObjectType type);
-
-  // for ground line
-  explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
+  // for ground line and occ
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
-  explicit Obstacle(int id,
-                    const iflyauto::FusionGroundLine &groundline_cluster);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
                     iflyauto::ObjectType type);
+  explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
+                    iflyauto::ObjectType type, iflyauto::GroundLineType ground_line_type);
+
   const std::vector<planning_math::Vec2d> &perception_points() const {
     return perception_points_;
   }
@@ -105,6 +93,9 @@ class Obstacle {
   bool is_static() const { return is_static_; }
   iflyauto::ObjectType type() const { return type_; }
   SourceType source_type() const { return source_type_; }
+  iflyauto::GroundLineType ground_line_type() const {
+    return ground_line_type_;
+  }
   bool is_vaild() const { return valid_; }
   bool is_reverse() const { return is_reverse_; }
   void set_is_reverse(bool is_reverse) { is_reverse_ = is_reverse; }
@@ -163,6 +154,12 @@ class Obstacle {
   void extract_point_at_specified_resolution(
       std::vector<planning_math::Vec2d> &points) const;
 
+  // Common initialization from point set: sets type_/source_type_ based on id_,
+  // computes convex hull, bounding box, ego-frame polygon, and sets center/size.
+  // type_hint: if UNKNOWN, infer type from id; otherwise use this type.
+  // small_area_valid_types: types exempt from the area < 0.01 check.
+  void InitFromPoints();
+
  private:
   int id_{};
   int perception_id_ = 0;
@@ -211,6 +208,8 @@ class Obstacle {
   std::vector<planning_math::Vec2d> perception_points_;
   unsigned int fusion_source_;
   SourceType source_type_;
+  iflyauto::GroundLineType ground_line_type_ =
+      iflyauto::GroundLineType::GROUND_LINE_TYPE_UNKNOWN;
 
   /************* for hpp start *************/
   int floor_id_ = 0;                                        // 楼层 id
