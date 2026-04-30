@@ -299,6 +299,7 @@ bool KDPath::XYToSLInRange(const Point2D& cart_point,
     const PathPoint* best_pt = nullptr;
     int best_idx = -1;
 
+    // (taolu10)二分查找
     for (int i = 0; i < (int)range_points.size() - 1; ++i) {
         const auto& p0 = range_points[i];
         const auto& p1 = range_points[i+1];

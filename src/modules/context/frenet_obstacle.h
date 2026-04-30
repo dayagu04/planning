@@ -136,7 +136,7 @@ class FrenetObstacle {
 
   const Obstacle* obstacle_ptr_ = nullptr;
 
-  FrenetObstacleBoundary frenet_obstacle_boundary_;
+  FrenetObstacleBoundary frenet_obstacle_boundary_; //frenet 坐标系下的 AABB box
   FrenetBoundaryCorners frenet_obstacle_corners_;
   SLPolygonSeq frenet_polygon_sequence_;
   std::vector<planning_math::Polygon2d> frenet_dynamic_obs_polygones_;

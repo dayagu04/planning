@@ -203,11 +203,11 @@ class Obstacle {
   bool is_normal_ = true;
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;
-  planning_math::Box2d perception_bounding_box_;
-  planning_math::Polygon2d perception_polygon_;
-  planning_math::Polygon2d obstacle_ego_polygon_;
-  planning_math::Polygon2d car_ego_polygon_;
-  std::vector<planning_math::Vec2d> perception_points_;
+  planning_math::Box2d perception_bounding_box_;  //全局坐标系下的 OOBB bounding box
+  planning_math::Polygon2d perception_polygon_;   //全局坐标系下的 polygon
+  planning_math::Polygon2d obstacle_ego_polygon_; //障碍物坐标系下的 polygon
+  planning_math::Polygon2d car_ego_polygon_;      //自车坐标系下的 polygon
+  std::vector<planning_math::Vec2d> perception_points_; //全局坐标系下的角点
   unsigned int fusion_source_;
   SourceType source_type_;
 

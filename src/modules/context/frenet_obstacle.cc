@@ -580,7 +580,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   auto origin_points = polygon.GetAllVertices();
   assert(origin_points.size() > 2);
   std::vector<double> curvatures;
-  for (auto point : origin_points) {
+  for (const auto& point : origin_points) {
     if (point.x() < 0.0 || point.x() > frenet_coord->Length()) {
       return;
     }
@@ -601,7 +601,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   }
   std::vector<planning_math::Vec2d> new_points;
   std::vector<planning_math::Vec2d> origin_cart_points;
-  for (auto point : origin_points) {
+  for (const auto& point : origin_points) {
     Point2D fren_point, cart_point;
     fren_point.x = point.x();
     fren_point.y = point.y();
