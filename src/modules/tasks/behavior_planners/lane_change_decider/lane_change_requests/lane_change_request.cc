@@ -1795,7 +1795,8 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
 
   const double ego_v =
       session_->environmental_model().get_ego_state_manager()->ego_v();
-  const double ttc_distance = ego_v * 1.0;
+  const double max_ttc_distance = 8.0;
+  const double ttc_distance = std::min(ego_v * 1.0, max_ttc_distance);
   const double check_ahead_distance = ttc_distance + vehicle_length;
 
   // 获取自车当前位置
