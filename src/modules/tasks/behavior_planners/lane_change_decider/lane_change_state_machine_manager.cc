@@ -4626,6 +4626,9 @@ bool LaneChangeStateMachineManager::
       double min_space = interp(agent_kph, xp, fp);
       // 防止在最小值跳变
       min_space = is_executing ? min_space * 1.0 : min_space * 1.25;
+      if(!is_large_car){ // 避免低速场景下大差速导致的不合理返回
+        box_longitudinal_buff = std::min(box_longitudinal_buff, agent_traj[i].v * 2.5);
+      }
       box_longitudinal_buff = std::max(box_longitudinal_buff, min_space);
       // 两类特殊pass
       if (ego_press_line_ratio > 0.3 && is_side_clear_ && is_executing) {
