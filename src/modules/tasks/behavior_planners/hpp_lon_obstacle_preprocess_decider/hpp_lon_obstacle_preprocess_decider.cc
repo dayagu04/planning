@@ -211,8 +211,6 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
     return;
   }
   auto ground_lines = obstacle_manager->get_groundline_obstacles().Items();
-  const auto &unified_items = obstacle_manager->get_unified_static_obstacles().Items();
-  ground_lines.insert(ground_lines.end(), unified_items.begin(), unified_items.end());
   if (ground_lines.empty()) {
     return;
   }

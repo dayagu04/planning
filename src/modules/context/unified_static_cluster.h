@@ -42,20 +42,21 @@ class UnifiedStaticCluster {
  public:
   explicit UnifiedStaticCluster(const UnifiedClusterConfig &cfg);
 
-  std::vector<ClusterObstacle> Process(
-      const std::vector<planning_math::Vec2d> &gl_points,
-      const std::vector<planning_math::Vec2d> &occ_points);
+  bool Process(
+      const std::vector<planning_math::Vec2d> &points,
+      std::vector<ClusterObstacle> &result);
 
  private:
   struct Cell { int ix, iy; };
   struct DsuNode { int parent; int rank; };
 
-  std::vector<Cell> BuildGrid(
-      const std::vector<planning_math::Vec2d> &gl_points,
-      const std::vector<planning_math::Vec2d> &occ_points,
-      std::vector<planning_math::Vec2d> &all_pts);
+  bool BuildGrid(
+      const std::vector<planning_math::Vec2d> &points,
+      std::vector<planning_math::Vec2d> &filted_points,
+      std::vector<Cell> &cells);
 
-  std::vector<std::vector<int>> ClusterCells(const std::vector<Cell> &cells);
+  bool ClusterCells(const std::vector<Cell> &cells,
+                    std::vector<std::vector<int>> &clusters);
 
   int  DsuFind(std::vector<DsuNode> &nodes, int i);
   void DsuUnion(std::vector<DsuNode> &nodes, int a, int b);

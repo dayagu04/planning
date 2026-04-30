@@ -13,7 +13,6 @@
 
 namespace planning {
 
-using planning_math::Box2d;
 using planning_math::Polygon2d;
 using planning_math::Vec2d;
 
@@ -23,19 +22,21 @@ UnifiedStaticCluster::UnifiedStaticCluster(const UnifiedClusterConfig &cfg)
 // ===========================================================================
 // Process — main entry point
 // ===========================================================================
-std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
-    const std::vector<Vec2d> &gl_points,
-    const std::vector<Vec2d> &occ_points) {
-  std::vector<ClusterObstacle> result;
-  if (!cfg_.enable) return result;
+bool UnifiedStaticCluster::Process(
+    const std::vector<Vec2d> &points,
+    std::vector<ClusterObstacle> &result) {
+  result.clear();
+  if (!cfg_.enable) return false;
 
   // Step 1: grid-hash dedup
-  std::vector<Vec2d> all_pts;
-  const std::vector<Cell> cells = BuildGrid(gl_points, occ_points, all_pts);
-  if (cells.empty()) return result;
+  std::vector<Vec2d> filted_points;
+  std::vector<Cell> cells;
+  if (!BuildGrid(points, filted_points, cells)) return false;
+  if (cells.empty() || filted_points.empty()) return false;
 
   // Step 2: 8-connected Union-Find clustering
-  std::vector<std::vector<int>> clusters = ClusterCells(cells);
+  std::vector<std::vector<int>> clusters;
+  if (!ClusterCells(cells, clusters)) return false;
 
   // Step 3: per-cluster shape processing
   for (const auto &member_indices : clusters) {
@@ -43,7 +44,7 @@ std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
 
     std::vector<Vec2d> pts;
     pts.reserve(member_indices.size());
-    for (int idx : member_indices) pts.push_back(all_pts[idx]);
+    for (int idx : member_indices) pts.push_back(filted_points[idx]);
 
     // Recursive bisection: splits large clusters into convex-hull pieces
     // Small clusters (diagonal < max_segment_length) become a single convex hull
@@ -61,39 +62,35 @@ std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
       }
     }
   }
-  return result;
+  return true;
 }
 
 // ===========================================================================
 // BuildGrid — O(n) grid-hash dedup
 // ===========================================================================
-std::vector<UnifiedStaticCluster::Cell> UnifiedStaticCluster::BuildGrid(
-    const std::vector<Vec2d> &gl_points,
-    const std::vector<Vec2d> &occ_points,
-    std::vector<Vec2d> &all_pts) {
-  all_pts.clear();
+bool UnifiedStaticCluster::BuildGrid(const std::vector<Vec2d> &points,
+                                     std::vector<Vec2d> &filted_points,
+                                     std::vector<Cell> &cells) {
+  cells.clear();
+  filted_points.clear();
   const double inv_res = 1.0 / cfg_.grid_resolution;
   std::unordered_map<int64_t, int> grid;
-  grid.reserve((gl_points.size() + occ_points.size()) * 2);
-  std::vector<Cell> cells;
-  cells.reserve(gl_points.size() + occ_points.size());
+  grid.reserve(points.size() * 2);
+  cells.reserve(points.size());
+  filted_points.reserve(points.size());
 
-  auto insert_point = [&](const Vec2d &p) {
-    if (p.x() == 0.0 && p.y() == 0.0) return;
+  for (const auto &p : points) {
     int ix = static_cast<int>(std::floor(p.x() * inv_res));
     int iy = static_cast<int>(std::floor(p.y() * inv_res));
     int64_t key = (static_cast<int64_t>(ix + 100000) << 32) |
                   static_cast<uint32_t>(iy + 100000);
     if (grid.find(key) == grid.end()) {
-      grid[key] = static_cast<int>(all_pts.size());
-      all_pts.push_back(p);
+      grid[key] = static_cast<int>(filted_points.size());
+      filted_points.push_back(p);
       cells.push_back({ix, iy});
     }
   };
-
-  for (const auto &p : gl_points)  insert_point(p);
-  for (const auto &p : occ_points) insert_point(p);
-  return cells;
+  return true;
 }
 
 // ===========================================================================
@@ -119,8 +116,10 @@ void UnifiedStaticCluster::DsuUnion(std::vector<DsuNode> &nodes, int a, int b) {
 // ===========================================================================
 // ClusterCells — N-connected Union-Find
 // ===========================================================================
-std::vector<std::vector<int>> UnifiedStaticCluster::ClusterCells(
-    const std::vector<Cell> &cells) {
+bool UnifiedStaticCluster::ClusterCells(
+    const std::vector<Cell> &cells,
+    std::vector<std::vector<int>> &clusters) {
+  clusters.clear();
   const int n = static_cast<int>(cells.size());
   std::unordered_map<int64_t, int> pos_map;
   pos_map.reserve(n * 2);
@@ -151,10 +150,9 @@ std::vector<std::vector<int>> UnifiedStaticCluster::ClusterCells(
   root_to_members.reserve(n);
   for (int i = 0; i < n; ++i) root_to_members[DsuFind(nodes, i)].push_back(i);
 
-  std::vector<std::vector<int>> clusters;
   clusters.reserve(root_to_members.size());
   for (auto &kv : root_to_members) clusters.push_back(std::move(kv.second));
-  return clusters;
+  return true;
 }
 
 // ===========================================================================

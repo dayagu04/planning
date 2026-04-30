@@ -16,6 +16,10 @@
 using namespace planning::planning_math;
 namespace planning {
 
+struct PointsClusterInfo {
+  planning_math::Vec2d center;
+  int id;
+};
 class ObstacleManager {
  public:
   ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
@@ -60,14 +64,6 @@ class ObstacleManager {
 
   const IndexedList<int, Obstacle> &get_groundline_obstacles() const {
     return groundline_obstacles_;
-  }
-
-  Obstacle *add_unified_static_obstacle(const Obstacle &obstacle) {
-    return unified_static_obstacles_.Add(obstacle.id(), obstacle);
-  }
-
-  const IndexedList<int, Obstacle> &get_unified_static_obstacles() const {
-    return unified_static_obstacles_;
   }
 
   Obstacle *add_speed_bump_obstacle(const Obstacle &obstacle) {
@@ -149,6 +145,24 @@ class ObstacleManager {
 
   void UpdateUnifiedStaticObstacle();
 
+  void RunCluster(const std::vector<planning_math::Vec2d> &points,
+                  std::vector<ClusterObstacle> &cluster_results);
+
+  void ClusterIdAssignment(const std::vector<ClusterObstacle> &cluster_results,
+                           std::vector<int> &new_to_id,
+                           std::vector<PointsClusterInfo> &prev_clusters,
+                           int &next_id, int id_offset);
+
+  void UpdateUnifiedGroundLineObstacle(
+      const iflyauto::FusionGroundLineInfo &ground_line_perception,
+      KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+      const Point2D &ego_point, std::vector<planning_math::Vec2d> &points);
+
+  void UpdateUnifiedOccObstacle(
+      const iflyauto::FusionOccupancyObjectsInfo& fusion_occupancy_objects_info,
+      KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+      const Point2D &ego_point, std::vector<planning_math::Vec2d> &points);
+
   void UpdateParkingSpaceObstacle();
 
   void UpdateMapStaticObstacle();
@@ -211,7 +225,6 @@ class ObstacleManager {
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
   IndexedList<int, Obstacle> groundline_obstacles_;
-  IndexedList<int, Obstacle> unified_static_obstacles_;  // Unified OCC+GroundLine cluster results
   IndexedList<int, Obstacle> gs_care_obstacles_;
   IndexedList<int, Obstacle> map_static_obstacles_;
   IndexedList<int, Obstacle> parking_space_obstacles_;
@@ -232,12 +245,14 @@ class ObstacleManager {
       nullptr;
   std::unique_ptr<UnifiedStaticCluster> unified_cluster_;
 
-  struct PointsClusterInfo {
-    planning_math::Vec2d center;
-    int id;
-  };
   std::vector<PointsClusterInfo> prev_unified_clusters_;
-  int unified_cluster_next_id_ = 0;
+  int unified_cluster_next_id_ = 100000;
+
+  std::vector<PointsClusterInfo> prev_gt_clusters_;
+  int gt_cluster_next_id_ = 100000;
+
+  std::vector<PointsClusterInfo> prev_occ_clusters_;
+  int occ_cluster_next_id_ = 100000;
 };
 
 using ObstacleManagerPtr = std::shared_ptr<ObstacleManager>;

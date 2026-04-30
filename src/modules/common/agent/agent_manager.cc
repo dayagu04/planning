@@ -166,33 +166,6 @@ void AgentManager::Update(const double start_timestamp_s) {
   }
   Append(occ_agent_table);
 
-  // Add unified static obstacles (OCC + GroundLine cluster)
-  const auto& unified_obs = obs_mgr->get_unified_static_obstacles().Items();
-  std::unordered_map<int32_t, Agent> unified_agent_table;
-  for (size_t i = 0; i < unified_obs.size(); i++) {
-    planning::agent::Agent unified_agent;
-    unified_agent.set_agent_id(unified_obs[i]->id());
-    unified_agent.set_type(agent::AgentType(unified_obs[i]->type()));
-    unified_agent.set_x(unified_obs[i]->x_center());
-    unified_agent.set_y(unified_obs[i]->y_center());
-    unified_agent.set_length(unified_obs[i]->length());
-    unified_agent.set_width(unified_obs[i]->width());
-    unified_agent.set_fusion_source(1);
-    unified_agent.set_is_static(unified_obs[i]->is_static());
-
-    unified_agent.set_speed(unified_obs[i]->velocity());
-    unified_agent.set_theta(0.0);
-    unified_agent.set_accel(0.0);
-    unified_agent.set_time_range({0.0, 5.0});
-
-    unified_agent.set_box(unified_obs[i]->perception_bounding_box());
-    unified_agent.set_polygon(unified_obs[i]->perception_polygon());
-    unified_agent.set_timestamp_s(0.0);
-    unified_agent.set_timestamp_us(0.0);
-    unified_agent_table.insert({unified_agent.agent_id(), unified_agent});
-  }
-  Append(unified_agent_table);
-
   //add uss obstacles
   const auto& uss_obs = obs_mgr->get_uss_obstacles().Items();
   std::unordered_map<int32_t, Agent> uss_agent_table;

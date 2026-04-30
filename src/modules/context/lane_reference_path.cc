@@ -297,8 +297,6 @@ void LaneReferencePath::update_obstacles() {
                               frenet_obstacles_, frenet_obstacles_map_);
     generate_frenet_obstacles(obstacle_manager->get_groundline_obstacles(),
                               frenet_obstacles_, frenet_obstacles_map_);
-    generate_frenet_obstacles(obstacle_manager->get_unified_static_obstacles(),
-                              frenet_obstacles_, frenet_obstacles_map_);
     generate_frenet_obstacles(obstacle_manager->get_occupancy_obstacles(),
                               frenet_obstacles_, frenet_obstacles_map_);
     generate_frenet_obstacles(obstacle_manager->get_map_static_obstacles(),
@@ -330,10 +328,6 @@ void LaneReferencePath::update_obstacles() {
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =
       obstacle_manager->get_groundline_obstacles().Items();
-  const auto &unified_items =
-      obstacle_manager->get_unified_static_obstacles().Items();
-  free_space_ground_lines_.insert(free_space_ground_lines_.end(),
-                                  unified_items.begin(), unified_items.end());
   road_edges_ = obstacle_manager->get_road_edge_obstacles().Items();
 }
 
