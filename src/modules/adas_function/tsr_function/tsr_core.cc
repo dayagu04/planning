@@ -826,7 +826,7 @@ void TsrCore::SetTsrOutputInfo() {
   // 辅助标识牌抑制显示时，不输出辅助标识牌
   if (supp_sign_in_suppression_flag_ == false) {
     GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type =
-        output_supp_sign_info_;
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN; //output_supp_sign_info_ 暂时关闭输出
   } else {
     GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type =
         iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
