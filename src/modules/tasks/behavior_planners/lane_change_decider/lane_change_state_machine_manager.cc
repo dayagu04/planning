@@ -2546,11 +2546,15 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
         continue;
       }
     } else if (target_lane_node->is_static_type() || target_lane_node->node_speed() < 0.3) {  // 静止
-      // 纵向重合或TTC过小的静止障碍物不作为前车
+      // 纵向重合或TTC过小的或者超过正常减速度的静止障碍物不作为前车
       double lon_gap = std::max(0.0, agent_start_bd.s_start - ego_sl_bd.s_end);
       double ego_v = ego_sl_state.velocity_s();
       double ttc = (ego_v > 1.0) ? (lon_gap / ego_v) : 100.0;
       if (ttc < 2.0) {
+        continue;
+      }
+      const double normal_decel = 2.0;
+      if(lon_gap < ego_v*ego_v /(2 * normal_decel)){
         continue;
       }
       // 横向滞回：上一帧已是前车用宽松阈值，否则用严格阈值
