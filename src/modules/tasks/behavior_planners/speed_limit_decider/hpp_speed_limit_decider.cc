@@ -866,9 +866,9 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimitFromBounds() {
   const double ego_s = frenet_ego_state.s();
   const double ego_v = frenet_ego_state.planning_init_point().v;
 
-  const double lookahead = interp(
-      ego_v, hpp_speed_limit_config_.narrow_passage_velocity_breakpoints,
-      hpp_speed_limit_config_.narrow_passage_lookahead_distances);
+  const double lookahead =
+      interp(ego_v, hpp_speed_limit_config_.narrow_passage_velocity_breakpoints,
+             hpp_speed_limit_config_.narrow_passage_lookahead_distances);
   const double s_end = ego_s + lookahead;
 
   constexpr double kControlDelay = 0.25;
@@ -950,25 +950,18 @@ double HPPSpeedLimitDecider::ComputeObstacleSpeedCompensation(
 
   const agent::AgentType agent_type = agent->type();
 
-  // 1. 静止不可移动物体：-0 km/h
+  // 1. 静止不可移动物体：不额外降速
   if (IsImmovableObstacle(agent_type)) {
     return 0.0;
   }
 
-  // 2. 静止可移动物体：-2 km/h
+  // 2. 根据障碍物速度插值补偿
   const double speed = agent->speed();
-  constexpr double kStaticSpeedThreshold = 0.5;  // m/s
-  if (speed < kStaticSpeedThreshold) {
-    return 2.0 / 3.6;  // -2 km/h -> m/s
-  }
-
-  // 3. 运动物体：补偿限速
-  constexpr double kX1 = 5.0 / 3.6;   // m/s (5 km/h)
-  constexpr double kC1 = 0.0;         // m/s (0 km/h)
-  constexpr double kX2 = 15.0 / 3.6;  // m/s (15 km/h)
-  constexpr double kC2 = 5.0 / 3.6;   // m/s (5 km/h)
-
-  return planning_math::ClampInterpolate(kX1, kC1, kX2, kC2, speed);
+  return planning_math::ClampInterpolate(
+      hpp_speed_limit_config_.narrow_obstacle_speed_lower,
+      hpp_speed_limit_config_.narrow_obstacle_compensation_lower,
+      hpp_speed_limit_config_.narrow_obstacle_speed_upper,
+      hpp_speed_limit_config_.narrow_obstacle_compensation_upper, speed);
 }
 
 double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
@@ -977,17 +970,11 @@ double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
   const double vehicle_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().max_width;
 
-  // 计算通道余量 = 实际宽度 - 车宽
-  const double passage_clearance = width - vehicle_width;
-
-  // 基础限速
-  constexpr double kW1 = 0.0;         // m
-  constexpr double kV1 = 10.0 / 3.6;  // m/s (10 km/h)
-  constexpr double kW2 = 0.7;         // m
-  constexpr double kV2 = 15.0 / 3.6;  // m/s (15 km/h)
-
-  const double v_base =
-      planning_math::ClampInterpolate(kW1, kV1, kW2, kV2, passage_clearance);
+  // 基础限速：基于通道宽度插值
+  const double v_base = planning_math::ClampInterpolate(
+      hpp_speed_limit_config_.narrow_speed_width_lower,
+      hpp_speed_limit_config_.narrow_speed_v_lower, vehicle_width,
+      hpp_speed_limit_config_.narrow_speed_v_upper, width);
 
   // 取左右两侧更严格的补偿
   const double compensation =

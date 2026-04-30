@@ -3795,6 +3795,20 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<bool>(json, "enable_cross_obstacle_virtual_agent", true);
     cross_obstacle_stop_buffer =
         read_json_key<double>(json, "cross_obstacle_stop_buffer", 0.0);
+    narrow_speed_width_lower =
+        read_json_key<double>(json, "narrow_speed_width_lower", 0.0);
+    narrow_speed_v_lower =
+        read_json_key<double>(json, "narrow_speed_v_lower", 2.78);
+    narrow_speed_v_upper =
+        read_json_key<double>(json, "narrow_speed_v_upper", 4.17);
+    narrow_obstacle_speed_lower =
+        read_json_key<double>(json, "narrow_obstacle_speed_lower", 0.0);
+    narrow_obstacle_compensation_lower =
+        read_json_key<double>(json, "narrow_obstacle_compensation_lower", 0.56);
+    narrow_obstacle_speed_upper =
+        read_json_key<double>(json, "narrow_obstacle_speed_upper", 4.17);
+    narrow_obstacle_compensation_upper =
+        read_json_key<double>(json, "narrow_obstacle_compensation_upper", 1.39);
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3884,6 +3898,13 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   int32_t turnstile_emergency_stop_stable_frame_threshold = 3;
   bool enable_cross_obstacle_virtual_agent = true;
   double cross_obstacle_stop_buffer = 0.0;
+  double narrow_speed_width_lower = 0.0;  // m
+  double narrow_speed_v_lower = 2.78;     // m/s (10 km/h)
+  double narrow_speed_v_upper = 4.17;     // m/s (15 km/h)
+  double narrow_obstacle_speed_lower = 0.0;              // m/s (0 km/h)
+  double narrow_obstacle_compensation_lower = 0.56;      // m/s (2 km/h)
+  double narrow_obstacle_speed_upper = 4.17;             // m/s (15 km/h)
+  double narrow_obstacle_compensation_upper = 1.39;      // m/s (5 km/h)
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
