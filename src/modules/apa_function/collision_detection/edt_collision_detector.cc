@@ -276,167 +276,82 @@ const double EDTCollisionDetector::GetObsDistByIndex(
   return 0.0;
 }
 
-void EDTCollisionDetector::UpdateSafeBuffer(const float body_lat_buffer,
-                                            const float lon_buffer,
-                                            const float max_circle_buffer,
-                                            const bool special_process_mirror,
-                                            const float mirror_lat_buffer) {
-  lon_buffer_ = lon_buffer;
-  const float real_mirror_lat_buffer =
-      special_process_mirror ? mirror_lat_buffer : body_lat_buffer;
-
+void EDTCollisionDetector::UpdateSafeBuffer(
+    const ColDetBuffer &col_det_buffer) {
   if (!need_update_buffer_ &&
-      common_math::IsTwoNumerEqual(body_lat_buffer_, body_lat_buffer) &&
-      common_math::IsTwoNumerEqual(mirror_lat_buffer_,
-                                   real_mirror_lat_buffer) &&
-      common_math::IsTwoNumerEqual(max_circle_buffer_, max_circle_buffer)) {
+      common_math::IsTwoNumerEqual(col_det_buffer_.body_lat_buffer,
+                                   col_det_buffer.body_lat_buffer) &&
+      common_math::IsTwoNumerEqual(col_det_buffer_.mirror_lat_buffer,
+                                   col_det_buffer.mirror_lat_buffer) &&
+      common_math::IsTwoNumerEqual(col_det_buffer_.max_circle_buffer,
+                                   col_det_buffer.max_circle_buffer)) {
+    col_det_buffer_.lon_buffer = col_det_buffer.lon_buffer;
     return;
   }
 
   need_update_buffer_ = false;
-  body_lat_buffer_ = body_lat_buffer;
-  mirror_lat_buffer_ = real_mirror_lat_buffer;
-  max_circle_buffer_ = max_circle_buffer;
+  col_det_buffer_ = col_det_buffer;
 
-  UpdateCarWithMirrorSafeBuffer();
-  UpdateCarWithOutMirrorSafeBuffer();
-  UpdateCarChassisSafeBuffer();
+  UpdateSingleCircleListSafeBuffer(
+      multi_car_shape_circle_.circles_with_mirror,
+      multi_car_shape_circle_with_buffer_.circles_with_mirror,
+      ApaObsHeightType::HIGH, true);
+  UpdateSingleCircleListSafeBuffer(
+      multi_car_shape_circle_.circles_without_mirror,
+      multi_car_shape_circle_with_buffer_.circles_without_mirror,
+      ApaObsHeightType::MID, false);
+  UpdateSingleCircleListSafeBuffer(
+      multi_car_shape_circle_.chassis_circles,
+      multi_car_shape_circle_with_buffer_.chassis_circles,
+      ApaObsHeightType::LOW, false);
 }
 
-void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
-  car_with_mirror_circles_list_buffer_.count =
-      car_with_mirror_circles_list_.count;
+void EDTCollisionDetector::UpdateSingleCircleListSafeBuffer(
+    const CarFootPrintCircleList &src, CarFootPrintCircleList &dst,
+    ApaObsHeightType height_type, bool has_mirror) {
+  dst.count = src.count;
+  dst.max_circle.center_local = src.max_circle.center_local;
+  dst.max_circle.radius =
+      src.max_circle.radius + col_det_buffer_.max_circle_buffer;
+  dst.height_type = height_type;
 
-  car_with_mirror_circles_list_buffer_.max_circle.center_local =
-      car_with_mirror_circles_list_.max_circle.center_local;
+  // Index mapping depends on whether mirror circles exist:
+  //   with_mirror:    left={0,4} right={1,3} mirror={2,5} front=6 rear=9
+  //   without_mirror: left={0,3} right={1,2}              front=4 rear=7
+  const size_t front_id = has_mirror ? 6 : 4;
+  const size_t rear_id = has_mirror ? 9 : 7;
 
-  car_with_mirror_circles_list_buffer_.max_circle.radius =
-      car_with_mirror_circles_list_.max_circle.radius + max_circle_buffer_;
+  for (size_t i = 0; i < dst.count; ++i) {
+    dst.circles[i].center_local = src.circles[i].center_local;
+    dst.circles[i].radius = src.circles[i].radius;
 
-  car_with_mirror_circles_list_buffer_.height_type = ApaObsHeightType::HIGH;
-
-  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
-  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
-
-  for (size_t i = 0; i < car_with_mirror_circles_list_buffer_.count; ++i) {
-    circles[i].center_local = origin_circles[i].center_local;
-    circles[i].radius = origin_circles[i].radius;
-    if (i == 0 || i == 4) {
-      // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += body_lat_buffer_;
-    } else if (i == 1 || i == 3) {
-      // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= body_lat_buffer_;
-    } else if (i == 2 || i == 5) {
-      // left and right mirror, increase radius
-      circles[i].radius += mirror_lat_buffer_;
-    } else if (i == 6) {
-      // front circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= body_lat_buffer_;
-    } else if (i == 9) {
-      // rear circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
+    if (has_mirror && (i == 2 || i == 5)) {
+      // mirror circles: expand radius by mirror buffer
+      dst.circles[i].radius += col_det_buffer_.mirror_lat_buffer;
+    } else if (has_mirror ? (i == 0 || i == 4) : (i == 0 || i == 3)) {
+      // left body circles: shift toward left
+      dst.circles[i].center_local.y() += col_det_buffer_.body_lat_buffer;
+    } else if (has_mirror ? (i == 1 || i == 3) : (i == 1 || i == 2)) {
+      // right body circles: shift toward right
+      dst.circles[i].center_local.y() -= col_det_buffer_.body_lat_buffer;
+    } else if (i == front_id) {
+      // front circle: expand + still tangent to the front lane of the car
+      dst.circles[i].radius += col_det_buffer_.body_lat_buffer;
+      dst.circles[i].center_local.x() -= col_det_buffer_.body_lat_buffer;
+    } else if (i == rear_id) {
+      // rear circle: expand + still tangent to the rear lane of the car
+      dst.circles[i].radius += col_det_buffer_.body_lat_buffer;
+      dst.circles[i].center_local.x() += col_det_buffer_.body_lat_buffer;
     } else {
-      // other circle in car
-      // generally it willn't exceed front and rear lane of the car
-      circles[i].radius += body_lat_buffer_;
-    }
-  }
-}
-
-void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
-  car_without_mirror_circles_list_with_buffer_.count =
-      car_without_mirror_circles_list_.count;
-
-  car_without_mirror_circles_list_with_buffer_.max_circle.center_local =
-      car_without_mirror_circles_list_.max_circle.center_local;
-
-  car_without_mirror_circles_list_with_buffer_.max_circle.radius =
-      car_without_mirror_circles_list_.max_circle.radius + max_circle_buffer_;
-
-  car_without_mirror_circles_list_with_buffer_.height_type =
-      ApaObsHeightType::MID;
-
-  CarFootPrintCircle *circles =
-      car_without_mirror_circles_list_with_buffer_.circles;
-  CarFootPrintCircle *origin_circles = car_without_mirror_circles_list_.circles;
-
-  for (size_t i = 0; i < car_without_mirror_circles_list_with_buffer_.count;
-       ++i) {
-    circles[i].center_local = origin_circles[i].center_local;
-    circles[i].radius = origin_circles[i].radius;
-    if (i == 0 || i == 3) {
-      // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += body_lat_buffer_;
-    } else if (i == 1 || i == 2) {
-      // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= body_lat_buffer_;
-    } else if (i == 4) {
-      // front circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= body_lat_buffer_;
-    } else if (i == 7) {
-      // rear circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
-    } else {
-      // other circle in car
-      // generally it willn't exceed front and rear lane of the car
-      circles[i].radius += body_lat_buffer_;
-    }
-  }
-}
-
-void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
-  car_chassis_circles_list_with_buffer_.count = car_chassis_circles_list_.count;
-
-  car_chassis_circles_list_with_buffer_.max_circle.center_local =
-      car_chassis_circles_list_.max_circle.center_local;
-
-  car_chassis_circles_list_with_buffer_.max_circle.radius =
-      car_chassis_circles_list_.max_circle.radius + max_circle_buffer_;
-
-  car_chassis_circles_list_with_buffer_.height_type = ApaObsHeightType::LOW;
-
-  CarFootPrintCircle *circles = car_chassis_circles_list_with_buffer_.circles;
-  CarFootPrintCircle *origin_circles = car_chassis_circles_list_.circles;
-
-  for (size_t i = 0; i < car_chassis_circles_list_with_buffer_.count; ++i) {
-    circles[i].center_local = origin_circles[i].center_local;
-    circles[i].radius = origin_circles[i].radius;
-    if (i == 0 || i == 3) {
-      // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += body_lat_buffer_;
-    } else if (i == 1 || i == 2) {
-      // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= body_lat_buffer_;
-    } else if (i == 4) {
-      // front circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= body_lat_buffer_;
-    } else if (i == 7) {
-      // rear circle, increase radius
-      circles[i].radius += body_lat_buffer_;
-      // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
-    } else {
-      // other circle in car
-      // generally it willn't exceed front and rear lane of the car
-      circles[i].radius += body_lat_buffer_;
+      // other circles in car body: expand radius
+      dst.circles[i].radius += col_det_buffer_.body_lat_buffer;
     }
   }
 }
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
-    const geometry_lib::PathPoint &pt, CarFootPrintCircleList *car_circle_list,
-    const ApaObsHeightType height_type) {
+    const geometry_lib::PathPoint &pt,
+    CarFootPrintCircleList *car_circle_list) {
   car_circle_list->LocalToGlobal(pt);
 
   CarFootPrintCircle *circle = nullptr;
@@ -451,7 +366,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
   if (!IsIndexValid(center_index)) {
     return true;
   }
-  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+         circle->radius;
   if (dist > 0.0) {
     return false;
   }
@@ -463,7 +379,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     if (!IsIndexValid(center_index)) {
       return true;
     }
-    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+           circle->radius;
     if (dist < 0.0f) {
       return true;
     }
@@ -474,8 +391,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const geometry_lib::PathPoint &pt, CarFootPrintCircleList *car_circle_list,
-    float *min_dist, int *circle_id, const ApaObsHeightType height_type,
-    const float safe_dist) {
+    float *min_dist, int *circle_id, const float safe_dist) {
   car_circle_list->LocalToGlobal(pt);
 
   CarFootPrintCircle *circle = nullptr;
@@ -492,7 +408,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     *circle_id = -1;
     return true;
   }
-  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+         circle->radius;
   if (dist > safe_dist) {
     *min_dist = dist;
     *circle_id = -1;
@@ -510,7 +427,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
       *circle_id = -1;
       return true;
     }
-    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+           circle->radius;
     if (dist < 0.0f) {
       *min_dist = dist;
       *circle_id = -1;
@@ -527,8 +445,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const common_math::PathPt<float> &pt,
-    CarFootPrintCircleList *car_circle_list,
-    const ApaObsHeightType height_type) {
+    CarFootPrintCircleList *car_circle_list) {
   car_circle_list->LocalToGlobal(pt);
   CarFootPrintCircle *circle = nullptr;
   // grid number where the circle center is located
@@ -541,7 +458,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
   if (!IsIndexValid(center_index)) {
     return true;
   }
-  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+         circle->radius;
   if (dist > 0.0f) {
     return false;
   }
@@ -553,7 +471,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     if (!IsIndexValid(center_index)) {
       return true;
     }
-    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+           circle->radius;
     if (dist < 0.0f) {
       return true;
     }
@@ -565,7 +484,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const common_math::PathPt<float> &pt,
     CarFootPrintCircleList *car_circle_list, float *min_dist,
-    const ApaObsHeightType height_type, const float safe_dist) {
+    const float safe_dist) {
   car_circle_list->LocalToGlobal(pt);
   CarFootPrintCircle *circle = nullptr;
   // grid number where the circle center is located
@@ -580,7 +499,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     return true;
   }
 
-  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+         circle->radius;
   if (dist > safe_dist) {
     *min_dist = dist;
     return false;
@@ -596,7 +516,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
       *min_dist = 0.0f;
       return true;
     }
-    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
+    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
+           circle->radius;
     if (dist < 0.0f) {
       *min_dist = dist;
       return true;
@@ -610,21 +531,16 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 }
 
 const ColResult EDTCollisionDetector::Update(
-    const geometry_lib::PathSegment &path_seg, const double body_lat_buffer,
-    const double lon_buffer, const bool need_cal_obs_dist,
-    const double max_circle_buffer, const bool special_process_mirror,
-    const double mirror_lat_buffer) {
+    const geometry_lib::PathSegment &path_seg,
+    const ColDetBuffer &col_det_buffer, const bool need_cal_obs_dist) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
-  return Update(pt_vec, body_lat_buffer, lon_buffer, need_cal_obs_dist,
-                max_circle_buffer, special_process_mirror, mirror_lat_buffer);
+  return Update(pt_vec, col_det_buffer, need_cal_obs_dist);
 }
 
 const ColResult EDTCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint> &pt_vec,
-    const double body_lat_buffer, const double lon_buffer,
-    const bool need_cal_obs_dist, const double max_circle_buffer,
-    const bool special_process_mirror, const double mirror_lat_buffer) {
+    const ColDetBuffer &col_det_buffer, const bool need_cal_obs_dist) {
   // The input PathPoint s must be assigned a value
   col_res_.Reset();
   const size_t N = pt_vec.size();
@@ -636,8 +552,7 @@ const ColResult EDTCollisionDetector::Update(
   col_res_.remain_car_dist = pt_vec.back().s;
   col_res_.remain_dist = pt_vec.back().s;
 
-  UpdateSafeBuffer(body_lat_buffer, lon_buffer, max_circle_buffer,
-                   special_process_mirror, mirror_lat_buffer);
+  UpdateSafeBuffer(col_det_buffer);
 
   path_pt_vec_ = pt_vec;
 
@@ -655,14 +570,14 @@ const ColResult EDTCollisionDetector::Update(
     geometry_lib::PathPoint temp_pt = pt;
     do {
       s += ds;
-      if (s >= lon_buffer_) {
-        s = lon_buffer_;
+      if (s >= col_det_buffer_.lon_buffer) {
+        s = col_det_buffer_.lon_buffer;
       }
       temp_pt.pos = pt.pos + heading_vec * s;
       temp_pt.s = pt.s + s;
       path_pt_vec_.emplace_back(temp_pt);
-    } while (s < lon_buffer_ - 0.001);
-  } else if (N > 1 && lon_buffer > 0.01) {
+    } while (s < col_det_buffer_.lon_buffer - 0.001);
+  } else if (N > 1 && col_det_buffer.lon_buffer > 0.01) {
     const Eigen::Vector2d start_point(path_pt_vec_[N - 2].pos.x(),
                                       path_pt_vec_[N - 2].pos.y());
 
@@ -676,22 +591,22 @@ const ColResult EDTCollisionDetector::Update(
     double s = 0.0;
     do {
       s += ds;
-      if (s >= lon_buffer_) {
-        s = lon_buffer_;
+      if (s >= col_det_buffer_.lon_buffer) {
+        s = col_det_buffer_.lon_buffer;
       }
       geometry_lib::CalExtendedPointByTwoPoints(start_point, end_point, pt.pos,
                                                 s);
       pt.s = col_res_.remain_car_dist + s;
       path_pt_vec_.emplace_back(pt);
-    } while (s < lon_buffer_);
+    } while (s < col_det_buffer_.lon_buffer);
   }
 
   CarFootPrintCircleList *high_circle_list =
-      &car_with_mirror_circles_list_buffer_;
+      &multi_car_shape_circle_with_buffer_.circles_with_mirror;
   CarFootPrintCircleList *mid_circle_list =
-      &car_without_mirror_circles_list_with_buffer_;
+      &multi_car_shape_circle_with_buffer_.circles_without_mirror;
   CarFootPrintCircleList *low_circle_list =
-      &car_chassis_circles_list_with_buffer_;
+      &multi_car_shape_circle_with_buffer_.chassis_circles;
 
   bool col_flag = false;
   double lon_safe_dist = 0.0;
@@ -704,9 +619,8 @@ const ColResult EDTCollisionDetector::Update(
     if (!IsPoseInClearZone(pt)) {
       col_flag = need_cal_obs_dist
                      ? IsCollisionForPoint(pt, high_circle_list, &obs_dist_high,
-                                           &circle_id, ApaObsHeightType::HIGH)
-                     : IsCollisionForPoint(pt, high_circle_list,
-                                           ApaObsHeightType::HIGH);
+                                           &circle_id)
+                     : IsCollisionForPoint(pt, high_circle_list);
       if (col_flag) {
         break;
       }
@@ -714,18 +628,16 @@ const ColResult EDTCollisionDetector::Update(
       if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low,
-                                             &circle_id, ApaObsHeightType::LOW)
-                       : IsCollisionForPoint(pt, low_circle_list,
-                                             ApaObsHeightType::LOW);
+                                             &circle_id)
+                       : IsCollisionForPoint(pt, low_circle_list);
         if (col_flag) {
           break;
         }
       } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist_mid,
-                                             &circle_id, ApaObsHeightType::MID)
-                       : IsCollisionForPoint(pt, mid_circle_list,
-                                             ApaObsHeightType::MID);
+                                             &circle_id)
+                       : IsCollisionForPoint(pt, mid_circle_list);
 
         if (col_flag) {
           break;
@@ -733,9 +645,8 @@ const ColResult EDTCollisionDetector::Update(
 
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low,
-                                             &circle_id, ApaObsHeightType::LOW)
-                       : IsCollisionForPoint(pt, low_circle_list,
-                                             ApaObsHeightType::LOW);
+                                             &circle_id)
+                       : IsCollisionForPoint(pt, low_circle_list);
 
         if (col_flag) {
           break;
@@ -758,7 +669,7 @@ const ColResult EDTCollisionDetector::Update(
       col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
           std::pair<double, geometry_lib::PathPoint>{
               std::min({obs_dist_high, obs_dist_mid, obs_dist_low}) +
-                  body_lat_buffer,
+                  col_det_buffer_.body_lat_buffer,
               pt},
           circle_id, car_safe_pos));
     }
@@ -767,7 +678,7 @@ const ColResult EDTCollisionDetector::Update(
   }
 
   col_res_.col_flag = col_flag;
-  col_res_.remain_dist = lon_safe_dist - lon_buffer;
+  col_res_.remain_dist = lon_safe_dist - col_det_buffer.lon_buffer;
   int safe_pt_number = static_cast<int>(col_res_.remain_dist / (sample_ds_));
   safe_pt_number = std::max(safe_pt_number, 0);
   if (col_res_.pt_obs_dist_info_vec.size() > safe_pt_number + 1) {
@@ -790,9 +701,7 @@ const ColResult EDTCollisionDetector::Update(
 
 const ColResultF EDTCollisionDetector::Update(
     const std::vector<common_math::PathPt<float>> &pt_vec,
-    const float lon_buffer, const float body_lat_buffer,
-    const float mirror_lat_buffer, const bool need_cal_obs_dist,
-    const float max_circle_buffer) {
+    const ColDetBuffer &col_det_buffer, const bool need_cal_obs_dist) {
   col_res_f_.Reset();
   if (pt_vec.empty()) {
     return col_res_f_;
@@ -800,14 +709,13 @@ const ColResultF EDTCollisionDetector::Update(
 
   pts_ = std::move(pt_vec);
 
-  UpdateSafeBuffer(body_lat_buffer, lon_buffer, max_circle_buffer, true,
-                   mirror_lat_buffer);
+  UpdateSafeBuffer(col_det_buffer);
 
   const float origin_length = pts_.back().s;
 
   const AstarPathGear gear = pts_.back().gear;
 
-  if (lon_buffer_ > 0.01f &&
+  if (col_det_buffer_.lon_buffer > 0.01f &&
       (gear == AstarPathGear::DRIVE || gear == AstarPathGear::REVERSE)) {
     common_math::Pos<float> dir =
         common_math::CalDirFromTheta(pts_.back().theta);
@@ -819,21 +727,21 @@ const ColResultF EDTCollisionDetector::Update(
     common_math::PathPt<float> temp_pt = pt;
     do {
       s += ds;
-      if (s >= lon_buffer_ + 0.001f) {
-        s = lon_buffer_;
+      if (s >= col_det_buffer_.lon_buffer + 0.001f) {
+        s = col_det_buffer_.lon_buffer;
       }
       temp_pt.pos = pt.pos + dir * s;
       temp_pt.s = pt.s + s;
       pts_.emplace_back(temp_pt);
-    } while (s < lon_buffer_ - 0.001f);
+    } while (s < col_det_buffer_.lon_buffer - 0.001f);
   }
 
   CarFootPrintCircleList *high_circle_list =
-      &car_with_mirror_circles_list_buffer_;
+      &multi_car_shape_circle_with_buffer_.circles_with_mirror;
   CarFootPrintCircleList *mid_circle_list =
-      &car_without_mirror_circles_list_with_buffer_;
+      &multi_car_shape_circle_with_buffer_.circles_without_mirror;
   CarFootPrintCircleList *low_circle_list =
-      &car_chassis_circles_list_with_buffer_;
+      &multi_car_shape_circle_with_buffer_.chassis_circles;
 
   float min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
   float obs_dist_high = 26.8f, obs_dist_mid = 26.8f, obs_dist_low = 26.8f;
@@ -843,40 +751,32 @@ const ColResultF EDTCollisionDetector::Update(
     obs_dist_high = 26.8f, obs_dist_mid = 26.8f, obs_dist_low = 26.8f;
     if (!IsPoseInClearZone(pt)) {
       col_flag = need_cal_obs_dist
-                     ? IsCollisionForPoint(pt, high_circle_list, &obs_dist_high,
-                                           ApaObsHeightType::HIGH)
-                     : IsCollisionForPoint(pt, high_circle_list,
-                                           ApaObsHeightType::HIGH);
+                     ? IsCollisionForPoint(pt, high_circle_list, &obs_dist_high)
+                     : IsCollisionForPoint(pt, high_circle_list);
       if (col_flag) {
         dangerous_pt = pt.GetPos();
         break;
       }
       if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low,
-                                             ApaObsHeightType::LOW)
-                       : IsCollisionForPoint(pt, low_circle_list,
-                                             ApaObsHeightType::LOW);
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low)
+                       : IsCollisionForPoint(pt, low_circle_list);
         if (col_flag) {
           dangerous_pt = pt.GetPos();
           break;
         }
       } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist_mid,
-                                             ApaObsHeightType::MID)
-                       : IsCollisionForPoint(pt, mid_circle_list,
-                                             ApaObsHeightType::MID);
+                       ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist_mid)
+                       : IsCollisionForPoint(pt, mid_circle_list);
         if (col_flag) {
           dangerous_pt = pt.GetPos();
           break;
         }
 
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low,
-                                             ApaObsHeightType::LOW)
-                       : IsCollisionForPoint(pt, low_circle_list,
-                                             ApaObsHeightType::LOW);
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist_low)
+                       : IsCollisionForPoint(pt, low_circle_list);
         if (col_flag) {
           dangerous_pt = pt.GetPos();
           break;
@@ -895,8 +795,8 @@ const ColResultF EDTCollisionDetector::Update(
   }
 
   col_res_f_.col_flag = col_flag;
-  col_res_f_.remain_dist = lon_safe_dist - lon_buffer_;
-  col_res_f_.min_obs_dist = min_obs_dist + body_lat_buffer_;
+  col_res_f_.remain_dist = lon_safe_dist - col_det_buffer_.lon_buffer;
+  col_res_f_.min_obs_dist = min_obs_dist + col_det_buffer_.body_lat_buffer;
   col_res_f_.dangerous_path_pt = dangerous_pt;
 
   return col_res_f_;

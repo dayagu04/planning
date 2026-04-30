@@ -44,7 +44,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
       apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
   frame_.remain_dist_path = CalRemainDistFromPath();
-  frame_.remain_dist_obs = CalRemainDistFromObs(safe_uss_remain_dist);
+  frame_.remain_dist_obs = CalRemainDistFromObs(
+      ColDetBuffer(safe_uss_remain_dist, 0.06, 0.06));
 
   // update ego slot info
   UpdateEgoSlotInfo();

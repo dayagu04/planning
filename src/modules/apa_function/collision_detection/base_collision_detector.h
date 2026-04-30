@@ -17,6 +17,24 @@ using namespace pnc;
 
 #define MAX_CAR_FOOTPRINT_CIRCLE_NUM (12)
 
+struct CarShapeVertex {
+  std::vector<Eigen::Vector2d> polygon_with_mirror;
+  std::vector<Eigen::Vector2d> polygon_without_mirror;
+  std::vector<Eigen::Vector2d> left_mirror_rectangle;
+  std::vector<Eigen::Vector2d> right_mirror_rectangle;
+  std::vector<Eigen::Vector2d> left_tyre_rectangle;
+  std::vector<Eigen::Vector2d> right_tyre_rectangle;
+  std::vector<Eigen::Vector2d> chassis_polygon;
+  std::vector<Eigen::Vector2d> rectangle_with_mirror;
+  std::vector<Eigen::Vector2f> rectangle_with_mirror_f;
+  std::vector<Eigen::Vector2d> rectangle_without_mirror;
+  std::vector<Eigen::Vector2d>
+      mirror_to_front_overhanging_rectangle_expand_front;
+  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_polygon;
+  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_rectangle_expand_rear;
+  std::vector<Eigen::Vector2d> mirror_to_front_overhanging_polygon;
+};
+
 struct ColResultF {
   bool col_flag = false;
   float remain_dist = 26.8f;
@@ -32,20 +50,6 @@ struct ColResultF {
 
     dangerous_path_pt.setZero();
   }
-};
-
-struct ColDetBuffer {
-  float lon_buffer;
-  float body_lat_buffer;
-  float mirror_lat_buffer;
-
-  ColDetBuffer() {}
-  ~ColDetBuffer() {}
-  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer,
-               const float _mirror_lat_buffer)
-      : lon_buffer(_lon_buffer),
-        body_lat_buffer(_body_lat_buffer),
-        mirror_lat_buffer(_mirror_lat_buffer) {}
 };
 
 struct ColResult {
@@ -164,6 +168,12 @@ struct CarFootPrintCircleList {
   }
 };
 
+struct MultiCarFootPrintCircleList {
+  CarFootPrintCircleList circles_with_mirror;
+  CarFootPrintCircleList circles_without_mirror;
+  CarFootPrintCircleList chassis_circles;
+};
+
 class BaseCollisionDetector {
  public:
   BaseCollisionDetector() {}
@@ -174,9 +184,7 @@ class BaseCollisionDetector {
     obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const float sample_ds) { sample_ds_ = sample_ds; }
-  void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
-                        const bool special_process_mirror = false,
-                        const double mirror_lat_buffer = 0.08);
+  void UpdateSafeBuffer(const ColDetBuffer &col_det_buffer);
 
   void UpdateObsClearZone(const std::vector<Eigen::Vector2d> &pt_vec);
   const bool IsPoseInClearZone(const geometry_lib::PathPoint &pose);
@@ -196,58 +204,21 @@ class BaseCollisionDetector {
     return obs_clear_zone_decider_.GetBoxVec();
   }
 
+  void GenRealTimeTyrePolygonAccordingToFrontWheelAngle(
+      const double front_wheel_angle);
+
   static const std::vector<Eigen::Vector2d> GetCarBigBoxWithBuffer(
       const double lat_buf, const double lon_buf,
       const geometry_lib::PathPoint &pose);
 
  protected:
-  std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_;
-  std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_with_buffer_;
+  CarShapeVertex car_shape_vertex_;
+  CarShapeVertex car_shape_vertex_with_buffer_;
 
-  std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_;
-  std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_with_buffer_;
+  MultiCarFootPrintCircleList multi_car_shape_circle_;
+  MultiCarFootPrintCircleList multi_car_shape_circle_with_buffer_;
 
-  std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> chassis_vertex_;
-  std::vector<Eigen::Vector2d> chassis_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_with_buffer_;
-  std::vector<common_math::Pos<float>> car_with_mirror_rectangle_vertexf_;
-
-  std::vector<Eigen::Vector2d> car_without_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> car_without_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_rectangle_vertex_expand_front_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_;
-
-  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_polygon_vertex_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_polygon_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_;
-
-  std::vector<Eigen::Vector2d> mirror_to_front_overhanging_polygon_vertex_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_polygon_vertex_with_buffer_;
-
-  CarFootPrintCircleList car_with_mirror_circles_list_;
-  CarFootPrintCircleList car_without_mirror_circles_list_;
-  CarFootPrintCircleList car_chassis_circles_list_;
-
-  float body_lat_buffer_{0.0f};
-  float mirror_lat_buffer_{0.0f};
-  float lon_buffer_{0.0f};
+  ColDetBuffer col_det_buffer_;
 
   std::vector<geometry_lib::PathPoint> path_pt_vec_;
   std::vector<common_math::PathPt<float>> pts_;

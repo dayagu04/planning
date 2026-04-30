@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -83,7 +84,7 @@ const bool PerpendicularTailInPathGenerator::Update() {
           ->Update(
               std::vector<geometry_lib::PathPoint>{
                   input_.ego_info_under_slot.cur_pose},
-              apa_param.GetParam().car_lat_inflation_normal, 0.3,
+              ColDetBuffer(0.3, apa_param.GetParam().car_lat_inflation_normal),
               GJKColDetRequest(true,
                                apa_param.GetParam().uss_config.use_uss_pt_cloud,
                                CarBodyType::NORMAL, ApaObsMovementType::STATIC,
@@ -744,7 +745,8 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
             temp_pose.pos = pose.pos + ds * k * heading_vec;
             if (!col_det_interface_ptr_->GetEDTColDetPtr()
                      ->Update(std::vector<geometry_lib::PathPoint>{temp_pose},
-                              calc_params_.strict_car_lat_inflation, 0.0)
+                              ColDetBuffer(
+                                  0.0, calc_params_.strict_car_lat_inflation))
                      .col_flag) {
               inner_inner_tang_pose_vec.emplace_back(temp_pose);
               number++;
@@ -1555,14 +1557,16 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   if (edt_col_det_ptr
           ->Update(
               std::vector<geometry_lib::PathPoint>{path_seg.GetStartPose()},
-              lat_inflation, lon_safe_dist, true)
+              ColDetBuffer(lon_safe_dist, lat_inflation, lat_inflation), true)
           .pt_closest2obs.first < 0.151) {
     init_pose_near_obs = true;
     ILOG_INFO_IF(enable_log) << "start pos is closed to obs";
   }
 
   if (method == ColDetMethod::EDT_GEOMETRY || method == ColDetMethod::EDT_GJK) {
-    res = edt_col_det_ptr->Update(path_seg, lat_inflation, lon_safe_dist, true);
+    res = edt_col_det_ptr->Update(
+        path_seg, ColDetBuffer(lon_safe_dist, lat_inflation, lat_inflation),
+        true);
 
     path_seg.obs_dist_info.integrated = res.pt_closest2obs;
     path_seg.pt_obs_dist_info_vec = res.pt_obs_dist_info_vec;
@@ -1587,11 +1591,11 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
                                << " " << res.pt_closest2obs.second.pos.y();
       if (method == ColDetMethod::EDT_GEOMETRY) {
         res = geometry_col_det_ptr->Update(
-            path_seg, lat_inflation, lon_safe_dist, false, lat_inflation,
+            path_seg, ColDetBuffer(lon_safe_dist, lat_inflation, lat_inflation),
             apa_param.GetParam().use_obs_height_method);
       } else if (method == ColDetMethod::EDT_GJK) {
         res = gjk_col_det_ptr->Update(
-            path_seg, lat_inflation, lon_safe_dist,
+            path_seg, ColDetBuffer(lon_safe_dist, lat_inflation, lat_inflation),
             GJKColDetRequest(true,
                              apa_param.GetParam().uss_config.use_uss_pt_cloud,
                              CarBodyType::NORMAL, ApaObsMovementType::STATIC,
@@ -1602,13 +1606,13 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
 
   else if (method == ColDetMethod::GEOMETRY) {
     res = geometry_col_det_ptr->Update(
-        path_seg, lat_inflation, lon_safe_dist, false, lat_inflation,
+        path_seg, ColDetBuffer(lon_safe_dist, lat_inflation),
         apa_param.GetParam().use_obs_height_method);
   }
 
   else if (method == ColDetMethod::GJK) {
     res = gjk_col_det_ptr->Update(
-        path_seg, lat_inflation, lon_safe_dist,
+        path_seg, ColDetBuffer(lon_safe_dist, lat_inflation),
         GJKColDetRequest(true, apa_param.GetParam().uss_config.use_uss_pt_cloud,
                          CarBodyType::NORMAL, ApaObsMovementType::STATIC,
                          apa_param.GetParam().use_obs_height_method));
@@ -4063,12 +4067,14 @@ const bool PerpendicularTailInPathGenerator::CheckStuckedByInside(
       return true;
     }
     return col_det_interface_ptr_->GetGJKColDetPtr()
-        ->Update(std::vector<geometry_lib::PathPoint>{end_pose},
-                 apa_param.GetParam().car_lat_inflation_strict + 0.1268, 0.0,
-                 GJKColDetRequest(
-                     true, apa_param.GetParam().uss_config.use_uss_pt_cloud,
-                     CarBodyType::NORMAL, ApaObsMovementType::STATIC,
-                     apa_param.GetParam().use_obs_height_method))
+        ->Update(
+            std::vector<geometry_lib::PathPoint>{end_pose},
+            ColDetBuffer(
+                0.0, apa_param.GetParam().car_lat_inflation_strict + 0.1268),
+            GJKColDetRequest(true,
+                             apa_param.GetParam().uss_config.use_uss_pt_cloud,
+                             CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                             apa_param.GetParam().use_obs_height_method))
         .col_flag;
   }
 

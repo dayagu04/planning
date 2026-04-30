@@ -87,55 +87,40 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   const double GetObsDistByIndex(const OGMIndex &id,
                                  const ApaObsHeightType &height_type);
 
-  void UpdateSafeBuffer(const float body_lat_buffer, const float lon_buffer,
-                        const float max_circle_buffer = 0.5,
-                        const bool special_process_mirror = false,
-                        const float mirror_lat_buffer = 0.08);
+  void UpdateSafeBuffer(const ColDetBuffer &col_det_buffer);
 
-  void UpdateCarWithMirrorSafeBuffer();
-  void UpdateCarWithOutMirrorSafeBuffer();
-  void UpdateCarChassisSafeBuffer();
+  void UpdateSingleCircleListSafeBuffer(const CarFootPrintCircleList &src,
+                                        CarFootPrintCircleList &dst,
+                                        ApaObsHeightType height_type,
+                                        bool has_mirror);
 
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
-                                 CarFootPrintCircleList *car_circle_list,
-                                 const ApaObsHeightType height_type);
+                                 CarFootPrintCircleList *car_circle_list);
 
   // return min dist between obs and car circle
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list,
                                  float *min_dist, int *circle_id,
-                                 const ApaObsHeightType height_type,
                                  const float safe_dist = 0.5);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
-                                 CarFootPrintCircleList *car_circle_list,
-                                 const ApaObsHeightType height_type);
+                                 CarFootPrintCircleList *car_circle_list);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
                                  CarFootPrintCircleList *car_circle_list,
-                                 float *min_dist,
-                                 const ApaObsHeightType height_type,
-                                 const float safe_dist = 0.5f);
+                                 float *min_dist, const float safe_dist = 0.5f);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer &col_det_buffer,
+                         const bool need_cal_obs_dist = false);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint> &pt_vec,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer &col_det_buffer,
+                         const bool need_cal_obs_dist = false);
 
   const ColResultF Update(const std::vector<common_math::PathPt<float>> &pts,
-                          const float lon_buffer, const float body_lat_buffer,
-                          const float mirror_lat_buffer,
-                          const bool need_cal_obs_dist = false,
-                          const float max_circle_buffer = 0.5);
+                          const ColDetBuffer &col_det_buffer,
+                          const bool need_cal_obs_dist = false);
 
   const geometry_lib::RectangleBound &GetOgmBound() const { return ogm_bound_; }
 
@@ -161,15 +146,6 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   OGMObsData car_with_mirror_ogm_obs_data_;
   OGMObsData car_without_mirror_ogm_obs_data_;
   OGMObsData car_chassis_ogm_obs_data_;
-
-  // 存储车包络圆信息
-  // local->veh coord sys
-  // global->slot coord sys
-  CarFootPrintCircleList car_with_mirror_circles_list_buffer_;
-  CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
-  CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
-
-  float max_circle_buffer_ = 0.5f;
 };
 
 }  // namespace apa_planner

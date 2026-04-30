@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "collision_detection/gjk_collision_detector.h"
 #include "geometry_math.h"
@@ -177,10 +178,12 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
 
     if (gjk_det_ptr
-            ->Update(tmp_pose_vec,
-                     param.lat_lon_target_pose_buffer.max_lat_body_buffer, 0.0,
-                     gjk_col_det_request, true,
-                     param.lat_lon_target_pose_buffer.max_lat_mirror_buffer)
+            ->Update(
+                tmp_pose_vec,
+                ColDetBuffer(
+                    0.0, param.lat_lon_target_pose_buffer.max_lat_body_buffer,
+                    param.lat_lon_target_pose_buffer.max_lat_mirror_buffer),
+                gjk_col_det_request)
             .col_flag) {
       offset_y = 0.0;
       update_target_pose(offset_y);
@@ -296,8 +299,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
               }
 
               const ColResult& res = gjk_det_ptr->Update(
-                  tmp_pose_vec, lat_body_buffer, 0.0, gjk_col_det_request, true,
-                  lat_mirror_buffer);
+                  tmp_pose_vec,
+                  ColDetBuffer(0.0, lat_body_buffer, lat_mirror_buffer),
+                  gjk_col_det_request);
               if (res.col_flag) {
                 continue;
               }

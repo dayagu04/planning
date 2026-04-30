@@ -14,20 +14,17 @@ namespace planning {
 namespace apa_planner {
 
 const ColResult GJKCollisionDetector::Update(
-    const geometry_lib::PathSegment& path_seg, const double body_lat_buffer,
-    const double lon_buffer, const GJKColDetRequest gjk_col_det_request,
-    const bool special_process_mirror, const double mirror_lat_buffer) {
+    const geometry_lib::PathSegment& path_seg, const ColDetBuffer& col_det_buffer,
+    const GJKColDetRequest gjk_col_det_request) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
-  return Update(pt_vec, body_lat_buffer, lon_buffer, gjk_col_det_request,
-                special_process_mirror, mirror_lat_buffer);
+  return Update(pt_vec, col_det_buffer, gjk_col_det_request);
 }
 
 const ColResult GJKCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint>& pt_vec,
-    const double body_lat_buffer, const double lon_buffer,
-    const GJKColDetRequest gjk_col_det_request,
-    const bool special_process_mirror, const double mirror_lat_buffer) {
+    const ColDetBuffer& col_det_buffer,
+    const GJKColDetRequest gjk_col_det_request) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -39,12 +36,11 @@ const ColResult GJKCollisionDetector::Update(
   col_res_.remain_car_dist = pt_vec.back().s;
   col_res_.remain_dist = pt_vec.back().s;
 
-  UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
-                   mirror_lat_buffer);
+  UpdateSafeBuffer(col_det_buffer);
   GenCarPolygon();
 
   path_pt_vec_ = pt_vec;
-  if (N > 1 && lon_buffer > 0.01) {
+  if (N > 1 && col_det_buffer.lon_buffer > 0.01) {
     const Eigen::Vector2d start_point(path_pt_vec_[N - 2].pos.x(),
                                       path_pt_vec_[N - 2].pos.y());
 
@@ -58,14 +54,14 @@ const ColResult GJKCollisionDetector::Update(
     double s = 0.0;
     do {
       s += ds;
-      if (s >= lon_buffer_) {
-        s = lon_buffer_;
+      if (s >= col_det_buffer.lon_buffer) {
+        s = col_det_buffer.lon_buffer;
       }
       geometry_lib::CalExtendedPointByTwoPoints(start_point, end_point, pt.pos,
                                                 s);
       pt.s = col_res_.remain_car_dist + s;
       path_pt_vec_.emplace_back(pt);
-    } while (s < lon_buffer_);
+    } while (s < col_det_buffer.lon_buffer);
   }
 
   bool col_flag = false;
@@ -146,6 +142,15 @@ const ColResult GJKCollisionDetector::Update(
       low_polygon_vec = {&polygon_foot_print_global_.max_polygon,
                          &polygon_foot_print_global_.chassis};
     }
+
+    if (gjk_col_det_request.use_tyre) {
+      high_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      high_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+      mid_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      mid_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+      low_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      low_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+    }
   }
 
   std::vector<Polygon2D*> polygon_vec;
@@ -209,7 +214,7 @@ const ColResult GJKCollisionDetector::Update(
   }
 
   col_res_.col_flag = col_flag;
-  col_res_.remain_dist = lon_safe_dist - lon_buffer;
+  col_res_.remain_dist = lon_safe_dist - col_det_buffer_.lon_buffer;
 
   if (gjk_col_det_request.movement_type == ApaObsMovementType::MOTION) {
     col_res_.remain_dist_dynamic = col_res_.remain_dist;
@@ -290,7 +295,7 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
                                             const double lat_buffer,
                                             const Eigen::Vector2d& obs) {
-  UpdateSafeBuffer(lat_buffer, 0.0);
+  UpdateSafeBuffer(ColDetBuffer(0.0, lat_buffer, lat_buffer));
   GenCarPolygon();
   TransformPolygonFootPrintLocalToGlobal(pose);
   bool col_flag = false;
@@ -354,40 +359,52 @@ void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
 
   ULFLocalPolygonToGlobal(&polygon_foot_print_global_.body_rectangle,
                           &polygon_foot_print_local_.body_rectangle, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.tyre_left,
+                          &polygon_foot_print_local_.tyre_left, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.tyre_right,
+                          &polygon_foot_print_local_.tyre_right, tf);
 }
 
 void GJKCollisionDetector::GenCarPolygon() {
   polygon_foot_print_local_.chassis.FillTangentCircleParams(
-      chassis_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.chassis_polygon);
 
   polygon_foot_print_local_.body.FillTangentCircleParams(
-      car_without_mirror_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.polygon_without_mirror);
 
   polygon_foot_print_local_.mirror_left.FillTangentCircleParams(
-      left_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.left_mirror_rectangle);
 
   polygon_foot_print_local_.mirror_right.FillTangentCircleParams(
-      right_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.right_mirror_rectangle);
 
   polygon_foot_print_local_.max_polygon.FillTangentCircleParams(
-      car_with_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.rectangle_with_mirror);
 
   polygon_foot_print_local_.mirror_to_front_overhang_expand_front
       .FillTangentCircleParams(
-          mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_);
+          car_shape_vertex_with_buffer_.mirror_to_front_overhanging_rectangle_expand_front);
 
   polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
-      mirror_to_rear_overhanging_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon);
 
   polygon_foot_print_local_.body_rectangle.FillTangentCircleParams(
-      car_without_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.rectangle_without_mirror);
 
   polygon_foot_print_local_.mirror_to_rear_overhang_expand_rear
       .FillTangentCircleParams(
-          mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_);
+          car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_rectangle_expand_rear);
 
   polygon_foot_print_local_.mirror_to_front_overhang.FillTangentCircleParams(
-      mirror_to_front_overhanging_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon);
+
+  polygon_foot_print_local_.tyre_left.FillTangentCircleParams(
+      car_shape_vertex_with_buffer_.left_tyre_rectangle);
+
+  polygon_foot_print_local_.tyre_right.FillTangentCircleParams(
+      car_shape_vertex_with_buffer_.right_tyre_rectangle);
 }
 
 void GJKCollisionDetector::Reset() {}

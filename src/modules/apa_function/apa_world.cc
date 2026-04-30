@@ -74,6 +74,9 @@ const bool ApaWorld::Update() {
                                 slot_manager_ptr_->GetEgoSlotInfoID());
 
   col_det_interface_ptr_->Init(measure_data_ptr_->GetFoldMirrorFlag());
+  col_det_interface_ptr_->GetGJKColDetPtr()
+      ->GenRealTimeTyrePolygonAccordingToFrontWheelAngle(
+          measure_data_ptr_->GetFrontWheelAngle());
 
   slot_manager_ptr_->Update(local_view_ptr_, planning_output_ptr_,
                             state_machine_ptr_, measure_data_ptr_,

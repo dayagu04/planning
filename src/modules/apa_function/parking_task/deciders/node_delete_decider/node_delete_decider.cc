@@ -912,7 +912,8 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     }
 
     const auto& res = edt_col_det_ptr->Update(
-        pts, lon_buffer, body_lat_buffer, mirror_lat_buffer, need_cal_obs_dist);
+        pts, ColDetBuffer(lon_buffer, body_lat_buffer, mirror_lat_buffer),
+        need_cal_obs_dist);
 
     if (need_cal_obs_dist) {
       obs_dist->SetDist(res.min_obs_dist);
@@ -934,8 +935,10 @@ const bool NodeDeleteDecider::CheckPtsCollision(
         }
 
         const auto& res =
-            edt_col_det_ptr->Update(check_pts, lon_buffer, body_lat_buffer,
-                                    mirror_lat_buffer, need_cal_obs_dist);
+            edt_col_det_ptr->Update(check_pts,
+                                    ColDetBuffer(lon_buffer, body_lat_buffer,
+                                                 mirror_lat_buffer),
+                                    need_cal_obs_dist);
 
         if (need_cal_obs_dist) {
           set_obs_dist(type, res.min_obs_dist);
