@@ -543,7 +543,8 @@ bool NarrowSpaceDecider::CalculateNarrowSpaceInfo(
     double dx = cart_space_end_pt.x - cart_space_start_pt.x;
     double dy = cart_space_end_pt.y - cart_space_start_pt.y;
     narrow_space_direction_angle_ = std::atan2(dy, dx);
-    if (narrow_space_state_ < NarrowSpaceState::EXITING_NARROW_SPACE) {
+    if (!is_out_of_narrow_space_ &&
+        narrow_space_state_ < NarrowSpaceState::EXITING_NARROW_SPACE) {
       end_point_ = cart_space_end_pt;
     }
   }
@@ -674,6 +675,9 @@ void NarrowSpaceDecider::UpdateNarrowSpaceState() {
   }
   // update state
   if (!is_exist_narrow_space_) {
+    if (is_in_function_ && narrow_space_state_ > NarrowSpaceState::APPROACH_NARROW_SPACE) {
+      is_out_of_narrow_space_ = true;
+    }
     narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
   } else if (!is_out_of_narrow_space_) {
     if (narrow_space_state_ >= NarrowSpaceState::EXITING_NARROW_SPACE) {
