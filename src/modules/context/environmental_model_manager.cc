@@ -587,8 +587,12 @@ bool EnvironmentalModelManager::Run() {
   start_time = IflyTime::Now_ms();
 #endif
 
+  // EDT update moved to on-demand in HybridARAStar/SccHybridARAStar
+  // to avoid unnecessary per-frame computation
   // time_start = IflyTime::Now_ms();
-  edt_manager_ptr_->update();
+  if(!session_->is_hpp_scene()){
+    edt_manager_ptr_->update();
+  }
   // time_end = IflyTime::Now_ms();
   // ILOG_INFO << "edt_manager cost:" << time_end - time_start;
   // JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);

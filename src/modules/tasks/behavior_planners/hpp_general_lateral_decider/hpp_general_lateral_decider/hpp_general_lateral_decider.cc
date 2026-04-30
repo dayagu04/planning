@@ -1528,11 +1528,19 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
       continue;
     }
 
+    Polygon2d obstacle_sl_polygon;
+    if (!obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
+                                           obstacle_sl_polygon)) {
+      continue;
+    }
+
     const auto &obstacle_id = obstacle->id();
     auto obstacle_decision = ObstacleDecision{obstacle_id, {}, {}};
 
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
+    GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
+                                   obstacle_decision, true);
+    GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
+                                   obstacle_decision, false);
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -1541,6 +1549,7 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
 
 void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
+    const Polygon2d &obstacle_sl_polygon,
     ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
   const auto &vehicle_param =
@@ -1580,14 +1589,21 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_cross_obj{false};
   bool has_lat_decision{false};
   bool has_lon_decision{false};
-  // Step 5) calculate soft_bound, hard_bound
-  Polygon2d obstacle_sl_polygon;
-  auto ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
-                                              obstacle_sl_polygon);
-  if (!ok) {
-    // TBD add log
-    return;
-  }
+
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
+  constexpr double kCareStaticObjectSThreshold = 25.0;
+
+  const double obs_s_min = obstacle_sl_polygon.min_x();
+  const double obs_s_max = obstacle_sl_polygon.max_x();
+  const double obs_l_min = obstacle_sl_polygon.min_y();
+  const double obs_l_max = obstacle_sl_polygon.max_y();
+  const double half_l_care = l_care_width * 0.5;
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
@@ -1606,27 +1622,26 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
       care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
       care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
     }
-    // std::max((front_lon_buf_dis - std::fabs(traj_point.curvature *
-    // config_.ref_curvature_factor)), 0.0);
+
+    if (care_area_s_start > obs_s_max) {
+      break;
+    }
+    if (care_area_s_end < obs_s_min ||
+        ego_l - half_l_care > obs_l_max ||
+        ego_l + half_l_care < obs_l_min) {
+      continue;
+    }
+
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
-    const auto care_polygon =  // @cai: consider the heading
+    const auto care_polygon =
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
     Polygon2d care_overlap_polygon;
-    bool b_overlap_with_care = false;
-    // default: invalid value
-    double overlap_min_y = 100.0;
-    double overlap_max_y = -100.0;
-
-    b_overlap_with_care =
+    bool b_overlap_with_care =
         obstacle_sl_polygon.ComputeOverlap(care_polygon, &care_overlap_polygon);
-    if (b_overlap_with_care) {
-      // TBD: add log
-      overlap_min_y = care_overlap_polygon.min_y();
-      overlap_max_y = care_overlap_polygon.max_y();
-    } else {
+    if (!b_overlap_with_care) {
       continue;
     }
 
