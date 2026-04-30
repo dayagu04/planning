@@ -261,10 +261,9 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   need_update_buffer_ = true;
 }
 
-static void ApplyLatBuffer(
-    const std::vector<Eigen::Vector2d>& src,
-    std::vector<Eigen::Vector2d>& dst,
-    const double buffer) {
+static void ApplyLatBuffer(const std::vector<Eigen::Vector2d>& src,
+                           std::vector<Eigen::Vector2d>& dst,
+                           const double buffer) {
   dst.clear();
   dst.reserve(src.size());
   Eigen::Vector2d v;
@@ -339,22 +338,26 @@ void BaseCollisionDetector::UpdateSafeBuffer(
 
   // body_buf polygons
   ApplyLatBuffer(car_shape_vertex_.polygon_without_mirror,
-                 car_shape_vertex_with_buffer_.polygon_without_mirror, body_buf);
+                 car_shape_vertex_with_buffer_.polygon_without_mirror,
+                 body_buf);
   ApplyLatBuffer(car_shape_vertex_.chassis_polygon,
                  car_shape_vertex_with_buffer_.chassis_polygon, body_buf);
   ApplyLatBuffer(car_shape_vertex_.rectangle_without_mirror,
                  car_shape_vertex_with_buffer_.rectangle_without_mirror,
                  body_buf);
-  ApplyLatBuffer(car_shape_vertex_.mirror_to_rear_overhanging_polygon,
-                 car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon,
-                 body_buf);
-  ApplyLatBuffer(car_shape_vertex_.mirror_to_front_overhanging_polygon,
-                 car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon,
-                 body_buf);
+  ApplyLatBuffer(
+      car_shape_vertex_.mirror_to_rear_overhanging_polygon,
+      car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon,
+      body_buf);
+  ApplyLatBuffer(
+      car_shape_vertex_.mirror_to_front_overhanging_polygon,
+      car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon,
+      body_buf);
 
   // mirror_buf polygons
   ApplyLatBuffer(car_shape_vertex_.rectangle_with_mirror,
-                 car_shape_vertex_with_buffer_.rectangle_with_mirror, mirror_buf);
+                 car_shape_vertex_with_buffer_.rectangle_with_mirror,
+                 mirror_buf);
   ApplyLatBuffer(
       car_shape_vertex_.mirror_to_front_overhanging_rectangle_expand_front,
       car_shape_vertex_with_buffer_
@@ -467,8 +470,10 @@ void BaseCollisionDetector::GenRealTimeTyrePolygonAccordingToFrontWheelAngle(
   const Eigen::Vector2d r3 =
       rot * Eigen::Vector2d(half_tyre_length, -half_tyre_width);
 
-  const Eigen::Vector2d left_center(param.wheel_base, half_car_width);
-  const Eigen::Vector2d right_center(param.wheel_base, -half_car_width);
+  const Eigen::Vector2d left_center(param.wheel_base,
+                                    half_car_width - half_tyre_width);
+  const Eigen::Vector2d right_center(param.wheel_base,
+                                     -half_car_width + half_tyre_width);
 
   car_shape_vertex_.left_tyre_rectangle = {left_center + r0, left_center + r1,
                                            left_center + r2, left_center + r3};
