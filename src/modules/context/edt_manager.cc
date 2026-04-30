@@ -30,7 +30,7 @@ void EdtManager::InitEDT() {
   // mirror_buffer);
 }
 
-OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
+OccupancyGridBound EdtManager::GenerateOGM(const Pose2D& base_pose) {
   ogm_.Clear();
   Transform2d ego_base;
   ego_base.SetBasePose(base_pose);
@@ -139,18 +139,15 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
 }
 
 void EdtManager::AddPointClouds(
+    const Pose2D& base_pose,
     const std::vector<planning_math::Vec2d> &point_clouds,
     size_t step) {  // can be sparse
-  const auto &ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
   // method 1:  // time-cost more
   // const auto &enu2car_matrix = ego_state_manager->get_enu2car();
 
   // method 2:  // time-cost less
   Transform2d ego_base;
-  ego_base.SetBasePose(Pose2D(ego_state_manager->ego_pose().x,
-                              ego_state_manager->ego_pose().y,
-                              ego_state_manager->ego_pose().theta));
+  ego_base.SetBasePose(base_pose);
   for (size_t i = 0; i < point_clouds.size(); i += step) {
     // method 1:
     // Eigen::Vector3d v;
@@ -169,10 +166,10 @@ void EdtManager::AddPointClouds(
   }
 }
 
-void EdtManager::AddODPoint(const Obstacle &obstalce) {
+void EdtManager::AddODPoint(const Pose2D& base_pose, const Obstacle &obstalce) {
   std::vector<planning_math::Vec2d> polygon_points;
   obstalce.perception_bounding_box().GetAllCorners(&polygon_points);
-  AddPointClouds(polygon_points);
+  AddPointClouds(base_pose, polygon_points);
   std::vector<planning_math::Vec2d> extracted_polygon_points;
   if (polygon_points.size() > 1) {
     for (size_t i = 0; i < polygon_points.size() - 1; ++i) {
@@ -187,7 +184,7 @@ void EdtManager::AddODPoint(const Obstacle &obstalce) {
           0.5 * (polygon_points.front().y() + polygon_points.back().y());
       extracted_polygon_points.emplace_back(planning_math::Vec2d(mid_x, mid_y));
     }
-    AddPointClouds(extracted_polygon_points);
+    AddPointClouds(base_pose, extracted_polygon_points);
   }
 }
 
@@ -236,9 +233,9 @@ void EdtManager::update() {
   is_edt_valid_ = false;
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
-  OccupancyGridBound grid_bound =
-      GenerateOGM(Pose2D(ego_state.ego_pose().x, ego_state.ego_pose().y,
-                         ego_state.ego_pose().theta));
+  Pose2D base_pose(ego_state.ego_pose().x, ego_state.ego_pose().y,
+                  ego_state.ego_pose().theta);
+  OccupancyGridBound grid_bound = GenerateOGM(base_pose);
 
   const auto &reference_path_ptr = session_->environmental_model()
                                        .get_reference_path_manager()
@@ -250,16 +247,16 @@ void EdtManager::update() {
       }
       if (frenet_obstacle->source_type() == SourceType::OD) {
         if (FilterObstacleForAra(*frenet_obstacle)) {
-          AddODPoint(*frenet_obstacle->obstacle());
+          AddODPoint(base_pose, *frenet_obstacle->obstacle());
         }
       } else if (frenet_obstacle->source_type() == SourceType::OCC) {
         if (FilterObstacleForAra(*frenet_obstacle)) {
-          AddPointClouds(frenet_obstacle->obstacle()->perception_points());
+          AddPointClouds(base_pose, frenet_obstacle->obstacle()->perception_points());
         }
       } else if (frenet_obstacle->source_type() == SourceType::GroundLine) {
-        AddPointClouds(frenet_obstacle->obstacle()->perception_points());
+        AddPointClouds(base_pose, frenet_obstacle->obstacle()->perception_points());
       } else if (frenet_obstacle->source_type() == SourceType::MAP) {
-        AddPointClouds(frenet_obstacle->obstacle()->perception_points());
+        AddPointClouds(base_pose, frenet_obstacle->obstacle()->perception_points());
       }
     }
   }
@@ -309,11 +306,11 @@ bool EdtManager::UpdateByLatDecision() {
       !session_->planning_context().last_planning_success()) {
     return false;
   }
-  const auto& ego_state =
-      session_->mutable_environmental_model()->get_ego_state_manager();
-  OccupancyGridBound grid_bound =
-      GenerateOGM(Pose2D(ego_state->ego_pose().x, ego_state->ego_pose().y,
-                         ego_state->ego_pose().theta));
+  // const auto& ego_state =
+  //     session_->mutable_environmental_model()->get_ego_state_manager();
+  // OccupancyGridBound grid_bound =
+  //     GenerateOGM(Pose2D(ego_state->ego_pose().x, ego_state->ego_pose().y,
+  //                        ego_state->ego_pose().theta));
   const auto& lat_obstacle_decision =
       session_->planning_context()
               .lateral_obstacle_decider_output()
@@ -323,6 +320,11 @@ bool EdtManager::UpdateByLatDecision() {
               .get_reference_path_manager()
               ->get_reference_path_by_current_lane();
   if (reference_path_ptr != nullptr) {
+    const auto& planning_init_point =
+        reference_path_ptr->get_frenet_ego_state().planning_init_point();
+    Pose2D base_pose(planning_init_point.x, planning_init_point.y,
+                     planning_init_point.heading_angle);
+    OccupancyGridBound grid_bound = GenerateOGM(base_pose);
     for (auto& frenet_obstacle : reference_path_ptr->get_obstacles()) {
       if (!frenet_obstacle->b_frenet_valid()) {
         continue;
@@ -333,21 +335,22 @@ bool EdtManager::UpdateByLatDecision() {
       }
       if (frenet_obstacle->source_type() == SourceType::OD) {
         if (FilterObstacleByLatDecision(*frenet_obstacle, lat_decision_itr->second)) {
-          AddODPoint(*frenet_obstacle->obstacle());
+          AddODPoint(base_pose, *frenet_obstacle->obstacle());
         }
       } else if (frenet_obstacle->source_type() == SourceType::OCC) {
         if (FilterObstacleByLatDecision(*frenet_obstacle, lat_decision_itr->second)) {
-          AddPointClouds(frenet_obstacle->obstacle()->perception_points());
+          AddPointClouds(base_pose, frenet_obstacle->obstacle()->perception_points());
         }
       }
     }
+    double time_start = IflyTime::Now_ms();
+    is_edt_valid_ = UpdateEDT(grid_bound);
+    double time_end = IflyTime::Now_ms();
+    ILOG_INFO << "EulerDistanceTransform cost:", time_end - time_start;
+    JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
+    return true;
   }
-  double time_start = IflyTime::Now_ms();
-  is_edt_valid_ = UpdateEDT(grid_bound);
-  double time_end = IflyTime::Now_ms();
-  ILOG_INFO << "EulerDistanceTransform cost:", time_end - time_start;
-  JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
-  return true;
+  return false;
 }
 
 }  // namespace planning
