@@ -2408,9 +2408,10 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   const double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
   const double predict_t = lc_safety_check_time_ + 1.5;
   const double rear_acc = rear_agent->accel_fusion();
+  const double ego_acc = ego_trajs_future_[0].a;
   double dis_diff_vel = 0.0;
   if (rear_acc > 0.3) {
-    dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+    dis_diff_vel = rel_vel * predict_t + 0.5 * std::max(0.0, rear_acc - ego_acc)  * predict_t * predict_t;
   } else if (rear_acc < -0.3) {
     dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
   } else {
