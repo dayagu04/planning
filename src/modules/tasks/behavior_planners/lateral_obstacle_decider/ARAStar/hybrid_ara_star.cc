@@ -73,7 +73,7 @@ HybridARAStar::HybridARAStar(framework::Session* session) {
   longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend;
   lateral_extend_ = hybrid_ara_star_conf_.lateral_extend;
   hpp_min_search_range_ = hybrid_ara_star_conf_.hpp_min_search_range;
-  enable_debug_info_ = hybrid_ara_star_conf_.enable_debug_info;
+  enable_debug_info_ = hybrid_ara_star_conf_.enable_ara_debug_info;
 
   ILOG_DEBUG << "HybridARAStar::HybridARAStar() ===========";
   ILOG_DEBUG << "x_grid_resolution_: " << x_grid_resolution_;
