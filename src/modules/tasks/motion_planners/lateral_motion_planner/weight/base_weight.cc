@@ -249,7 +249,7 @@ void BaseWeight::SetLateralMotionWeightForRADS(
   planning_input.set_q_continuity(0.0);
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
-  planning_input.set_q_edt_distance(2000.0);
+  planning_input.set_q_edt_distance(0.0);
 }
 
 void BaseWeight::SetLateralMotionWeightForNSA(
@@ -1877,7 +1877,7 @@ void BaseWeight::MakeDynamicPosBoundWeight(
     std::vector<double> fp_ratio_with_vel{0.3, 1.0, 1.0, 1.0, 1.0, 1.0};
     double start_vel = ref_vel_;
     if (!planning_input.ref_vel_vec().empty()) {
-      start_vel = planning_input.ref_vel_vec(0);      
+      start_vel = planning_input.ref_vel_vec(0);
     }
     init_ratio = planning::interp(std::fabs(start_vel), xp_v, fp_ratio_with_vel);
   }
