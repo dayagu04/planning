@@ -4489,9 +4489,22 @@ bool LaneChangeStateMachineManager::
       two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
     }
     bool is_checking_rear_overtaking = false;
+    double rear_p_decel = 0.0;
+    double rear_p_cruise = 0.0;
+    double rear_p_accel = 0.0;
     if(target_lane_rear_node_){
       is_checking_rear_overtaking = target_lane_rear_node_->node_agent_id() == agent_node->node_agent_id()
-                                 && rear_agent_overtaking_ && !is_front_agent;
+                                && !is_front_agent;
+      // 获取后车纵向意图概率
+      if (is_checking_rear_overtaking) {
+        const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
+        const auto rear_agent = dynamic_world->agent_manager()->GetAgent(agent_node->node_agent_id());
+        if (rear_agent != nullptr) {
+          rear_p_decel = rear_agent->lon_decel_prob();
+          rear_p_cruise = rear_agent->lon_cruise_prob();
+          rear_p_accel = rear_agent->lon_accel_prob();
+        }
+      }
     }
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
@@ -4571,10 +4584,36 @@ bool LaneChangeStateMachineManager::
       double dist_ttc_interp = (rel_vel > 0.0) ? rel_vel * pred_ttc : 0.0;
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
-      // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)? 
-                                      0.99: lc_safety_check_config_.ttc_decay_factor;
-      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      // 3) 时间衰减：基于后车纵向意图调节衰减策略
+      // 规则：
+      // - 加速意图：lc_safety_check_num_ 步内不衰减，之外正常衰减
+      // - 巡航意图：lc_safety_check_num_ * p_cruise 步内不衰减，之外正常衰减
+      // - 减速意图：全程正常衰减
+      double ttc_decay = 1.0;
+      if (is_checking_rear_overtaking && !is_aggressive_scence_) {
+        // 计算不衰减的步数阈值
+        int no_decay_steps = 0;
+        if (rear_p_accel > rear_p_decel && rear_p_accel > rear_p_cruise) {
+          // 加速意图：lc_safety_check_num_ 步内不衰减
+          no_decay_steps = lc_safety_check_num_;
+        } else if (rear_p_cruise > rear_p_decel && rear_p_cruise > rear_p_accel) {
+          // 巡航意图：lc_safety_check_num_ * p_cruise 步内不衰减
+          no_decay_steps = static_cast<int>(lc_safety_check_num_ * rear_p_cruise);
+        }
+        // 减速意图：no_decay_steps = 0，全程衰减
+        if (i < no_decay_steps) {
+          // 不衰减区域
+          ttc_decay = 1.0;
+        } else {
+          // 超出不衰减区域，正常衰减
+          double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+          ttc_decay = std::pow(ttc_decay_factor, i - no_decay_steps);
+        }
+      } else {
+        // 非gap后车(临时13变2 11变2后车)，正常衰减
+        double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+        ttc_decay = std::pow(ttc_decay_factor, i);
+      }
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
