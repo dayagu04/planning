@@ -3582,7 +3582,9 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       // 判断车道前方是否消亡
       double accumulated_dis = 0.0;
       const auto* itera_lane = merge_link_lane;
-      while (itera_lane != nullptr && accumulated_dis < 300.0) {
+      const double max_search_dis = std::min(
+          300.0, route_info_output_.distance_to_exit_noa - dist_to_merge);
+      while (itera_lane != nullptr && accumulated_dis < max_search_dis) {
         if (IsMergeLane(itera_lane)) {
           const auto merge_lane_type = CalculateMergeLaneType(itera_lane);
           if (merge_lane_type == MERGE_TO_LEFT &&
