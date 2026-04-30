@@ -2336,6 +2336,8 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"hybrid_ara_star", "stitching_cost_weight"});
     stitching_cost_time_decay_factor = read_json_keys<double>(
         json, std::vector<std::string>{"hybrid_ara_star", "stitching_cost_time_decay_factor"});
+    enable_ara_debug_info = read_json_keys<bool>(
+        json, std::vector<std::string>{"hybrid_ara_star", "enable_ara_debug_info"});
   }
   double x_grid_resolution = 0.3;
   double y_grid_resolution = 0.3;
@@ -2364,6 +2366,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
   double use_occ_s_dist = 7;
   double stitching_cost_weight = 0;
   double stitching_cost_time_decay_factor = 0.0;
+  bool enable_ara_debug_info = false;
 };
 
 struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
