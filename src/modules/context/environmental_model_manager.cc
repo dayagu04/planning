@@ -1018,8 +1018,16 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
 
     PredictionObject cur_predicion_obj;
-    cur_predicion_obj.id =
-        prediction_object.fusion_obstacle.additional_info.track_id;
+    if (session_->is_hpp_scene() &&
+        prediction_object.fusion_obstacle.common_info.type ==
+            iflyauto::ObjectType::OBJECT_TYPE_TURNSTILE) {
+      // hack by taolu10: 闸机抬杆会和其他 OD 的 id 重复，这里临时处理
+      cur_predicion_obj.id =
+          prediction_object.fusion_obstacle.additional_info.track_id + 1000;
+    } else {
+      cur_predicion_obj.id =
+          prediction_object.fusion_obstacle.additional_info.track_id;
+    }
     cur_predicion_obj.is_dangerous =
         prediction_object.fusion_obstacle.common_info.is_dangerous;
     cur_predicion_obj.dangerous_confidence =
