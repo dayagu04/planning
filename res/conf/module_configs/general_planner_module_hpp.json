@@ -81,7 +81,7 @@
   "nudge_buffer_road_boundary": 0.6,
   "nudge_buffer_lane_boundary": 0.4,
   "static_nudge_buffer_lane_boundary":0,
-  "velocity_upper_bound": 34.72,
+  "velocity_upper_bound": 5.0,
   "velocity_upper_bound_scale_rate": 1.2,
   "acceleration_upper_bound": 1.0,
   "lateral_reference_enable_max_time": 2,
@@ -196,6 +196,8 @@
   "hpp_profile_comfort_accel": 1.5,
   "hpp_profile_lookahead": 100.0,
   "hpp_profile_ds": 1.0,
+  "narrow_passage_velocity_breakpoints": [0.0, 1.5, 3.0, 4.17],
+  "narrow_passage_lookahead_distances": [5.0, 10.0, 15.0, 20.0],
   "speed_bump_collision_buffer": 0.0,
   "turnstile_stop_buffer": -0.2,
   "turnstile_min_forward_stop_buffer": 0.5,
@@ -1110,6 +1112,6 @@
   "hpp_lateral_obstacle_decider": {
     "relative_nudge_buffer": 0.0,
     "absolute_nudge_buffer": 0.6,
-    "ego_detour_safe_dis": 0.3 
+    "ego_detour_safe_dis": 0.3
   }
 }

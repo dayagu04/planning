@@ -611,11 +611,9 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
   const double ds = hpp_speed_limit_config_.hpp_profile_ds;
   const int N = static_cast<int>(lookahead / ds) + 1;
 
-  // (a) 初始化为 v_cruise
   std::vector<double> v(N, v_cruise);
   std::vector<SpeedLimitType> binding_type(N, SpeedLimitType::CRUISE);
 
-  // (b) 叠加所有 segments，每个采样点取 min
   for (const auto& seg : speed_limit_segments_) {
     int i_start = std::max(0, static_cast<int>((seg.s_start - ego_s) / ds));
     int i_end = std::min(N - 1, static_cast<int>((seg.s_end - ego_s) / ds));
@@ -627,7 +625,6 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
     }
   }
 
-  // (c) 后向平滑（减速约束）
   const double a_decel =
       std::abs(hpp_speed_limit_config_.approaching_zone_deceleration);
   for (int i = N - 2; i >= 0; --i) {
@@ -637,9 +634,6 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
     }
   }
 
-  // (d) 前向平滑（加速约束）— 消除场景间跳变
-  //     在无限速场景时，计算到下一个限速场景的距离，
-  //     限速为从 ego_v 以 a_accel 加速该距离后能到的速度
   const double a_accel = hpp_speed_limit_config_.hpp_profile_comfort_accel;
   if (binding_type[0] == SpeedLimitType::CRUISE && v[0] > ego_v) {
     double dist_to_next_zone = lookahead;
@@ -654,7 +648,6 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
     v[0] = std::min(v[0], v_accel_limit);
   }
 
-  // (e) 输出
   v_target_ =
       std::clamp(v[0], hpp_speed_limit_config_.velocity_lower_bound, v_cruise);
   v_target_type_ = binding_type[0];
@@ -862,78 +855,58 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimitFromBounds() {
     return;
   }
 
-  const size_t n = traj_points.size();
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (!reference_path_ptr) {
+    return;
+  }
 
-  // 1. 计算每个点的原始限速
-  std::vector<double> raw_speeds(n,
-                                 hpp_speed_limit_config_.velocity_upper_bound);
-  std::vector<double> s_values(n);
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_s = frenet_ego_state.s();
+  const double ego_v = frenet_ego_state.planning_init_point().v;
+
+  const double lookahead = interp(
+      ego_v, hpp_speed_limit_config_.narrow_passage_velocity_breakpoints,
+      hpp_speed_limit_config_.narrow_passage_lookahead_distances);
+  const double s_end = ego_s + lookahead;
+
+  constexpr double kControlDelay = 0.25;
+  const double delay_distance = ego_v * kControlDelay;
+  const double target_s = ego_s + delay_distance;
+
+  const size_t n = traj_points.size();
+  double target_v_limit = hpp_speed_limit_config_.velocity_upper_bound;
+  bool has_limit = false;
 
   for (size_t i = 0; i < n; ++i) {
-    s_values[i] = traj_points[i].s;
+    const double s = traj_points[i].s;
+
+    if (s < ego_s) {
+      continue;
+    }
+
+    if (s > s_end) {
+      break;
+    }
+
     const double width =
         hard_bounds_frenet_point[i].second - hard_bounds_frenet_point[i].first;
-    raw_speeds[i] = ComputeNarrowSpeedLimit(width, hard_bounds_info[i].first,
-                                            hard_bounds_info[i].second);
-  }
+    const double v_limit = ComputeNarrowSpeedLimit(
+        width, hard_bounds_info[i].first, hard_bounds_info[i].second);
 
-  // 2. 滑动窗口取最小值平滑，消除逐点跳动
-  constexpr size_t kSmoothWindow = 3;
-  std::vector<double> smoothed_speeds(n);
-  for (size_t i = 0; i < n; ++i) {
-    double min_v = raw_speeds[i];
-    for (size_t j = 1; j <= kSmoothWindow && i + j < n; ++j) {
-      min_v = std::min(min_v, raw_speeds[i + j]);
-    }
-    for (size_t j = 1; j <= kSmoothWindow && j <= i; ++j) {
-      min_v = std::min(min_v, raw_speeds[i - j]);
-    }
-    smoothed_speeds[i] = min_v;
-  }
-
-  // 3. 合并相邻限速相近的点为 segment
-  constexpr double kSpeedMergeTolerance = 0.5;  // m/s
-
-  int seg_start_idx = -1;
-  double seg_min_speed = 0.0;
-
-  for (size_t i = 0; i < n; ++i) {
-    const bool need_limit =
-        smoothed_speeds[i] < hpp_speed_limit_config_.velocity_upper_bound;
-
-    if (need_limit && seg_start_idx < 0) {
-      // 开始新 segment
-      seg_start_idx = static_cast<int>(i);
-      seg_min_speed = smoothed_speeds[i];
-    } else if (need_limit && seg_start_idx >= 0) {
-      const double v_diff =
-          std::abs(smoothed_speeds[i] - smoothed_speeds[i - 1]);
-      if (v_diff > kSpeedMergeTolerance) {
-        // 限速变化大，结束当前 segment 并开始新的
-        speed_limit_segments_.push_back({s_values[seg_start_idx],
-                                         s_values[i - 1], seg_min_speed,
-                                         SpeedLimitType::NARROW_PASSAGE});
-        seg_start_idx = static_cast<int>(i);
-        seg_min_speed = smoothed_speeds[i];
-      } else {
-        seg_min_speed = std::min(seg_min_speed, smoothed_speeds[i]);
+    if (s >= target_s && !has_limit) {
+      if (v_limit < hpp_speed_limit_config_.velocity_upper_bound) {
+        target_v_limit = v_limit;
+        has_limit = true;
+        break;
       }
-    } else if (!need_limit && seg_start_idx >= 0) {
-      // 当前点不需要限速，结束 segment
-      speed_limit_segments_.push_back({s_values[seg_start_idx], s_values[i - 1],
-                                       seg_min_speed,
-                                       SpeedLimitType::NARROW_PASSAGE});
-      seg_start_idx = -1;
-    }else {
-
     }
   }
 
-  // 处理尾部未关闭的 segment
-  if (seg_start_idx >= 0) {
-    speed_limit_segments_.push_back({s_values[seg_start_idx], s_values[n - 1],
-                                     seg_min_speed,
-                                     SpeedLimitType::NARROW_PASSAGE});
+  if (has_limit) {
+    speed_limit_segments_.push_back(
+        {ego_s, s_end, target_v_limit, SpeedLimitType::NARROW_PASSAGE});
   }
 }
 
@@ -1010,7 +983,7 @@ double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
   // 基础限速
   constexpr double kW1 = 0.0;         // m
   constexpr double kV1 = 10.0 / 3.6;  // m/s (10 km/h)
-  constexpr double kW2 = 1.0;         // m
+  constexpr double kW2 = 0.7;         // m
   constexpr double kV2 = 15.0 / 3.6;  // m/s (15 km/h)
 
   const double v_base =

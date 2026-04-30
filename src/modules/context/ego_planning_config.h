@@ -3733,6 +3733,10 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "hpp_profile_lookahead");
     hpp_profile_ds =
         read_json_key<double>(json, "hpp_profile_ds");
+    narrow_passage_velocity_breakpoints =
+        read_json_key<std::vector<double>>(json, "narrow_passage_velocity_breakpoints");
+    narrow_passage_lookahead_distances =
+        read_json_key<std::vector<double>>(json, "narrow_passage_lookahead_distances");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
     turnstile_stop_buffer =
@@ -3848,6 +3852,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double hpp_profile_comfort_accel = 1.5;                      // m/s^2
   double hpp_profile_lookahead = 100.0;                        // m
   double hpp_profile_ds = 1.0;                                 // m
+  std::vector<double> narrow_passage_velocity_breakpoints = {0.0, 1.5, 3.0, 4.17};
+  std::vector<double> narrow_passage_lookahead_distances = {5.0, 10.0, 15.0, 20.0};
   double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
   double turnstile_min_forward_stop_buffer = 1.0;
