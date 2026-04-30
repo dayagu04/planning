@@ -648,6 +648,38 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
 
+  // 预计算目标库位 s，用于接近库位时缩小 ego buffer
+  constexpr double kNearTargetDist = 15.0;  // 距离目标15m内开始缩小buffer
+  double target_slot_s = std::numeric_limits<double>::max();
+  const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+  if (parking_slot_manager && parking_slot_manager->IsExistTargetSlot()) {
+    const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
+    double target_slot_l_unused;
+    if (!frenet_coord->XYToSL(target_slot_point.x(), target_slot_point.y(),
+                              &target_slot_s, &target_slot_l_unused)) {
+      target_slot_s = std::numeric_limits<double>::max();
+    }
+  }
+
+  // Lambda: 接近目标库位时缩小 buffer
+  auto shrink_buffer_near_target = [&](double current_s,
+                                        std::pair<double, double>& lbuffer,
+                                        std::pair<double, double>& rbuffer) {
+    const double dist_to_target = target_slot_s - current_s;
+    if (dist_to_target > 0 && dist_to_target < kNearTargetDist) {
+      const double shrink_ratio = dist_to_target / kNearTargetDist;
+      if (lbuffer.second > half_ego_width) {
+        lbuffer.second = half_ego_width +
+            (lbuffer.second - half_ego_width) * shrink_ratio;
+      }
+      if (rbuffer.second < -half_ego_width) {
+        rbuffer.second = -half_ego_width +
+            (rbuffer.second + half_ego_width) * shrink_ratio;
+      }
+    }
+  };
+
   std::vector<double> left_outline_s;
   std::vector<double> left_outline_l;
   std::vector<double> right_outline_s;
@@ -741,6 +773,8 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
       ego_lbuffer.second = std::max(ego_lbuffer.second, half_ego_width);
       ego_rbuffer.second = std::min(ego_rbuffer.second, -half_ego_width);
 
+      shrink_buffer_near_target(last_lat_path_s, ego_lbuffer, ego_rbuffer);
+
       if ((ego_lbuffer.first > left_outline_s.back()) &&
           (ego_rbuffer.first > right_outline_s.back())) {
         left_outline_s.emplace_back(ego_lbuffer.first);
@@ -775,6 +809,8 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
           }
         }
       }
+
+      shrink_buffer_near_target(point.s, ego_lbuffer, ego_rbuffer);
 
       if ((ego_lbuffer.first > left_outline_s.back()) &&
           (ego_rbuffer.first > right_outline_s.back())) {
