@@ -454,7 +454,8 @@ HppObstacleLateralPreprocessDecider::ClassifyObstaclesByMotion(
       std::fabs(obs_ptr->frenet_relative_velocity_angle());
 
   ObstacleMotionType type = ObstacleMotionType::STATIC;
-  if (obs_ptr->is_static()) {
+  //动态大类类型障碍物不参与聚类
+  if (obs_ptr->is_static() && obs_ptr->type() != iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
     type = ObstacleMotionType::STATIC;
   } else {
     if (obs_relative_v_angle > 3 * PI / 4) {

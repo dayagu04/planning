@@ -2372,6 +2372,9 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
 struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
+    use_dynamic_obs_decision = read_json_keys<bool>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "use_dynamic_obs_decision"});
     relative_nudge_buffer = read_json_keys<double>(
         json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
                                        "relative_nudge_buffer"});
@@ -2402,7 +2405,8 @@ struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
                                        "dynamic_scene_ego_traj_expand_s"});
   }
-
+  
+  bool use_dynamic_obs_decision = false;
   double relative_nudge_buffer = 0.8;
   double absolute_nudge_buffer = 2.0;
   double ego_detour_safe_dis = 0.3;
