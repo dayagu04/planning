@@ -949,22 +949,24 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
 
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     TrajectoryPoint pt;
-    if (!hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+    if (hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
             plan_history_traj_tmp, ref_traj_points_[i].s, pt)) {
-      // continue;
+      plan_history_traj_.emplace_back(std::move(pt));
+    } else {
+      LOG_DEBUG("GetTrajectoryPointAtS failed !");
+      plan_history_traj_.emplace_back(ref_traj_points_[i]);
     }
     // pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
-    plan_history_traj_.emplace_back(std::move(pt));
   }
 
   auto t_delay = plan_history_traj_.front().t;
 
   if (t_delay < -1e-2) {
-    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    for (size_t i = 0; i < plan_history_traj_.size(); ++i) {
       plan_history_traj_[i].t -= t_delay;
     }
   } else if (t_delay > 1e-2) {
-    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    for (size_t i = 0; i < plan_history_traj_.size(); ++i) {
       plan_history_traj_[i].t -= t_delay;
     }
   }
@@ -2556,7 +2558,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
       merged[i] = plan_history_traj_[i];
     }
   } else {
-    for (size_t i = 0; i < n; ++i) {
+    const size_t hist_n = plan_history_traj_.size();
+    for (size_t i = 0; i < n && i < hist_n; ++i) {
       if (plan_history_traj_[i].s - s_ref > 1.0) {
         break;
       }
