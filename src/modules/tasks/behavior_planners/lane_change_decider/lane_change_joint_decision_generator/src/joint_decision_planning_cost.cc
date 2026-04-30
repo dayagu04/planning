@@ -1002,6 +1002,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     }
 
     const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    const int p_decel_idx = GetObsPDecelIdx(i, obs_num);
+    const double p_decel = cost_config_ptr_->at(p_decel_idx);
     const double obs_x = x[state_base_idx + OBS_X];
     const double obs_y = x[state_base_idx + OBS_Y];
     const double obs_theta = x[state_base_idx + OBS_THETA];
@@ -1068,6 +1070,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     result.plane_dist = plane_dist;
     result.normal_x = ego_normal_x;
     result.normal_y = ego_normal_y;
+    result.p_decel = p_decel;
 
     results.push_back(result);
   }
@@ -1137,11 +1140,17 @@ void HardHalfplaneCostTerm::GetGradientHessian(
 
     // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
     double cur_alpha = alpha;
+    double ego_weight = alpha;
+    double obs_weight = 1.0 - alpha;
+
     if (result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
-      cur_alpha = 1.0;
+      ego_weight = 1.0;
+      obs_weight = 0.0;
+    } else if (result.label_type == planning::lane_change_joint_decision::OVERTAKE) {
+      // 使用 p_decel 连续调节让行比例
+      obs_weight = (1.0 - alpha) * result.p_decel;
+      ego_weight = 1.0 - obs_weight;
     }
-    double ego_weight = cur_alpha;
-    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;
@@ -1313,6 +1322,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     }
 
     const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    const int p_decel_idx = GetObsPDecelIdx(i, obs_num);
+    const double p_decel = cost_config_ptr_->at(p_decel_idx);
     const double obs_x = x[state_base_idx + OBS_X];
     const double obs_y = x[state_base_idx + OBS_Y];
     const double obs_theta = x[state_base_idx + OBS_THETA];
@@ -1406,6 +1417,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     result.s_target = s_target;
     result.normal_x = std::cos(ego_theta);
     result.normal_y = std::sin(ego_theta);
+    result.p_decel = p_decel;
 
     results.push_back(result);
   }
@@ -1499,12 +1511,16 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     const double normal_y = result.normal_y;
 
     // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
-    double cur_alpha = alpha;
+    double ego_weight = alpha;
+    double obs_weight = 1.0 - alpha;
+
     if (label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
-      cur_alpha = 1.0;
+      ego_weight = 1.0;
+      obs_weight = 0.0;
+    } else if (label_type == planning::lane_change_joint_decision::OVERTAKE) {
+      obs_weight = (1.0 - alpha) * result.p_decel;
+      ego_weight = 1.0 - obs_weight;
     }
-    double ego_weight = cur_alpha;
-    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;

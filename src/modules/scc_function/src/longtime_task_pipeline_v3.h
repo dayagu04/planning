@@ -21,6 +21,7 @@
 // #include
 // "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
 #include "tasks/behavior_planners/ego_lane_road_right_decider/ego_lane_road_right_decider.h"
+#include "tasks/behavior_planners/intention_decider/intention_decider.h"
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
@@ -61,6 +62,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
+  std::unique_ptr<behavior_planners::IntentionDecider> intention_decider_;
   // 施工场景
   //   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
   std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;

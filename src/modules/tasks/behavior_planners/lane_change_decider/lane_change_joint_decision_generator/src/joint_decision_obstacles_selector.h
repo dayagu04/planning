@@ -38,6 +38,11 @@ struct LaneChangeKeyObstacle {
   double init_acc;
   double init_s;
   double init_l;
+
+  // Longitudinal intent probabilities
+  double p_decel = 0.0;
+  double p_cruise = 0.0;
+  double p_accel = 0.0;
 };
 
 class JointDecisionObstaclesSelector {

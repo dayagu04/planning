@@ -206,6 +206,18 @@ class Agent {
   const double prediction_cutin_score() const;
   void set_prediction_cutin_score(const double prediction_cutin_score);
 
+  const int longitudinal_intent() const;
+  void set_longitudinal_intent(const int longitudinal_intent);
+
+  const double lon_decel_prob() const;
+  void set_lon_decel_prob(const double lon_decel_prob);
+
+  const double lon_cruise_prob() const;
+  void set_lon_cruise_prob(const double lon_cruise_prob);
+
+  const double lon_accel_prob() const;
+  void set_lon_accel_prob(const double lon_accel_prob);
+
   const bool is_crossing() const;
   void set_is_crossing(const bool is_crossing);
 
@@ -316,6 +328,11 @@ class Agent {
   double prediction_cutin_score_ = 0.0;
 
   double rule_base_cutin_score_ = 0.0;
+
+  int longitudinal_intent_ = 3;  // LongitudinalIntent: 0=Decel, 1=Cruise, 2=Accel, 3=Unknown
+  double lon_decel_prob_ = 0.0;
+  double lon_cruise_prob_ = 0.0;
+  double lon_accel_prob_ = 0.0;
 
   bool is_cutout_ = false;
 

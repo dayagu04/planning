@@ -292,6 +292,12 @@ uint8_t JointDecisionPlanningProblem::Update(
           planning_input.obs_ref_trajectory(j).width();
       cost_config_vec.at(i)[GetObsLongitudinalLabelIdx(j, obs_num_)] =
           planning_input.obs_ref_trajectory(j).longitudinal_label();
+      cost_config_vec.at(i)[GetObsPDecelIdx(j, obs_num_)] =
+          planning_input.obs_ref_trajectory(j).p_decel();
+      cost_config_vec.at(i)[GetObsPCruiseIdx(j, obs_num_)] =
+          planning_input.obs_ref_trajectory(j).p_cruise();
+      cost_config_vec.at(i)[GetObsPAccelIdx(j, obs_num_)] =
+          planning_input.obs_ref_trajectory(j).p_accel();
     }
   }
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);

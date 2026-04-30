@@ -37,6 +37,9 @@ message JointDecisionObsRefTrajectory {
   optional int32 obs_id = 11;
   optional double init_s = 12;
   repeated double curv_factor_vec = 13;
+  optional double p_decel = 14;
+  optional double p_cruise = 15;
+  optional double p_accel = 16;
 }
 
 // 道路边界

@@ -2356,16 +2356,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     ego_trajs_future_[i].s = ego_opt_traj[i].s;
     ego_trajs_future_[i].t = ego_opt_traj[i].t;
   }
-  // 记录更新后的后车标签，未命中则保持默认值。
-  // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
-  const auto rear_it =
-      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-  if (rear_it == joint_decision_obstacle_labels_.end()) {
-    return;
-  }
-  if (rear_it->second != lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-    return;
-  }
+  // 判断后车是否会在短时间内超越自车
   if (ego_trajs_future_.empty()) {
     return;
   }
@@ -2374,6 +2365,23 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   if (rear_agent == nullptr) {
     return;
   }
+
+  // EGO_OVERTAKE（大车）或加速意图：直接判定 overtaking
+  const auto label_it =
+      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+  if (label_it != joint_decision_obstacle_labels_.end() &&
+      label_it->second == static_cast<int>(lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE)) {
+    rear_agent_overtaking_ = true;
+    return;
+  }
+
+  const int lon_intent = rear_agent->longitudinal_intent();
+  // ACCEL = 2
+  if (lon_intent == 2) {
+    rear_agent_overtaking_ = true;
+    return;
+  }
+
   const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
   if (agent_trajs.empty() || agent_trajs[0].empty()) {
     return;
@@ -2414,6 +2422,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   double risk_min_gap = traj[0].vel() * kRiskGapTime;
   bool is_rear_faster = rel_vel > kRearFasterThreshold;
   bool is_gap_tight = rear_gap < risk_min_gap;
+
   rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0)
                            || (is_rear_faster && is_gap_tight);
 }

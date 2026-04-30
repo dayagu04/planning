@@ -542,6 +542,9 @@ void JointDecisionInputBuilder::BuildObsInfo(
       obs_ref_trajectory->set_longitudinal_label(obstacle.longitudinal_label);
       obs_ref_trajectory->set_obs_id(obstacle.agent_id);
       obs_ref_trajectory->set_init_s(obstacle.init_s);
+      obs_ref_trajectory->set_p_decel(obstacle.p_decel);
+      obs_ref_trajectory->set_p_cruise(obstacle.p_cruise);
+      obs_ref_trajectory->set_p_accel(obstacle.p_accel);
 
       const double obs_wheel_base = obstacle.length * 0.75;
       for (size_t i = 0; i < obstacle.ref_x_vec.size(); ++i) {

@@ -23,6 +23,9 @@ struct AgentHistoryState {
   double y;
   double l = 0.0;
   double l_dot = 0.0;
+  double s = 0.0;
+  double s_dot = 0.0;
+  double s_ddot = 0.0;
 };
 
 struct BayesFeatures {
