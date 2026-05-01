@@ -637,15 +637,29 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
   const double a_accel = hpp_speed_limit_config_.hpp_profile_comfort_accel;
   if (binding_type[0] == SpeedLimitType::CRUISE && v[0] > ego_v) {
     double dist_to_next_zone = lookahead;
+    double next_zone_v = v_cruise;
     for (int i = 1; i < N; ++i) {
       if (binding_type[i] != SpeedLimitType::CRUISE) {
         dist_to_next_zone = i * ds;
+        next_zone_v = v[i];
         break;
       }
     }
-    double v_accel_limit =
-        std::sqrt(ego_v * ego_v + 2.0 * a_accel * dist_to_next_zone);
-    v[0] = std::min(v[0], v_accel_limit);
+
+    double v_peak_sq = (a_decel * ego_v * ego_v +
+                        a_accel * next_zone_v * next_zone_v +
+                        2.0 * a_accel * a_decel * dist_to_next_zone) /
+                       (a_accel + a_decel);
+    double v_peak = std::sqrt(std::max(v_peak_sq, ego_v * ego_v));
+
+    constexpr double kMinSpeedGain = 1.0;
+    if (v_peak - ego_v < kMinSpeedGain) {
+      v[0] = ego_v;
+    } else {
+      double v_accel_limit =
+          std::sqrt(ego_v * ego_v + 2.0 * a_accel * dist_to_next_zone);
+      v[0] = std::min(v[0], v_accel_limit);
+    }
   }
 
   v_target_ =
