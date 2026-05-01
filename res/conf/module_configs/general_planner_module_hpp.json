@@ -1130,7 +1130,7 @@
     "enable_ara_debug_info": false
   },
   "hpp_lateral_obstacle_decider": {
-    "use_dynamic_obs_decision": false,
+    "use_dynamic_obs_decision": true,
     "relative_nudge_buffer": 0.0,
     "absolute_nudge_buffer": 0.6,
     "ego_detour_safe_dis": 0.3
