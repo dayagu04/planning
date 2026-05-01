@@ -5639,10 +5639,12 @@ struct EgoPlanningEdtManagerConfig : public EgoPlanningConfig {
     lon_safe_buffer =
         read_json_key<double>(json, "lon_safe_buffer", lon_safe_buffer);
     mirror_buffer = read_json_key<double>(json, "mirror_buffer", mirror_buffer);
+    edt_resolution = read_json_key<double>(json, "edt_resolution", edt_resolution);
   }
   double car_body_lat_safe_buffer = 0.2;
   double lon_safe_buffer = 0.2;
   double mirror_buffer = 0.2;
+  double edt_resolution = 0.05;
 };
 
 struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
