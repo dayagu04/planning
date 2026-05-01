@@ -372,7 +372,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
     current_a = next_acc;
     current_theta = next_theta;
     current_delta = next_delta;
-    ego_s += ds;
   }
 
   planning_input.mutable_ref_x_vec()->Clear();
