@@ -53,6 +53,7 @@
   "car_body_lat_safe_buffer": 0.1,
   "lon_safe_buffer": 0.1,
   "mirror_buffer": 0.1,
+  "edt_resolution": 0.075,
   "supper_limit_for_OD_straight": 6,
   "supper_limit_for_OD_bend": 7.5,
   "is_select_split_nearing_ramp": false,
@@ -239,6 +240,10 @@
   "turnstile_emergency_opening_status_stable_frame_threshold": 3,
   "turnstile_emergency_stop_velocity_threshold": 0.1,
   "turnstile_emergency_stop_stable_frame_threshold": 3,
+  "enable_turnstile_gate_base_fallback": true,
+  "turnstile_gate_base_stop_offset": 0.5,
+  "turnstile_gate_base_behind_threshold": 0,
+  "turnstile_gate_base_lateral_search_range": 3.5,
   "enable_cross_obstacle_virtual_agent": true,
   "cross_obstacle_stop_buffer": 0.0,
   "narrow_speed_width_lower": 0.0,
@@ -1128,10 +1133,10 @@
     "use_occ_s_dist": 7,
     "stitching_cost_weight": 150.0,
     "stitching_cost_time_decay_factor": 0.0,
-    "enable_ara_debug_info": true
+    "enable_ara_debug_info": false
   },
   "hpp_lateral_obstacle_decider": {
-    "use_dynamic_obs_decision": false,
+    "use_dynamic_obs_decision": true,
     "relative_nudge_buffer": 0.0,
     "absolute_nudge_buffer": 0.6,
     "ego_detour_safe_dis": 0.3

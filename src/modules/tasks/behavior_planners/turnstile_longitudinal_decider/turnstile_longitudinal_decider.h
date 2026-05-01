@@ -94,6 +94,11 @@ class TurnstileLongitudinalDecider : public Task {
     const Obstacle* target_turnstile_obs = nullptr;  // 用于缓存主道闸 obstacle
     ConstFrenetObstaclePtr front_vehicle_frenet_obs;  // 用于缓存当前前车 frenet obstacle
     GateSnapshot target_turnstile_gate_snapshot;
+
+    bool has_gate_base_fallback = false;
+    double gate_base_stop_s = 0.0;
+    int32_t gate_base_count = 0;
+    double gate_base_min_lateral_dist = 0.0;
   };
 
   // 周期状态（跨帧保留）。
@@ -136,6 +141,7 @@ class TurnstileLongitudinalDecider : public Task {
   void ResetStateWhenDeciderInactive();
   void InitFrameContextFromReferencePath();
   void UpdateTargetTurnstile();
+  void UpdateGateBaseInfo();
   void UpdateGateSnapshot();
   void UpdateFrontVehicle();
   void UpdateTurnstilePassability();

@@ -425,6 +425,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "turnstile_gate_snapshot_is_static", "turnstile_gate_snapshot_is_opening",
       "turnstile_gate_snapshot_is_closing", "turnstile_gate_snapshot_is_closed",
       "turnstile_gate_snapshot_is_opened", "turnstile_gate_snapshot_is_passable",
+      "turnstile_has_gate_base_fallback", "turnstile_gate_base_stop_s",
+      "turnstile_enable_gate_base_fallback", "turnstile_ego_s_end",
+      "turnstile_gate_base_count", "turnstile_gate_base_min_lateral_dist",
   ]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
@@ -504,6 +507,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         'turnstile_gate_snapshot_is_closed': turnstile_debug.gate_snapshot_is_closed,
         'turnstile_gate_snapshot_is_opened': turnstile_debug.gate_snapshot_is_opened,
         'turnstile_gate_snapshot_is_passable': turnstile_debug.gate_snapshot_is_passable,
+        'turnstile_has_gate_base_fallback': turnstile_debug.has_gate_base_fallback,
+        'turnstile_gate_base_stop_s': turnstile_debug.gate_base_stop_s,
+        'turnstile_enable_gate_base_fallback': turnstile_debug.enable_gate_base_fallback,
+        'turnstile_ego_s_end': turnstile_debug.ego_s_end,
+        'turnstile_gate_base_count': turnstile_debug.gate_base_count,
+        'turnstile_gate_base_min_lateral_dist': turnstile_debug.gate_base_min_lateral_dist,
     })
 
   # load new st boundaries

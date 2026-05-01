@@ -169,12 +169,17 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       } else if (obstacle->type() ==
                  iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
         // 绑定的occ动态障碍物与od障碍物，决策结果一样
-        if (obstacle->obstacle()->has_object_detection_id()) {
+        if (obstacle->obstacle()->has_object_detection_id() &&
+            lat_obstacle_decision.find(
+                obstacle->obstacle()->object_detection_id()) !=
+                lat_obstacle_decision.end()) {
           const uint32 occ2od_id = obstacle->obstacle()->object_detection_id();
           lat_obstacle_decision[obs_id] = lat_obstacle_decision[occ2od_id];
         } else {
           lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
         }
+      } else {
+        lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
       }
     }
   }
