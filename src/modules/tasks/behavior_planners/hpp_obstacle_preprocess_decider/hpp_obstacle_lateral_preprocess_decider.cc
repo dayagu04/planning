@@ -553,12 +553,18 @@ bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
       bool lat_meet_cond2 = l_gap < kMergeLatSmallThr;
 
       if (lon_meet_cond1 && lat_meet_cond1) {
-        double dist = obs_i->obstacle()->perception_polygon().DistanceTo(
-            obs_j->obstacle()->perception_polygon());
-        if (dist < kMergeAbsDisThr) {
-          cluster_map_i[j] = ObstacleClusterType::ABS_MERGE;
-          cluster_map_j[i] = ObstacleClusterType::ABS_MERGE;
-          continue;
+        constexpr double kBoxDistanceMargin = 0.3;
+        const auto& box_i = obs_i->obstacle()->perception_bounding_box();
+        const auto& box_j = obs_j->obstacle()->perception_bounding_box();
+        double box_dist = box_i.DistanceTo(box_j);
+        if (box_dist < kMergeAbsDisThr + kBoxDistanceMargin) {
+          double dist = obs_i->obstacle()->perception_polygon().DistanceTo(
+              obs_j->obstacle()->perception_polygon());
+          if (dist < kMergeAbsDisThr) {
+            cluster_map_i[j] = ObstacleClusterType::ABS_MERGE;
+            cluster_map_j[i] = ObstacleClusterType::ABS_MERGE;
+            continue;
+          }
         }
       }
       if (lon_meet_cond1 && lat_meet_cond2) {

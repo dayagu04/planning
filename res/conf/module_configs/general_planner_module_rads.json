@@ -33,7 +33,6 @@
   "enable_fusion_occupancy_objects": true,
   "enable_fusion_parking_slot": true,
   "enable_fusion_ground_line": true,
-  "enable_parking_prediction": false,
   "enable_uss":true,
   "enable_parking_prediction": false,
   "enable_lane_borrow_deciderV2": false,

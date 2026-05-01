@@ -5573,6 +5573,29 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "processed_trajectory_acc_thr");
     max_heading_diff_threshold_deg = read_json_key<double>(
         json, "max_heading_diff_threshold_deg", max_heading_diff_threshold_deg);
+    ReadItem<bool>(json, enable_unified_static_cluster,
+                   "enable_unified_static_cluster");
+    ReadItem<bool>(json, enable_merge_occ_and_ground_line,
+                   "enable_merge_occ_and_ground_line");
+    ReadItem<double>(json, cluster_grid_resolution, "cluster_grid_resolution");
+    ReadItem<int>(json, cluster_neighbor_range, "cluster_neighbor_range");
+    ReadItem<double>(json, cluster_aspect_ratio_threshold,
+                     "cluster_aspect_ratio_threshold");
+    ReadItem<double>(json, cluster_rdp_tolerance, "cluster_rdp_tolerance");
+    ReadItem<double>(json, cluster_box_safety_buffer,
+                     "cluster_box_safety_buffer");
+    ReadItem<int>(json, cluster_min_points, "cluster_min_points");
+    ReadItem<double>(json, cluster_max_segment_length,
+                     "cluster_max_segment_length");
+    ReadItem<double>(json, cluster_compactness_threshold,
+                     "cluster_compactness_threshold");
+    ReadItem<double>(json, cluster_density_threshold,
+                     "cluster_density_threshold");
+    ReadItem<double>(json, cluster_curvature_threshold,
+                     "cluster_curvature_threshold");
+    ReadItem<double>(json, cluster_bisect_stop_ratio,
+                     "cluster_bisect_stop_ratio");
+    ReadVector<int>(json, cluster_occ_standalone_types, "cluster_occ_standalone_types");
   }
   double frenet_obstacle_range_s_min = -50.0;
   double frenet_obstacle_range_s_max = 180.0;
@@ -5585,6 +5608,22 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double processed_trajectory_filter_alpha = 0.4;
   double processed_trajectory_acc_thr = -0.5;
   double max_heading_diff_threshold_deg = 90.0;
+  bool   enable_unified_static_cluster  = false;
+  bool   enable_merge_occ_and_ground_line  = false;
+  double cluster_grid_resolution        = 0.25;
+  int    cluster_neighbor_range         = 1;
+  double cluster_aspect_ratio_threshold = 3.0;
+  double cluster_rdp_tolerance          = 0.15;
+  double cluster_box_safety_buffer      = 0.1;
+  int    cluster_min_points             = 3;
+  double cluster_max_segment_length     = 2.0;
+  double cluster_compactness_threshold  = 0.80;
+  double cluster_density_threshold      = 4.0;
+  double cluster_curvature_threshold    = 0.05;
+  double cluster_bisect_stop_ratio      = 0.85;
+  // OCC types that bypass unified clustering and are processed as standalone obstacles.
+  // Dynamic OCC objects (MOVING/ONCOME/CROSS) always bypass regardless of this list.
+  std::vector<int> cluster_occ_standalone_types = {52, 53, 54};  // OCC_CAR, OCC_CYCLIST, OCC_PEOPLE
 };
 
 struct EgoPlanningEdtManagerConfig : public EgoPlanningConfig {

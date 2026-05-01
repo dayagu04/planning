@@ -1,9 +1,12 @@
 #include "obstacle_manager.h"
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "ego_planning_config.h"
@@ -16,6 +19,25 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
+namespace {
+
+bool ShouldOccBypassCluster(
+    const iflyauto::FusionOccupancyObject &occ_obj,
+    const std::vector<int> &solo_types) {
+  const auto motion = occ_obj.additional_occupancy_info.motion_pattern_current;
+  if (motion == iflyauto::OBJECT_MOTION_TYPE_MOVING ||
+      motion == iflyauto::OBJECT_MOTION_TYPE_ONCOME ||
+      motion == iflyauto::OBJECT_MOTION_TYPE_CROSS) {
+    return true;
+  }
+  const int type_val = static_cast<int>(occ_obj.common_occupancy_info.type);
+  for (int t : solo_types) {
+    if (t == type_val) return true;
+  }
+  return false;
+}
+
+}  // namespace
 
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
@@ -27,6 +49,21 @@ void ObstacleManager::SetConfig(
     const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
   ground_line_manager_ptr_ = std::make_shared<GroundLineManager>();
+
+  UnifiedClusterConfig ucc;
+  ucc.enable                 = config_.enable_unified_static_cluster;
+  ucc.grid_resolution        = config_.cluster_grid_resolution;
+  ucc.neighbor_range         = config_.cluster_neighbor_range;
+  ucc.aspect_ratio_threshold = config_.cluster_aspect_ratio_threshold;
+  ucc.rdp_tolerance          = config_.cluster_rdp_tolerance;
+  ucc.box_safety_buffer      = config_.cluster_box_safety_buffer;
+  ucc.min_points             = config_.cluster_min_points;
+  ucc.max_segment_length     = config_.cluster_max_segment_length;
+  ucc.compactness_threshold  = config_.cluster_compactness_threshold;
+  ucc.density_threshold      = config_.cluster_density_threshold;
+  ucc.curvature_threshold    = config_.cluster_curvature_threshold;
+  ucc.bisect_stop_ratio      = config_.cluster_bisect_stop_ratio;
+  unified_cluster_ = std::make_unique<UnifiedStaticCluster>(ucc);
 }
 
 void ObstacleManager::update() {
@@ -152,31 +189,42 @@ void ObstacleManager::update() {
   }
 
   if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
-    // ground line
-    double time_start = IflyTime::Now_ms();
-    UpdateGroundLineObstacle();
-    double time_end = IflyTime::Now_ms();
-    ILOG_DEBUG << "UpdateGroundLineObstacle cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
+    double time_start;
+    double time_end;
+    if (config_.enable_unified_static_cluster) {
+      // Unified path: dedup + cluster GL and OCC together
+      time_start = IflyTime::Now_ms();
+      UpdateUnifiedStaticObstacle();
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateUnifiedStaticObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE("UpdateUnifiedStaticObstacleCost", time_end - time_start);
+    } else {
+      // Legacy path: process GL and OCC separately
+      // ground line
+      time_start = IflyTime::Now_ms();
+      UpdateGroundLineObstacle();
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateGroundLineObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
 
-    // parking space
+      // occupancy objects
+      time_start = IflyTime::Now_ms();
+      if (config_.enable_fusion_occupancy_objects) {
+        UpdateOccObstacle();
+      }
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateOccObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
+    }
+
+    // parking space (always runs regardless of clustering mode)
     time_start = IflyTime::Now_ms();
-    if (config_.enable_fusion_parking_slot) {  // fusion parking slot
+    if (config_.enable_fusion_parking_slot) {
       UpdateParkingSpaceObstacle();
-    } else {  // ehr parking space
     }
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "UpdateParkingSpaceObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("UpdateParkingSpaceObstacleCost", time_end - time_start);
-
-    // occupancy objects
-    time_start = IflyTime::Now_ms();
-    if (config_.enable_fusion_occupancy_objects) {
-      UpdateOccObstacle();
-    }
-    time_end = IflyTime::Now_ms();
-    ILOG_DEBUG << "UpdateOccObstacle cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
 
     // ehr column box
     time_start = IflyTime::Now_ms();
@@ -733,6 +781,387 @@ void ObstacleManager::UpdateGroundLineObstacle() {
   }
 }
 
+void ObstacleManager::UpdateUnifiedStaticObstacle() {
+  if (!unified_cluster_) {
+    return;
+  }
+
+  const auto &local_view = session_->environmental_model().get_local_view();
+  const auto &ref_path_ptr = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .coarse_planning_info.reference_path;
+  if (ref_path_ptr == nullptr) {
+    return;
+  }
+  const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  Point2D ego_point;
+  if (!frenet_coord->XYToSL(
+          Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
+          ego_point) ||
+      std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+    return;
+  }
+
+  // --- Collect GroundLine raw points ---
+  std::vector<planning_math::Vec2d> filted_gl_points;
+  UpdateUnifiedGroundLineObstacle(local_view.ground_line_perception,
+                                  frenet_coord, ref_path_ptr, ego_point,
+                                  filted_gl_points);
+
+
+  // --- Collect OCC raw points with OD ID pre-grouping and type/motion filtering ---
+  std::vector<planning_math::Vec2d> filted_occ_points;
+  if (config_.enable_fusion_occupancy_objects &&
+      local_view.fusion_occupancy_objects_info.local_point_valid) {
+    UpdateUnifiedOccObstacle(local_view.fusion_occupancy_objects_info,
+                             frenet_coord, ref_path_ptr, ego_point,
+                             filted_occ_points);
+  }
+
+  // --- Run unified clustering ---
+  if (config_.enable_merge_occ_and_ground_line) {
+    filted_gl_points.insert(filted_gl_points.end(), filted_occ_points.begin(),
+                            filted_occ_points.end());
+
+    std::vector<ClusterObstacle> cluster_results;
+    std::vector<int> new_to_id;
+    RunCluster(filted_gl_points, cluster_results);
+    ClusterIdAssignment(cluster_results, new_to_id, prev_unified_clusters_,
+                        unified_cluster_next_id_, kUnifiedStaticIdOffset);
+    for (size_t i = 0; i < cluster_results.size(); ++i) {
+      Obstacle obstacle(new_to_id[i], cluster_results[i].points);
+      if (obstacle.is_vaild()) {
+        add_groundline_obstacle(obstacle);
+      }
+    }
+  } else {
+    std::vector<ClusterObstacle> gt_cluster_results;
+    RunCluster(filted_gl_points, gt_cluster_results);
+    std::vector<int> gt_new_to_id;
+    ClusterIdAssignment(gt_cluster_results, gt_new_to_id, prev_gt_clusters_,
+                        gt_cluster_next_id_, kGroundLineIdOffset);
+    for (size_t i = 0; i < gt_cluster_results.size(); ++i) {
+      Obstacle obstacle(gt_new_to_id[i], gt_cluster_results[i].points);
+      if (obstacle.is_vaild()) {
+        add_groundline_obstacle(obstacle);
+      }
+    }
+
+
+    std::vector<ClusterObstacle> occ_cluster_results;
+    RunCluster(filted_occ_points, occ_cluster_results);
+    std::vector<int> occ_new_to_id;
+    ClusterIdAssignment(occ_cluster_results, occ_new_to_id, prev_occ_clusters_,
+                        occ_cluster_next_id_, kOccupancyObjectIdOffset);
+
+    for (size_t i = 0; i < occ_cluster_results.size(); ++i) {
+      Obstacle obstacle(occ_new_to_id[i], occ_cluster_results[i].points);
+      if (obstacle.is_vaild()) {
+        add_occupancy_obstacle(obstacle);
+      }
+    }
+  }
+
+  if (session_->is_hpp_scene()) {
+    for (const auto *c_obstacle : groundline_obstacles_.Items()) {
+      auto *obstacle = groundline_obstacles_.Find(c_obstacle->id());
+      if (obstacle) {
+        obstacle->set_floor_id(ego_state->ego_floor_id());
+      }
+    }
+
+    for (const auto *c_obstacle : occupancy_obstacles_.Items()) {
+      auto *obstacle = occupancy_obstacles_.Find(c_obstacle->id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state->ego_floor_id());
+        }
+    }
+  }
+}
+
+void ObstacleManager::RunCluster(
+    const std::vector<planning_math::Vec2d> &points,
+    std::vector<ClusterObstacle> &cluster_results) {
+  cluster_results.clear();
+  unified_cluster_->Process(points, cluster_results);
+
+  const int min_pts = config_.cluster_min_points;
+  cluster_results.erase(
+      std::remove_if(cluster_results.begin(), cluster_results.end(),
+                     [min_pts](const auto &obs) {
+                       return static_cast<int>(obs.points.size()) < min_pts;
+                     }),
+      cluster_results.end());
+}
+
+void ObstacleManager::ClusterIdAssignment(
+    const std::vector<ClusterObstacle> &cluster_results,
+    std::vector<int> &new_to_id,
+    std::vector<PointsClusterInfo> &prev_clusters,
+    int &next_id,
+    int id_offset) {
+  // Step 2: Build match candidates (new cluster <-> prev cluster)
+  struct MatchCandidate {
+    int new_idx;
+    int prev_idx;
+    double dist;
+  };
+  std::vector<MatchCandidate> candidates;
+  constexpr double kMatchThreshold = 1.5;  // meters
+
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
+    for (size_t j = 0; j < prev_clusters.size(); ++j) {
+      double d = cluster_results[i].center.DistanceTo(prev_clusters[j].center);
+      if (d < kMatchThreshold) {
+        candidates.push_back({static_cast<int>(i), static_cast<int>(j), d});
+      }
+    }
+  }
+
+  // Sort by distance for optimal greedy matching
+  std::sort(candidates.begin(), candidates.end(),
+            [](const auto &a, const auto &b) { return a.dist < b.dist; });
+
+  // Step 3: Greedy assignment
+  new_to_id.assign(cluster_results.size(), -1);
+  std::vector<bool> prev_used(prev_clusters.size(), false);
+
+  for (const auto &c : candidates) {
+    if (new_to_id[c.new_idx] != -1) continue;  // Already matched
+    if (prev_used[c.prev_idx]) continue;       // Already used
+    new_to_id[c.new_idx] = prev_clusters[c.prev_idx].id;
+    prev_used[c.prev_idx] = true;
+  }
+
+  // Assign fresh IDs to unmatched clusters
+  // Unified path uses id_offset + [0, 900000), separate from
+  // legacy groundline path which uses kGroundLineIdOffset + perception_id
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
+    if (new_to_id[i] == -1) {
+      new_to_id[i] = id_offset + (next_id++);
+      if (next_id >= 900000) {
+        next_id = 100000;
+      }
+    }
+  }
+
+  // update tracking state
+  prev_clusters.clear();
+  prev_clusters.reserve(cluster_results.size());
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
+    prev_clusters.push_back({cluster_results[i].center, new_to_id[i]});
+  }
+}
+
+void ObstacleManager::UpdateUnifiedGroundLineObstacle(
+    const iflyauto::FusionGroundLineInfo &ground_line_perception,
+    KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+    const Point2D &ego_point, std::vector<planning_math::Vec2d> &points) {
+  // Step 1: Pre-calculate total point count for all groundlines
+  points.clear();
+  const size_t groundline_size = ground_line_perception.groundline_size;
+  size_t total_point_count = 0;
+  for (size_t i = 0; i < groundline_size; ++i) {
+    const auto &groundline = ground_line_perception.groundline[i];
+    if (groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN) {
+      continue;
+    }
+    total_point_count += groundline.groundline_point_size;
+  }
+  points.reserve(total_point_count);
+
+  // Step 2: Filter and collect valid points
+  double kMinFrontDistance  = 2.0;
+  double kMinFrontDistanceForMap = 3.0;
+  double kMaxSideDistance = 5.0;
+  for (size_t i = 0; i < groundline_size; ++i) {
+    const auto &groundline = ground_line_perception.groundline[i];
+    const size_t pt_size = groundline.groundline_point_size;
+    if (groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN) {
+      continue;  // columns handled separately by UpdateMapStaticObstacle
+    }
+
+    std::vector<planning_math::Vec2d> object_points;
+    object_points.reserve(pt_size);
+    for (size_t j = 0; j < pt_size; ++j) {
+      const auto &gp = groundline.groundline_point[j];
+      if (gp.x == 0.0f && gp.y == 0.0f) {
+        continue;
+      }
+      Point2D sl_point;
+      if (!frenet_coord->XYToSL(Point2D(gp.x, gp.y), sl_point) ||
+          std::isnan(sl_point.x) || std::isnan(sl_point.y)) {
+        continue;
+      }
+      ReferencePathPoint ref_pt_at_s;
+      if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
+          groundline.floor_id.id != ref_pt_at_s.floor_id) {
+        continue;
+      }
+      if (sl_point.x < ego_point.x + kMinFrontDistance) {
+        continue;
+      }
+      if (groundline.resource_type ==
+              iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP &&
+          sl_point.x < ego_point.x + kMinFrontDistanceForMap) {
+        continue;
+      }
+      if (std::fabs(sl_point.y) > kMaxSideDistance) {
+        continue;
+      }
+      object_points.emplace_back(gp.x, gp.y);
+    }
+
+    if (groundline.type == iflyauto::GROUND_LINE_TYPE_GATE_BASE) {
+      Obstacle obstacle(
+          kGroundLineIdOffset + groundline.id, std::move(object_points),
+          iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL, groundline.type);
+      if (obstacle.is_vaild()) {
+        add_groundline_obstacle(obstacle);
+      }
+      continue;
+    }
+
+    points.insert(points.end(), object_points.begin(), object_points.end());
+  }
+
+  // Step 3: Shrink to fit actual size
+  points.shrink_to_fit();
+}
+
+void ObstacleManager::UpdateUnifiedOccObstacle(
+    const iflyauto::FusionOccupancyObjectsInfo &fusion_occupancy_objects_info,
+    KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+    const Point2D &ego_point, std::vector<planning_math::Vec2d> &points) {
+  const size_t occ_size = fusion_occupancy_objects_info.fusion_object_size;
+  const auto *occ_objects = fusion_occupancy_objects_info.fusion_object;
+
+  // Step 1: Pre-group OCC by sensor_source_id (OD ID)
+  std::unordered_map<uint32_t, std::vector<size_t>> od_id_to_occ_indices;
+  std::vector<size_t> no_od_id_indices;
+  for (size_t i = 0; i < occ_size; ++i) {
+    uint32_t od_id = occ_objects[i].additional_occupancy_info.sensor_source_id;
+    if (od_id > 0) {
+      od_id_to_occ_indices[od_id].push_back(i);
+    } else {
+      no_od_id_indices.push_back(i);
+    }
+  }
+
+  // Step 2: Process OCC groups with OD ID (highest priority)
+  for (const auto &[od_id, indices] : od_id_to_occ_indices) {
+    if (indices.empty()) continue;  // Safety check (should never happen)
+
+    // Calculate total capacity for performance
+    size_t total_capacity = 0;
+    for (size_t idx : indices) {
+      total_capacity +=
+          occ_objects[idx].additional_occupancy_info.polygon_points_size;
+    }
+
+    std::vector<planning_math::Vec2d> merged_points;
+    merged_points.reserve(total_capacity);
+
+    const auto &first_occ = occ_objects[indices[0]];
+    size_t contributing_occ_count = 0;
+
+    // Merge all polygon_points from OCCs with same OD ID
+    for (size_t idx : indices) {
+      const auto &occ_obj = occ_objects[idx];
+      const size_t pt_size =
+          occ_obj.additional_occupancy_info.polygon_points_size;
+      const auto *pts = occ_obj.additional_occupancy_info.polygon_points;
+
+      int valid_in_this_occ = 0;
+      for (size_t j = 0; j < pt_size; ++j) {
+        if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+        merged_points.emplace_back(pts[j].x, pts[j].y);
+        valid_in_this_occ++;
+      }
+      if (valid_in_this_occ > 0) {
+        contributing_occ_count++;
+      } else {
+        ILOG_DEBUG << "[UnifiedStatic] OCC track_id="
+                   << occ_obj.additional_occupancy_info.track_id
+                   << " in OD group " << od_id << " has no valid points";
+      }
+    }
+
+    // Validate and create obstacle
+    if (merged_points.empty()) {
+      ILOG_DEBUG << "[UnifiedStatic] OD-bound OCC od_id=" << od_id
+                 << " has no valid points after merging";
+      continue;
+    }
+
+    if (static_cast<int>(merged_points.size()) >= config_.cluster_min_points) {
+      int obs_id = kOccupancyObjectIdOffset +
+                   first_occ.additional_occupancy_info.track_id;
+      Obstacle obstacle(obs_id, merged_points,
+                        first_occ.common_occupancy_info.type);
+      obstacle.set_object_detection_id(static_cast<int>(od_id));
+
+      if (obstacle.is_vaild()) {
+        ILOG_DEBUG << "[UnifiedStatic] OD-bound OCC od_id=" << od_id
+                   << " track_id="
+                   << first_occ.additional_occupancy_info.track_id << " type="
+                   << static_cast<int>(first_occ.common_occupancy_info.type)
+                   << " merged_points=" << merged_points.size() << " from "
+                   << contributing_occ_count << "/" << indices.size()
+                   << " OCC objects";
+        add_occupancy_obstacle(obstacle);
+      }
+    }
+  }
+
+  // Step 3: Process OCC without OD ID (existing flow)
+  for (size_t idx : no_od_id_indices) {
+    const auto &occ_obj = occ_objects[idx];
+    const size_t pt_size =
+        occ_obj.additional_occupancy_info.polygon_points_size;
+    if (pt_size == 0) continue;
+    const auto *pts = occ_obj.additional_occupancy_info.polygon_points;
+
+    if (ShouldOccBypassCluster(occ_obj, config_.cluster_occ_standalone_types)) {
+      std::vector<planning_math::Vec2d> standalone_occ_points;
+      standalone_occ_points.reserve(pt_size);
+      for (size_t j = 0; j < pt_size; ++j) {
+        if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+        standalone_occ_points.emplace_back(pts[j].x, pts[j].y);
+      }
+      if (standalone_occ_points.empty()) {
+        ILOG_DEBUG << "[UnifiedStatic] OCC track_id="
+                   << occ_obj.additional_occupancy_info.track_id
+                   << " has no valid points (all 0,0)";
+        continue;
+      }
+      if (static_cast<int>(standalone_occ_points.size()) >=
+          config_.cluster_min_points) {
+        int obs_id = kOccupancyObjectIdOffset +
+                     occ_obj.additional_occupancy_info.track_id;
+        Obstacle obstacle(obs_id, standalone_occ_points,
+                          occ_obj.common_occupancy_info.type);
+        if (obstacle.is_vaild()) {
+          ILOG_DEBUG << "[UnifiedStatic] standalone OCC track_id="
+                     << occ_obj.additional_occupancy_info.track_id << " type="
+                     << static_cast<int>(occ_obj.common_occupancy_info.type);
+          add_occupancy_obstacle(obstacle);
+        }
+      }
+    } else {
+      for (size_t j = 0; j < pt_size; ++j) {
+        if (pts[j].x == 0.0f && pts[j].y == 0.0f) continue;
+        points.emplace_back(pts[j].x, pts[j].y);
+      }
+    }
+  }
+}
+
 bool ObstacleManager::FilterGroundLineByDistance(
       const std::vector<planning_math::Vec2d> &points,
       const std::shared_ptr<ReferencePath> &ref_path_ptr,
@@ -955,6 +1384,13 @@ void ObstacleManager::clear() {
   turnstile_obstacles_ = IndexedList<int, Obstacle>();
   semantic_sign_obstacles_ = IndexedList<int, Obstacle>();
   uss_obstacles_ = IndexedList<int, Obstacle>();
+  
+  prev_unified_clusters_.clear();
+  prev_occ_clusters_.clear();
+  prev_gt_clusters_.clear();
+  unified_cluster_next_id_ = 100000;
+  gt_cluster_next_id_ = 100000;
+  occ_cluster_next_id_ = 100000;
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
@@ -992,10 +1428,6 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
                              map_static_obstacles_.Items().size());
-    // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
-    //                                   groundline_obstacles_.Items().size() +
-    //                                   occupancy_obstacles_.Items().size() +
-    //                                   map_static_obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
     add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,
