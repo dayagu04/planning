@@ -507,12 +507,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         'turnstile_gate_snapshot_is_closed': turnstile_debug.gate_snapshot_is_closed,
         'turnstile_gate_snapshot_is_opened': turnstile_debug.gate_snapshot_is_opened,
         'turnstile_gate_snapshot_is_passable': turnstile_debug.gate_snapshot_is_passable,
-        'turnstile_has_gate_base_fallback': turnstile_debug.has_gate_base_fallback,
-        'turnstile_gate_base_stop_s': turnstile_debug.gate_base_stop_s,
-        'turnstile_enable_gate_base_fallback': turnstile_debug.enable_gate_base_fallback,
-        'turnstile_ego_s_end': turnstile_debug.ego_s_end,
-        'turnstile_gate_base_count': turnstile_debug.gate_base_count,
-        'turnstile_gate_base_min_lateral_dist': turnstile_debug.gate_base_min_lateral_dist,
+        'turnstile_has_gate_base_fallback': getattr(turnstile_debug, 'has_gate_base_fallback', False),
+        'turnstile_gate_base_stop_s': getattr(turnstile_debug, 'gate_base_stop_s', 0.0),
+        'turnstile_enable_gate_base_fallback': getattr(turnstile_debug, 'enable_gate_base_fallback', False),
+        'turnstile_ego_s_end': getattr(turnstile_debug, 'ego_s_end', 0.0),
+        'turnstile_gate_base_count': getattr(turnstile_debug, 'gate_base_count', 0),
+        'turnstile_gate_base_min_lateral_dist': getattr(turnstile_debug, 'gate_base_min_lateral_dist', 0.0),
     })
 
   # load new st boundaries
