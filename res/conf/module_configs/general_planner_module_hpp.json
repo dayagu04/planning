@@ -321,7 +321,9 @@
     "relative_v_bp":[-0.05, 0, 1, 2, 3, 4],
     "relative_v_decrease_extra_buffer":[0.0, 0.06, 0.12, 0.17, 0.2, 0.25],
     "truck_decrease_extra_buffer":0.1,
-    "ref_curvature_factor":10.0
+    "ref_curvature_factor":10.0,
+    "gate_extra_lat_buffer": 0.1,
+    "gate_front_range": 5.0
   },
   "spatio_temporal_grid_map": {
     "map_size_x": 250,

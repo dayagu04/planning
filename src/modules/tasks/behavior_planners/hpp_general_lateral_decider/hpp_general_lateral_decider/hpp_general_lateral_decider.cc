@@ -1517,6 +1517,21 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
     const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
+  // 收集闸机障碍物的 s 范围，用于给闸机及其前方范围内障碍物增加 buffer
+  const double gate_extra_lat_buffer = config_.gate_extra_lat_buffer;
+  const double gate_front_range = config_.gate_front_range;
+  std::vector<std::pair<double, double>> gate_s_ranges;
+  if (gate_extra_lat_buffer > 1e-6) {
+    for (const auto &obs : obs_vec) {
+      if (obs->obstacle()->ground_line_type() ==
+          iflyauto::GroundLineType::GROUND_LINE_TYPE_GATE_BASE) {
+        gate_s_ranges.emplace_back(obs->frenet_obstacle_boundary().s_start,
+                                   obs->frenet_obstacle_boundary().s_end);
+      }
+    }
+  }
+  const bool has_gate = !gate_s_ranges.empty();
+
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
       continue;
@@ -1528,13 +1543,24 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
       continue;
     }
 
+    double gate_extra_buffer = 0.0;
+    if (has_gate) {
+      const double obs_s = obstacle->frenet_s();
+      for (const auto &range : gate_s_ranges) {
+        if (obs_s >= range.first - gate_front_range && obs_s <= range.second) {
+          gate_extra_buffer = gate_extra_lat_buffer;
+          break;
+        }
+      }
+    }
+
     const auto &obstacle_id = obstacle->id();
     auto obstacle_decision = ObstacleDecision{obstacle_id, {}, {}};
 
     GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
-                                   obstacle_decision, true);
+                                   obstacle_decision, true, gate_extra_buffer);
     GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
-                                   obstacle_decision, false);
+                                   obstacle_decision, false, gate_extra_buffer);
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -1544,7 +1570,8 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
 void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     const Polygon2d &obstacle_sl_polygon,
-    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound,
+    double extra_lat_buffer) {
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1650,6 +1677,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
         hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
             ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, obstacle);
     lat_buf_dis += road_type_dis;
+    lat_buf_dis += extra_lat_buffer;
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;

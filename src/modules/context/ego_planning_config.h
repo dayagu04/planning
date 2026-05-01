@@ -3029,6 +3029,12 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, bound2center_line_distance_thr,
                      "general_lateral_decider",
                      "bound2center_line_distance_thr");
+    ReadItem<double>(json, gate_extra_lat_buffer,
+                     "general_lateral_decider",
+                     "gate_extra_lat_buffer");
+    ReadItem<double>(json, gate_front_range,
+                     "general_lateral_decider",
+                     "gate_front_range");
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -3096,6 +3102,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double static_cone_max_extra_lateral_buffer = 0.15;
   double static_other_max_extra_lateral_buffer = 0.45;
   double bound2center_line_distance_thr = 0.1;
+  double gate_extra_lat_buffer = 0.0;
+  double gate_front_range = 0.0;
 };
 
 struct HppStopDeciderConfig : public EgoPlanningConfig {
