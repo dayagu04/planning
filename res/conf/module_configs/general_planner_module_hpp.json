@@ -1114,7 +1114,7 @@
     "use_occ_s_dist": 7,
     "stitching_cost_weight": 150.0,
     "stitching_cost_time_decay_factor": 0.0,
-    "enable_ara_debug_info": true
+    "enable_ara_debug_info": false
   },
   "hpp_lateral_obstacle_decider": {
     "relative_nudge_buffer": 0.0,
