@@ -44,6 +44,7 @@ bool TurnstileLongitudinalDecider::Execute() {
   // 每帧执行顺序：输入刷新 -> 跨帧状态更新 -> 状态机转移 -> 输出停车决策。
   InitFrameContextFromReferencePath();
   UpdateTargetTurnstile();
+  UpdateGateBaseInfo();
   UpdateGateSnapshot();
   UpdateFrontVehicle();
   UpdateTurnstilePassability();
@@ -85,6 +86,10 @@ void TurnstileLongitudinalDecider::ResetStateWhenDeciderInactive() {
   frame_ctx_.stop_virtual_agent_id = kHppTurnstileVirtualAgentId;
   frame_ctx_.turnstile_stop_s = 0.0;
   frame_ctx_.turnstile_s = 0.0;
+  frame_ctx_.has_gate_base_fallback = false;
+  frame_ctx_.gate_base_stop_s = 0.0;
+  frame_ctx_.gate_base_count = 0;
+  frame_ctx_.gate_base_min_lateral_dist = 0.0;
 
   cycle_state_.target_turnstile_lost_frame_count = 0;
   cycle_state_.target_lost_timeout = false;
@@ -174,6 +179,91 @@ void TurnstileLongitudinalDecider::UpdateTargetTurnstile() {
   cycle_state_.target_lost_timeout = false;
   frame_ctx_.has_target_turnstile = true;
   frame_ctx_.turnstile_s = target_boundary.s_start;
+}
+
+void TurnstileLongitudinalDecider::UpdateGateBaseInfo() {
+  frame_ctx_.has_gate_base_fallback = false;
+  frame_ctx_.gate_base_stop_s = 0.0;
+  frame_ctx_.gate_base_count = 0;
+  frame_ctx_.gate_base_min_lateral_dist = 0.0;
+
+  if (!lon_config_.enable_turnstile_gate_base_fallback) {
+    return;
+  }
+
+  if (reference_path_ == nullptr) {
+    return;
+  }
+
+  const auto& local_view = session_->environmental_model().get_local_view();
+  if (local_view.ground_line_perception.groundline_size == 0) {
+    return;
+  }
+
+  const auto& frenet_coord = reference_path_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+
+  const double ego_s = reference_path_->get_frenet_ego_state().s();
+  double min_lateral_dist = std::numeric_limits<double>::max();
+  double selected_min_s = 0.0;
+  bool found = false;
+  int32_t candidate_count = 0;
+
+  for (size_t i = 0; i < local_view.ground_line_perception.groundline_size; ++i) {
+    const auto& groundline = local_view.ground_line_perception.groundline[i];
+    if (groundline.type != iflyauto::GROUND_LINE_TYPE_GATE_BASE) {
+      continue;
+    }
+
+    ++candidate_count;
+
+    double line_min_s = std::numeric_limits<double>::max();
+    double line_min_lateral = std::numeric_limits<double>::max();
+
+    for (size_t j = 0; j < groundline.groundline_point_size; ++j) {
+      const auto& pt = groundline.groundline_point[j];
+      if (pt.x == 0.0 && pt.y == 0.0) {
+        continue;
+      }
+
+      Point2D sl_point;
+      if (!frenet_coord->XYToSL(Point2D(pt.x, pt.y), sl_point) ||
+          std::isnan(sl_point.x) || std::isnan(sl_point.y)) {
+        continue;
+      }
+
+      line_min_s = std::min(line_min_s, sl_point.x);
+      line_min_lateral = std::min(line_min_lateral, std::fabs(sl_point.y));
+    }
+
+    if (line_min_s == std::numeric_limits<double>::max()) {
+      continue;
+    }
+
+    if (line_min_s < ego_s - lon_config_.turnstile_gate_base_behind_threshold) {
+      continue;
+    }
+
+    if (line_min_lateral > lon_config_.turnstile_gate_base_lateral_search_range) {
+      continue;
+    }
+
+    if (line_min_lateral < min_lateral_dist) {
+      min_lateral_dist = line_min_lateral;
+      selected_min_s = line_min_s;
+      found = true;
+    }
+  }
+
+  frame_ctx_.has_gate_base_fallback = found;
+  frame_ctx_.gate_base_count = candidate_count;
+  if (found) {
+    frame_ctx_.gate_base_stop_s = selected_min_s +
+        lon_config_.turnstile_gate_base_stop_offset;
+    frame_ctx_.gate_base_min_lateral_dist = min_lateral_dist;
+  }
 }
 
 void TurnstileLongitudinalDecider::UpdateGateSnapshot() {
@@ -720,27 +810,44 @@ void TurnstileLongitudinalDecider::UpdateTurnstileStage() {
 }
 
 bool TurnstileLongitudinalDecider::ShouldCreateVirtualObstacle() const {
-  if (!frame_ctx_.has_target_turnstile) {
-    return false;
+  if (frame_ctx_.has_target_turnstile) {
+    if (stage_ == TurnstileStage::EMERGENCY_BLOCK) {
+      return true;
+    }
+    return stage_ != TurnstileStage::IDLE && stage_ != TurnstileStage::PASSABLE_RELEASE &&
+           stage_ != TurnstileStage::PASSING && stage_ != TurnstileStage::PASSED;
   }
-  if (stage_ == TurnstileStage::EMERGENCY_BLOCK) {
+
+  if (lon_config_.enable_turnstile_gate_base_fallback &&
+      frame_ctx_.has_gate_base_fallback &&
+      stage_ == TurnstileStage::IDLE) {
     return true;
   }
-  return stage_ != TurnstileStage::IDLE && stage_ != TurnstileStage::PASSABLE_RELEASE &&
-         stage_ != TurnstileStage::PASSING && stage_ != TurnstileStage::PASSED;
+
+  return false;
 }
 
 bool TurnstileLongitudinalDecider::AddVirtualObstacle() {
-  if (reference_path_ == nullptr || frame_ctx_.target_turnstile_frenet_obs == nullptr) {
+  if (reference_path_ == nullptr) {
     return false;
   }
+
   ReferencePathPoint ref_point;
   const auto& ego_boundary = reference_path_->get_ego_frenet_boundary();
-  const double turnstile_s =
-      frame_ctx_.target_turnstile_frenet_obs->frenet_obstacle_boundary().s_start;
-  const double stop_s =
-      std::max(turnstile_s + lon_config_.turnstile_stop_buffer,
-               ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
+  double stop_s = 0.0;
+
+  if (frame_ctx_.has_target_turnstile && frame_ctx_.target_turnstile_frenet_obs != nullptr) {
+    const double turnstile_s =
+        frame_ctx_.target_turnstile_frenet_obs->frenet_obstacle_boundary().s_start;
+    stop_s = std::max(turnstile_s + lon_config_.turnstile_stop_buffer,
+                      ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
+  } else if (frame_ctx_.has_gate_base_fallback) {
+    stop_s = std::max(frame_ctx_.gate_base_stop_s,
+                      ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
+  } else {
+    return false;
+  }
+
   if (!reference_path_->get_reference_point_by_lon(stop_s, ref_point)) {
     return false;
   }
@@ -854,6 +961,15 @@ void TurnstileLongitudinalDecider::DumpTurnstileDebug() const {
   turnstile_debug->set_gate_snapshot_is_closed(snapshot.is_closed);
   turnstile_debug->set_gate_snapshot_is_opened(snapshot.is_opened);
   turnstile_debug->set_gate_snapshot_is_passable(snapshot.is_passable);
+
+  turnstile_debug->set_has_gate_base_fallback(frame_ctx_.has_gate_base_fallback);
+  turnstile_debug->set_gate_base_stop_s(frame_ctx_.gate_base_stop_s);
+  turnstile_debug->set_enable_gate_base_fallback(
+      lon_config_.enable_turnstile_gate_base_fallback);
+  const auto& ego_boundary = reference_path_->get_ego_frenet_boundary();
+  turnstile_debug->set_ego_s_end(ego_boundary.s_end);
+  turnstile_debug->set_gate_base_count(frame_ctx_.gate_base_count);
+  turnstile_debug->set_gate_base_min_lateral_dist(frame_ctx_.gate_base_min_lateral_dist);
 }
 
 }  // namespace planning

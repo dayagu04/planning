@@ -180,6 +180,13 @@ message TurnstileLongitudinalDebug {
   optional bool gate_snapshot_is_closed = 29;
   optional bool gate_snapshot_is_opened = 30;
   optional bool gate_snapshot_is_passable = 31;
+
+  optional bool has_gate_base_fallback = 32;
+  optional double gate_base_stop_s = 33;
+  optional bool enable_gate_base_fallback = 34;
+  optional double ego_s_end = 35;
+  optional int32 gate_base_count = 36;
+  optional double gate_base_min_lateral_dist = 37;
 }
 
 message PlanningDebugInfo {

@@ -3795,6 +3795,14 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         json, "turnstile_emergency_stop_velocity_threshold", 0.1);
     turnstile_emergency_stop_stable_frame_threshold = read_json_key<int32_t>(
         json, "turnstile_emergency_stop_stable_frame_threshold", 3);
+    enable_turnstile_gate_base_fallback =
+        read_json_key<bool>(json, "enable_turnstile_gate_base_fallback", false);
+    turnstile_gate_base_stop_offset =
+        read_json_key<double>(json, "turnstile_gate_base_stop_offset", 0.0);
+    turnstile_gate_base_behind_threshold =
+        read_json_key<double>(json, "turnstile_gate_base_behind_threshold", 0.5);
+    turnstile_gate_base_lateral_search_range =
+        read_json_key<double>(json, "turnstile_gate_base_lateral_search_range", 5.0);
     enable_cross_obstacle_virtual_agent =
         read_json_key<bool>(json, "enable_cross_obstacle_virtual_agent", true);
     cross_obstacle_stop_buffer =
@@ -3900,6 +3908,10 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   int32_t turnstile_emergency_opening_status_stable_frame_threshold = 3;
   double turnstile_emergency_stop_velocity_threshold = 0.1;
   int32_t turnstile_emergency_stop_stable_frame_threshold = 3;
+  bool enable_turnstile_gate_base_fallback = false;
+  double turnstile_gate_base_stop_offset = 0.0;
+  double turnstile_gate_base_behind_threshold = 0.5;
+  double turnstile_gate_base_lateral_search_range = 5.0;
   bool enable_cross_obstacle_virtual_agent = true;
   double cross_obstacle_stop_buffer = 0.0;
   double narrow_speed_width_lower = 0.0;  // m
