@@ -31,6 +31,9 @@ class TrafficLightDecider : public Task {
   // intersection before is small intersection or not
   bool IsSmallFrontIntersection();
 
+  // intersection before with curb match tfl or not
+  bool IsIntersectionWithCurbMatchTFL();
+
   // small intersection is matchable with tfl or not
   bool IsIntersectionMatchTFL();
 
