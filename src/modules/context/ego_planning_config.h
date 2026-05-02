@@ -3757,6 +3757,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "turnstile_min_forward_stop_buffer", 1.0);
     enable_turnstile_longitudinal_decider =
         read_json_key<bool>(json, "enable_turnstile_longitudinal_decider", true);
+    enable_turnstile_recognition =
+        read_json_key<bool>(json, "enable_turnstile_recognition", true);
     turnstile_open_status_threshold =
         read_json_key<double>(json, "turnstile_open_status_threshold", 0.8);
     turnstile_closed_status_threshold =
@@ -3892,6 +3894,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double turnstile_stop_buffer = 3.5;
   double turnstile_min_forward_stop_buffer = 1.0;
   bool enable_turnstile_longitudinal_decider = true;
+  bool enable_turnstile_recognition = true;
   double turnstile_open_status_threshold = 0.8;
   double turnstile_closed_status_threshold = 0.2;
   double turnstile_passable_status_threshold = 0.8;

@@ -217,6 +217,7 @@
   "turnstile_stop_buffer": -0.2,
   "turnstile_min_forward_stop_buffer": 0.5,
   "enable_turnstile_longitudinal_decider": true,
+  "enable_turnstile_recognition": false,
   "turnstile_open_status_threshold": 0.8,
   "turnstile_closed_status_threshold": 0.2,
   "turnstile_passable_status_threshold": 0.8,

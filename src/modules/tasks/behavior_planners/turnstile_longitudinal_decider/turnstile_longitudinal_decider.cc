@@ -13,6 +13,8 @@ namespace planning {
 namespace {
 constexpr int32_t kHppTurnstileVirtualAgentId =
     agent::AgentDefaultInfo::kHppTurnstileVirtualAgentId;
+constexpr int32_t kHppTurnstileGateBaseVirtualAgentId =
+    kHppTurnstileVirtualAgentId + 1;
 
 void UpdateStableCounter(bool condition, int32_t* counter) {
   if (condition) {
@@ -135,7 +137,16 @@ void TurnstileLongitudinalDecider::InitFrameContextFromReferencePath() {
 }
 
 void TurnstileLongitudinalDecider::UpdateTargetTurnstile() {
-  // 统一的“目标丢失”处理：累计丢失帧并在达到阈值后触发 timeout。
+  if (!lon_config_.enable_turnstile_recognition) {
+    frame_ctx_.has_target_turnstile = false;
+    frame_ctx_.target_turnstile_frenet_obs = nullptr;
+    frame_ctx_.target_turnstile_obs = nullptr;
+    cycle_state_.target_turnstile_lost_frame_count = 0;
+    cycle_state_.target_lost_timeout = false;
+    return;
+  }
+
+  // 统一的”目标丢失”处理：累计丢失帧并在达到阈值后触发 timeout。
   const auto mark_target_lost = [this]() {
     ++cycle_state_.target_turnstile_lost_frame_count;
     cycle_state_.target_lost_timeout =
@@ -267,6 +278,9 @@ void TurnstileLongitudinalDecider::UpdateGateBaseInfo() {
 }
 
 void TurnstileLongitudinalDecider::UpdateGateSnapshot() {
+  if (!lon_config_.enable_turnstile_recognition) {
+    return;
+  }
   if (!frame_ctx_.has_target_turnstile || frame_ctx_.target_turnstile_obs == nullptr) {
     return;
   }
@@ -835,15 +849,18 @@ bool TurnstileLongitudinalDecider::AddVirtualObstacle() {
   ReferencePathPoint ref_point;
   const auto& ego_boundary = reference_path_->get_ego_frenet_boundary();
   double stop_s = 0.0;
+  int32_t virtual_agent_id = kHppTurnstileVirtualAgentId;
 
   if (frame_ctx_.has_target_turnstile && frame_ctx_.target_turnstile_frenet_obs != nullptr) {
     const double turnstile_s =
         frame_ctx_.target_turnstile_frenet_obs->frenet_obstacle_boundary().s_start;
     stop_s = std::max(turnstile_s + lon_config_.turnstile_stop_buffer,
                       ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
+    virtual_agent_id = kHppTurnstileVirtualAgentId;
   } else if (frame_ctx_.has_gate_base_fallback) {
     stop_s = std::max(frame_ctx_.gate_base_stop_s,
                       ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
+    virtual_agent_id = kHppTurnstileGateBaseVirtualAgentId;
   } else {
     return false;
   }
@@ -853,7 +870,7 @@ bool TurnstileLongitudinalDecider::AddVirtualObstacle() {
   }
 
   planning::agent::Agent virtual_agent;
-  virtual_agent.set_agent_id(kHppTurnstileVirtualAgentId);
+  virtual_agent.set_agent_id(virtual_agent_id);
   virtual_agent.set_type(agent::AgentType::VIRTUAL);
   virtual_agent.set_is_tfl_virtual_obs(false);
   virtual_agent.set_is_stop_destination_virtual_obs(false);
