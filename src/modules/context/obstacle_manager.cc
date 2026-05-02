@@ -834,6 +834,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
     ClusterIdAssignment(cluster_results, new_to_id, prev_unified_clusters_,
                         unified_cluster_next_id_, kUnifiedStaticIdOffset);
     for (size_t i = 0; i < cluster_results.size(); ++i) {
+      if(cluster_results[i].points.empty()){
+        continue;
+      }
       Obstacle obstacle(new_to_id[i], cluster_results[i].points);
       if (obstacle.is_vaild()) {
         add_groundline_obstacle(obstacle);
@@ -846,6 +849,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
     ClusterIdAssignment(gt_cluster_results, gt_new_to_id, prev_gt_clusters_,
                         gt_cluster_next_id_, kGroundLineIdOffset);
     for (size_t i = 0; i < gt_cluster_results.size(); ++i) {
+      if(gt_cluster_results[i].points.empty()){
+        continue;
+      }
       Obstacle obstacle(gt_new_to_id[i], gt_cluster_results[i].points);
       if (obstacle.is_vaild()) {
         add_groundline_obstacle(obstacle);
@@ -860,6 +866,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
                         occ_cluster_next_id_, kOccupancyObjectIdOffset);
 
     for (size_t i = 0; i < occ_cluster_results.size(); ++i) {
+      if(occ_cluster_results[i].points.empty()){
+        continue;
+      }
       Obstacle obstacle(occ_new_to_id[i], occ_cluster_results[i].points);
       if (obstacle.is_vaild()) {
         add_occupancy_obstacle(obstacle);
@@ -1017,17 +1026,20 @@ void ObstacleManager::UpdateUnifiedGroundLineObstacle(
       object_points.emplace_back(gp.x, gp.y);
     }
 
+    if (object_points.empty()) {
+      continue;
+    }
     if (groundline.type == iflyauto::GROUND_LINE_TYPE_GATE_BASE) {
       Obstacle obstacle(
-          kGroundLineIdOffset + groundline.id, std::move(object_points),
+          kGroundLineIdOffset + groundline.id, object_points,
           iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL, groundline.type);
       if (obstacle.is_vaild()) {
         add_groundline_obstacle(obstacle);
       }
-      continue;
+    } else {
+      points.insert(points.end(), object_points.begin(), object_points.end());
     }
 
-    points.insert(points.end(), object_points.begin(), object_points.end());
   }
 
   // Step 3: Shrink to fit actual size
