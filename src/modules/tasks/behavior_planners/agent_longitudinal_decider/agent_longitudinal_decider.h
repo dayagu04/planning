@@ -87,6 +87,8 @@ class AgentLongitudinalDecider : public Task {
 
   void UpdateAgentTable();
 
+  void SetPredictionCutInAgents();
+
   void FilterRearAgents();
 
   void FilterUltradistantObs();

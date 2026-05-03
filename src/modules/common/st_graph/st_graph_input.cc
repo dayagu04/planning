@@ -106,6 +106,8 @@ void StGraphInput::Update() {
       session_->environmental_model().get_ego_state_manager();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  is_emergency_speed_adjust_ = lane_change_decider_output.s_search_status &&
+                               lane_change_decider_output.is_emergency_scene;
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const auto& planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
@@ -119,6 +121,26 @@ void StGraphInput::Update() {
   road_right_level_ = session_->planning_context()
                           .ego_lane_road_right_decider_output()
                           .road_right_level;
+
+  if (is_lane_change_execution_) {
+    const auto& ego_trajs_future = lane_change_decider_output.ego_trajs_future;
+    if (!ego_trajs_future.empty()) {
+      std::vector<planning_math::PathPoint> lane_change_path_points;
+      lane_change_path_points.reserve(ego_trajs_future.size());
+      for (const auto& traj_pt : ego_trajs_future) {
+        lane_change_path_points.emplace_back(
+            traj_pt.x, traj_pt.y, traj_pt.s, traj_pt.l,
+            traj_pt.heading_angle, traj_pt.curvature,
+            traj_pt.dkappa, traj_pt.ddkappa);
+      }
+      lane_change_kd_path_ = std::make_shared<planning_math::KDPath>(
+          std::move(lane_change_path_points));
+    } else {
+      lane_change_kd_path_ = nullptr;
+    }
+  } else {
+    lane_change_kd_path_ = nullptr;
+  }
 
   GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
   const auto& init_point = ego_state_manager->planning_init_point();

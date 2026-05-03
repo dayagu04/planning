@@ -261,8 +261,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_rear_axle =
       ego_vehicle_param.front_edge_to_rear_axle;
-  const double rear_axle_to_center =
-      ego_vehicle_param.rear_axle_to_center;
+  const double rear_axle_to_center = ego_vehicle_param.rear_axle_to_center;
 
   const auto& ego_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
@@ -359,7 +358,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
         added_agent_ids.find(agent_id) != added_agent_ids.end() ||
         agent_id == gap_rear_agent_id ||
-        (parallel_overtake_agent_id_ != -1 &&
+        (!agent->is_rule_base_cutin() &&
+         parallel_overtake_agent_id_ != -1 &&
          agent_id == parallel_overtake_agent_id_)) {
       continue;
     }
@@ -390,8 +390,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   for (const auto& [agent_id, decision] : lat_obstacle_decision) {
     if (decision == LatObstacleDecisionType::FOLLOW &&
         forbidden_ids.find(agent_id) == forbidden_ids.end() &&
-        added_agent_ids.find(agent_id) == added_agent_ids.end() &&
-        agent_id != parallel_overtake_agent_id_) {
+        added_agent_ids.find(agent_id) == added_agent_ids.end()) {
       if (auto agent = agent_manager->GetAgent(agent_id)) {
         follow_agents.push_back({agent, FollowAgentSource::kLatFollowAgentIds});
         added_agent_ids.insert(agent_id);
