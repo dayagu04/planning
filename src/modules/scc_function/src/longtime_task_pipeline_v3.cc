@@ -13,6 +13,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
+  intention_decider_ =
+      std::make_unique<longitudinal_intention::IntentionDecider>(config_builder, session);
   // construction_scene_decider_ =
   //     std::make_unique<ConstructionSceneDecider>(config_builder, session);
   spatio_temporal_planner_ =
@@ -123,6 +125,18 @@ bool LongTimeTaskPipelineV3::Run() {
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("ego_lane_road_right_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
+  ok = intention_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(intention_decider_->Name());
+    return false;
+  }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("intention_decider_cost", end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 

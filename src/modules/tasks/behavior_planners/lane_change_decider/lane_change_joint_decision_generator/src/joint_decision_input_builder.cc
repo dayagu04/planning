@@ -372,7 +372,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
     current_a = next_acc;
     current_theta = next_theta;
     current_delta = next_delta;
-    ego_s += ds;
   }
 
   planning_input.mutable_ref_x_vec()->Clear();
@@ -436,6 +435,11 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_q_ego_delta_weight(lc_decision_config_.q_ego_delta_weight);
   planning_input.set_q_obs_jerk_weight(lc_decision_config_.q_obs_jerk_weight);
   planning_input.set_q_obs_omega_weight(lc_decision_config_.q_obs_omega_weight);
+
+  planning_input.set_q_obs_acc_bound_weight(
+      lc_decision_config_.q_obs_acc_bound_weight);
+  planning_input.set_obs_acc_max(lc_decision_config_.obs_acc_max);
+  planning_input.set_obs_acc_min(lc_decision_config_.obs_acc_min);
 
   planning_input.set_q_ego_acc_bound_weight(
       lc_decision_config_.q_ego_acc_bound_weight);
@@ -537,6 +541,9 @@ void JointDecisionInputBuilder::BuildObsInfo(
       obs_ref_trajectory->set_longitudinal_label(obstacle.longitudinal_label);
       obs_ref_trajectory->set_obs_id(obstacle.agent_id);
       obs_ref_trajectory->set_init_s(obstacle.init_s);
+      obs_ref_trajectory->set_p_decel(obstacle.lon_intent_info.decel_prob);
+      obs_ref_trajectory->set_p_cruise(obstacle.lon_intent_info.cruise_prob);
+      obs_ref_trajectory->set_p_accel(obstacle.lon_intent_info.accel_prob);
 
       const double obs_wheel_base = obstacle.length * 0.75;
       for (size_t i = 0; i < obstacle.ref_x_vec.size(); ++i) {

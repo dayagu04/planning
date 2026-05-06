@@ -916,6 +916,60 @@ void EgoVelBoundCostTerm::GetGradientHessian(
   }
 }
 
+double ObsAccBoundCostTerm::GetCost(const ilqr_solver::State& x,
+                                    const ilqr_solver::Control&) {
+  const int obs_num = cost_config_ptr_->at(OBS_NUM);
+  double weight = cost_config_ptr_->at(W_OBS_ACC_BOUND);
+  double acc_max = cost_config_ptr_->at(OBS_ACC_MAX);
+  double acc_min = cost_config_ptr_->at(OBS_ACC_MIN);
+
+  double cost = 0.0;
+
+  for (int i = 0; i < obs_num; ++i) {
+    const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    double obs_acc = x[state_base_idx + OBS_ACC];
+
+    if (obs_acc > acc_max) {
+      double violation = obs_acc - acc_max;
+      cost += weight * violation * violation;
+    }
+
+    if (obs_acc < acc_min) {
+      double violation = acc_min - obs_acc;
+      cost += weight * violation * violation;
+    }
+  }
+
+  return cost;
+}
+
+void ObsAccBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
+  const int obs_num = cost_config_ptr_->at(OBS_NUM);
+  double weight = cost_config_ptr_->at(W_OBS_ACC_BOUND);
+  double acc_max = cost_config_ptr_->at(OBS_ACC_MAX);
+  double acc_min = cost_config_ptr_->at(OBS_ACC_MIN);
+
+  for (int i = 0; i < obs_num; ++i) {
+    const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    double obs_acc = x[state_base_idx + OBS_ACC];
+
+    if (obs_acc > acc_max) {
+      double violation = obs_acc - acc_max;
+      lx(state_base_idx + OBS_ACC) += 2.0 * weight * violation;
+      lxx(state_base_idx + OBS_ACC, state_base_idx + OBS_ACC) += 2.0 * weight;
+    }
+
+    if (obs_acc < acc_min) {
+      double violation = acc_min - obs_acc;
+      lx(state_base_idx + OBS_ACC) -= 2.0 * weight * violation;
+      lxx(state_base_idx + OBS_ACC, state_base_idx + OBS_ACC) += 2.0 * weight;
+    }
+  }
+}
+
 std::vector<HardHalfplaneCostTerm::HardHalfplaneResult>
 HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
   std::vector<HardHalfplaneResult> results;
@@ -948,6 +1002,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     }
 
     const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    const int p_decel_idx = GetObsPDecelIdx(i, obs_num);
+    const double p_decel = cost_config_ptr_->at(p_decel_idx);
     const double obs_x = x[state_base_idx + OBS_X];
     const double obs_y = x[state_base_idx + OBS_Y];
     const double obs_theta = x[state_base_idx + OBS_THETA];
@@ -1014,6 +1070,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     result.plane_dist = plane_dist;
     result.normal_x = ego_normal_x;
     result.normal_y = ego_normal_y;
+    result.p_decel = p_decel;
 
     results.push_back(result);
   }
@@ -1083,11 +1140,17 @@ void HardHalfplaneCostTerm::GetGradientHessian(
 
     // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
     double cur_alpha = alpha;
+    double ego_weight = alpha;
+    double obs_weight = 1.0 - alpha;
+
     if (result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
-      cur_alpha = 1.0;
+      ego_weight = 1.0;
+      obs_weight = 0.0;
+    } else if (result.label_type == planning::lane_change_joint_decision::OVERTAKE) {
+      // 使用 p_decel 连续调节让行比例
+      obs_weight = (1.0 - alpha) * result.p_decel;
+      ego_weight = 1.0 - obs_weight;
     }
-    double ego_weight = cur_alpha;
-    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;
@@ -1259,6 +1322,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     }
 
     const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
+    const int p_decel_idx = GetObsPDecelIdx(i, obs_num);
+    const double p_decel = cost_config_ptr_->at(p_decel_idx);
     const double obs_x = x[state_base_idx + OBS_X];
     const double obs_y = x[state_base_idx + OBS_Y];
     const double obs_theta = x[state_base_idx + OBS_THETA];
@@ -1352,6 +1417,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     result.s_target = s_target;
     result.normal_x = std::cos(ego_theta);
     result.normal_y = std::sin(ego_theta);
+    result.p_decel = p_decel;
 
     results.push_back(result);
   }
@@ -1445,12 +1511,16 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     const double normal_y = result.normal_y;
 
     // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
-    double cur_alpha = alpha;
+    double ego_weight = alpha;
+    double obs_weight = 1.0 - alpha;
+
     if (label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
-      cur_alpha = 1.0;
+      ego_weight = 1.0;
+      obs_weight = 0.0;
+    } else if (label_type == planning::lane_change_joint_decision::OVERTAKE) {
+      obs_weight = (1.0 - alpha) * result.p_decel;
+      ego_weight = 1.0 - obs_weight;
     }
-    double ego_weight = cur_alpha;
-    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;

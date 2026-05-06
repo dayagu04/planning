@@ -278,7 +278,7 @@ class LaneChangeStateMachineManager {
   void CheckTargetRearNode(int64_t target_lane_rear_node_id);
   FrenetObstacleBoundary GetSLboundaryFromAgent(
       const std::shared_ptr<ReferencePath> ref_path,
-      const planning_math::Box2d& obs_box);
+      const planning_math::Box2d& obs_box) const;
   bool PassInLane(double lane_width, const FrenetObstacleBoundary& obs_bd,
                   const double car_width, const double safety_margin,
                   const RequestType direction);
@@ -362,6 +362,7 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
+  int last_target_front_agent_id_ = -1;
   int last_target_rear_agent_id_ = -1;
   int last_merging_rear_agent_id_ = -1;
   int merging_rear_agent_id_ = -1;

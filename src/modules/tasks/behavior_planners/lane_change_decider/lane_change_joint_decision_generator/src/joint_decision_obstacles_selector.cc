@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include "tasks/behavior_planners/intention_decider/intention_decider.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -100,19 +101,24 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
                                  agent::AgentType::TRUCK == agent->type() ||
                                  agent::AgentType::TRAILER == agent->type() ||
                                  agent->length() > 8.0);
-          UpdateRearAgentConfidence(agent, ego_reference_path);  // 检查意图，更新置信度
-          bool should_ignore_rear =
-              ShouldIgnoreRearAgent(agent, ego_reference_path);
-          lane_change_joint_decision::LongitudinalLabel label =
-              (is_large_agent || should_ignore_rear)
-                  ? lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE
-                  : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
+
+          // 大车硬置 EGO_OVERTAKE，其余统一走 OVERTAKE 由连续概率调节让行比例
+          lane_change_joint_decision::LongitudinalLabel label;
+          if (is_large_agent) {
+            label = lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE;
+          } else {
+            label = lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
+          }
           key_obstacles_.emplace_back(
               CreateKeyObstacle(agent, ego_lane_coord, label));
           // 输出后车标签和置信度到 JSON 用于可视化
           JSON_DEBUG_VALUE("rear_agent_longitudinal_label",
                            static_cast<int>(label));
           JSON_DEBUG_VALUE("rear_agent_confidence", rear_agent_confidence_);
+          const auto& rear_info = agent->longitudinal_intent_info();
+          JSON_DEBUG_VALUE("rear_agent_decel_prob", rear_info.decel_prob);
+          JSON_DEBUG_VALUE("rear_agent_cruise_prob", rear_info.cruise_prob);
+          JSON_DEBUG_VALUE("rear_agent_accel_prob", rear_info.accel_prob);
           rear_agent_id_ = lc_info.gap_rear_agent_id;  // 更新后车历史记录
           break;
         }
@@ -648,6 +654,7 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     key_obstacle.init_vel =
         agent->trajectories_used_by_st_graph().front().front().vel();
     key_obstacle.init_acc = agent->accel_fusion();
+    key_obstacle.lon_intent_info = agent->longitudinal_intent_info();
   }
 
   key_obstacle.init_s = 0.0;
