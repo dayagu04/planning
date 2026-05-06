@@ -2535,6 +2535,9 @@ void SpatioTemporalUnionDp::PostProcessLateralProfile(
           0);
     }
 
+    if (is_overshoot_left && pt_l_idx < prev_l_idx) continue;
+    if (is_overshoot_right && pt_l_idx > prev_l_idx) continue;
+
     const int step = is_overshoot_left ? -1 : 1;
     int target_l_idx = prev_l_idx;
     for (int k = pt_l_idx;
@@ -2547,6 +2550,7 @@ void SpatioTemporalUnionDp::PostProcessLateralProfile(
         break;
       }
     }
+
 
     const bool moved = is_overshoot_left ? target_l_idx < pt_l_idx
                                          : target_l_idx > pt_l_idx;
