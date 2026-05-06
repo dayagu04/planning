@@ -243,8 +243,8 @@ bool TrafficLightDecider::Execute() {
   const auto& route_info_output = session_->environmental_model().get_route_info()
                                                            ->get_route_info_output();
   if (config_.enable_tfl_decider && !in_acc_func &&
-      (!route_info_output.is_ego_on_expressway) &&
-      ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
+      ((is_in_straight_lane_ && !can_pass_) ||
+      (!is_in_straight_lane_ && (!route_info_output.is_ego_on_expressway)))) {
     AddVirtualObstacle();
   }
   //此外认为已经进入路口
