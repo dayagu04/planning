@@ -1793,6 +1793,27 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
   const double half_vehicle_width = vehicle_param.width * 0.5;
   const double vehicle_length = vehicle_param.front_edge_to_rear_axle;
 
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_v = ego_state->ego_v();
+  const double max_ttc_distance = 8.0;
+  constexpr double kTtcTimeSec = 1.0;
+  const double ttc_distance = std::min(ego_v * kTtcTimeSec, max_ttc_distance);
+  const double check_ahead_distance = ttc_distance + vehicle_length;
+
+  // 获取自车当前位置
+  const auto& planning_init_point = ego_state->planning_init_point();
+  const double ego_x = planning_init_point.lat_init_state.x();
+  const double ego_y = planning_init_point.lat_init_state.y();
+  double ego_s_origin = 0.0, ego_l_origin = 0.0;
+  if (!origin_frenet_coord->XYToSL(ego_x, ego_y, &ego_s_origin,
+                                   &ego_l_origin)) {
+    return true;
+  }
+
+  const double far_distance_threshold = 50.0;
+  const double far_check_ahead_distance = vehicle_length;
+
   for (size_t i = 0; i < path_points.size(); ++i) {
     const double pt_x = path_points[i].x;
     const double pt_y = path_points[i].y;
@@ -1811,8 +1832,13 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
     bool use_target = target_valid && (!origin_valid ||
                                        std::abs(target_l) < std::abs(origin_l));
 
+    // 判断当前路径点距自车位置是否超过50m，远处感知不稳定，缩小前方检测范围
+    const double dist_from_ego = origin_valid ? (origin_s - ego_s_origin) : 0.0;
+    const bool is_far_point = dist_from_ego > far_distance_threshold;
+    const double cur_check_ahead =
+        is_far_point ? far_check_ahead_distance : check_ahead_distance;
+
     if (use_target) {
-      // 检查当前点
       ReferencePathPoint ref_pt{};
       if (!target_reference_path->get_reference_point_by_lon(target_s,
                                                              ref_pt)) {
@@ -1829,24 +1855,33 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
         return true;
       }
 
-      // 检查前方一个车长位置
-      ReferencePathPoint ref_pt_ahead{};
-      if (target_reference_path->get_reference_point_by_lon(
-              target_s + vehicle_length, ref_pt_ahead)) {
-        if (left_vehicle_edge >
-            ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
-          return true;
-        }
-        if (right_vehicle_edge <
-            -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
-          return true;
+      // 根据参考线朝向计算前方实际位置，再投影到参考线检查路沿
+      const double ahead_x =
+          pt_x + cur_check_ahead * std::cos(ref_pt.path_point.theta());
+      const double ahead_y =
+          pt_y + cur_check_ahead * std::sin(ref_pt.path_point.theta());
+      double ahead_target_s = 0.0, ahead_target_l = 0.0;
+      if (target_reference_path->get_frenet_coord()->XYToSL(
+              ahead_x, ahead_y, &ahead_target_s, &ahead_target_l)) {
+        ReferencePathPoint ref_pt_ahead{};
+        if (target_reference_path->get_reference_point_by_lon(
+                ahead_target_s, ref_pt_ahead)) {
+          const double ahead_left = ahead_target_l + half_vehicle_width;
+          const double ahead_right = ahead_target_l - half_vehicle_width;
+          if (ahead_left >
+              ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
+            return true;
+          }
+          if (ahead_right <
+              -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
+            return true;
+          }
         }
       }
     } else {
       if (!origin_valid) {
         continue;
       }
-      // 检查当前点
       ReferencePathPoint ref_pt{};
       if (!origin_reference_path->get_reference_point_by_lon(origin_s,
                                                              ref_pt)) {
@@ -1863,17 +1898,27 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
         return true;
       }
 
-      // 检查前方一个车长位置
-      ReferencePathPoint ref_pt_ahead{};
-      if (origin_reference_path->get_reference_point_by_lon(
-              origin_s + vehicle_length, ref_pt_ahead)) {
-        if (left_vehicle_edge >
-            ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
-          return true;
-        }
-        if (right_vehicle_edge <
-            -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
-          return true;
+      // 根据参考线朝向计算前方实际位置，再投影到参考线检查路沿
+      const double ahead_x =
+          pt_x + cur_check_ahead * std::cos(ref_pt.path_point.theta());
+      const double ahead_y =
+          pt_y + cur_check_ahead * std::sin(ref_pt.path_point.theta());
+      double ahead_origin_s = 0.0, ahead_origin_l = 0.0;
+      if (origin_frenet_coord->XYToSL(ahead_x, ahead_y, &ahead_origin_s,
+                                       &ahead_origin_l)) {
+        ReferencePathPoint ref_pt_ahead{};
+        if (origin_reference_path->get_reference_point_by_lon(
+                ahead_origin_s, ref_pt_ahead)) {
+          const double ahead_left = ahead_origin_l + half_vehicle_width;
+          const double ahead_right = ahead_origin_l - half_vehicle_width;
+          if (ahead_left >
+              ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
+            return true;
+          }
+          if (ahead_right <
+              -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
+            return true;
+          }
         }
       }
     }

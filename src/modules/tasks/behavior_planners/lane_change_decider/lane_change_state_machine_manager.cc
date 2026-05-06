@@ -6260,7 +6260,17 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
   constexpr double kNearingExchangeUpperThreshold = 100.0;
-  constexpr double kNearingExchangeLowerThreshold = -20.0;
+
+  // 判断自车是否在最左或最右车道（排除应急车道和导流区车道）
+  const int ego_seq = route_info_output.ego_seq;
+  bool is_ego_on_leftmost = false;
+  bool is_ego_on_rightmost = false;
+  if (leftest_lane != nullptr && rightest_lane != nullptr) {
+    is_ego_on_leftmost =
+        (ego_seq == current_link->lane_num() - leftest_lane->sequence() + 1);
+    is_ego_on_rightmost =
+        (ego_seq == current_link->lane_num() - rightest_lane->sequence() + 1);
+  }
 
   if (!route_info_output.map_split_region_info_list.empty()) {
     double distance_to_exchange =
@@ -6269,17 +6279,16 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
         route_info_output.map_split_region_info_list.front()
             .start_fp_point.fp_distance_to_split_point;
     bool is_nearing_exchange =
-        distance_to_exchange < kNearingExchangeUpperThreshold &&
-        distance_to_exchange > kNearingExchangeLowerThreshold;
+        distance_to_exchange < kNearingExchangeUpperThreshold;
     if (is_rightest_extend_lane &&
         route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT &&
-        is_nearing_exchange) {
+        is_nearing_exchange && is_ego_on_rightmost) {
       return RAMP_ON_RIGHT;
     } else if (is_leftest_extend_lane &&
                route_info_output.map_split_region_info_list.front()
                        .split_direction == SPLIT_LEFT &&
-               is_nearing_exchange) {
+               is_nearing_exchange && is_ego_on_leftmost) {
       return RAMP_ON_LEFT;
     }
   }
@@ -6416,8 +6425,8 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithRoadEdge(
       session_->mutable_planning_context()->last_planning_result().traj_points;
   const auto& ego_trajs_future_points =
       lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_copy_;
-  return lc_request_.IsPathCollisionWithRoadEdge(origin_lane_id,
-                                     target_lane_id, ego_trajs_future_points);
+  return lc_request_.IsPathCollisionWithRoadEdge(
+      origin_lane_id, target_lane_id, ego_trajs_future_points);
 }
 
 bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
