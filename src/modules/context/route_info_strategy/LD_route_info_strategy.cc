@@ -1435,6 +1435,38 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
           total_length -= ego_on_cur_link_s_;
         }
 
+        // 此处抑制变道逻辑，无法区分Link后续两条道路 车道数也一致的情况
+        // 如果遇到上述情况，不进行判断。
+        if (link_ptr->successor_link_ids_size() > 1 && total_length < 100.0) {
+          bool is_same_lane_num_on_next_link = false;
+
+          int next_lane_num = -1;
+          for (uint64 const next_link_id : link_ptr->successor_link_ids()) {
+            auto tmp_link_ptr = ld_map_.GetLinkOnRoute(next_link_id);
+
+            int invalid_lane_num = 0;
+            for (uint64 const lane_id : tmp_link_ptr->lane_ids()) {
+              auto const* lane_ptr = ld_map_.GetLaneInfoByID(lane_id);
+              if (IsDiversionLane(lane_ptr)) {
+                invalid_lane_num++;
+              }
+            }
+            if (next_lane_num == -1) {
+              next_lane_num = tmp_link_ptr->lane_ids_size() - invalid_lane_num;
+            } else if (next_lane_num ==
+                       tmp_link_ptr->lane_ids_size() - invalid_lane_num) {
+              is_same_lane_num_on_next_link = true;
+              break;
+            }
+          }
+
+          if (is_same_lane_num_on_next_link) {
+            feasible_order.clear();
+            current_on_route = false;
+            break;
+          }
+        }
+
         if (check_dist - error_dist <= total_length) {
           std::pair<int,std::vector<uint32>> tmp_pair;
 
