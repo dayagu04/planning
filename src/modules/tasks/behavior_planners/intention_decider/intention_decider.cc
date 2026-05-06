@@ -24,7 +24,7 @@ IntentionDecider::IntentionDecider(
 }
 
 bool IntentionDecider::Execute() {
-  ILOG_INFO << "=======IntentionDecider=======";
+  ILOG_DEBUG << "=======IntentionDecider=======";
 
   // if (!PreCheck()) {
   //   ILOG_DEBUG << "PreCheck failed";
@@ -33,20 +33,13 @@ bool IntentionDecider::Execute() {
 
   // Get managers from session
   const auto& environmental_model = session_->environmental_model();
-  dynamic_world_ = environmental_model.get_dynamic_world();
   virtual_lane_manager_ = environmental_model.get_virtual_lane_manager();
   ego_state_manager_ = environmental_model.get_ego_state_manager();
+  const auto& agent_manager = environmental_model.get_agent_manager();
 
-  if (dynamic_world_ == nullptr || virtual_lane_manager_ == nullptr ||
+  if (agent_manager == nullptr || virtual_lane_manager_ == nullptr ||
       ego_state_manager_ == nullptr) {
     ILOG_DEBUG << "Required managers not available";
-    return false;
-  }
-
-  const auto* agent_manager = dynamic_world_->agent_manager();
-  auto* mutable_agent_manager = dynamic_world_->mutable_agent_manager();
-
-  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
     return false;
   }
 
@@ -66,7 +59,7 @@ bool IntentionDecider::Execute() {
   ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l);
 
   DeciderLongitudinalIntent(*agent_manager, init_point, ego_lane_coord,
-                            mutable_agent_manager);
+                            agent_manager.get());
   UpdateAgentTable(*agent_manager, ego_s);
 
   return true;

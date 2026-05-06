@@ -7,13 +7,13 @@
 #include <set>
 #include <vector>
 
-#include "dynamic_world/dynamic_world.h"
 #include "ego_state_manager.h"
 #include "session.h"
 #include "tasks/task.h"
 #include "utils/kd_path.h"
 #include "virtual_lane_manager.h"
-
+#include "agent/agent_manager.h"
+#include "agent/agent.h"
 namespace planning {
 namespace behavior_planners {
 
@@ -90,7 +90,6 @@ class IntentionDecider : public Task {
       const LongitudinalBayesFeatures& features);
 
   // Session and managers
-  std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
   std::shared_ptr<EgoStateManager> ego_state_manager_;
 
