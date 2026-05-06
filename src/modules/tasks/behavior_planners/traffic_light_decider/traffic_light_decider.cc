@@ -13,6 +13,10 @@ constexpr double kGreenReminderEndTime = 4.6;
 constexpr double kGreenReminderLeadoneDis = 10.0;
 constexpr double kGreenBlinkIgnoreVelThred = 4.72;
 constexpr double kStoplineTFLDisValidThred = 200.0;
+constexpr int kRedLightDebounceThreshold = 20;
+constexpr int kRedLightPassConfirmThreshold = 10;
+constexpr double kCurbCheckDistance = 50.0;
+constexpr double kCurbDistanceThreshold = 3.0;
 }
 TrafficLightDecider::TrafficLightDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -89,17 +93,39 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      bool red_can_pass = false;
       if (can_pass_ && dis_to_stopline > 100.0) {
-        can_pass_ = true;
-      } else {
-        if (dis_to_stopline < 100.0 && ((is_small_front_intersection_ &&
-            !is_tfl_match_intersection_) || (!is_small_front_intersection_ &&
-            !IsIntersectionMatchTFLByDisRatio()))) {
+        red_can_pass = true;
+      } else if (dis_to_stopline < 100.0 && ((is_small_front_intersection_ &&
+          !is_tfl_match_intersection_) || (!is_small_front_intersection_ &&
+          !IsIntersectionMatchTFLByDisRatio()))) {
+        if (is_small_front_intersection_ && IsIntersectionWithCurbMatchTFL()) {
+          red_can_pass = false;
+        } else {
+          red_can_pass = true;
+        }
+      }
+
+      if (!red_can_pass) {
+        red_light_false_count_++;
+        red_light_pass_pending_count_ = 0;
+        can_pass_ = false;
+      } else if (red_light_false_count_ >= kRedLightDebounceThreshold) {
+        red_light_pass_pending_count_++;
+        if (red_light_pass_pending_count_ >= kRedLightPassConfirmThreshold) {
           can_pass_ = true;
+          red_light_false_count_ = 0;
+          red_light_pass_pending_count_ = 0;
         } else {
           can_pass_ = false;
         }
+      } else {
+        can_pass_ = true;
+        red_light_false_count_ = 0;
+        red_light_pass_pending_count_ = 0;
       }
+      JSON_DEBUG_VALUE("red_light_false_count", red_light_false_count_);
+      JSON_DEBUG_VALUE("red_light_pass_pending_count", red_light_pass_pending_count_);
 
     } else if (traffic_status.go_straight == 3 ||
                traffic_status.go_straight == 43) {
@@ -107,6 +133,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ += 0.1;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else if (traffic_status.go_straight == 2 ||
@@ -129,6 +157,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ += 0.1;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
 
     } else if (traffic_status.go_straight == 30 ||
                traffic_status.go_straight == 32 ||
@@ -152,6 +182,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ += 0.1;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
 
     } else if (traffic_status.go_straight == 20 ||
                traffic_status.go_straight == 22) {
@@ -159,6 +191,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else {
@@ -168,6 +202,8 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       if (dis_to_stopline > 200.0 || !is_first_car_) {
         can_pass_ = true;
+        red_light_false_count_ = 0;
+        red_light_pass_pending_count_ = 0;
       }
       // can_pass_ = true;
     }
@@ -180,6 +216,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ += 0.1;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
 
     } else if (traffic_status.go_straight == 20 ||
@@ -188,6 +226,8 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      red_light_false_count_ = 0;
+      red_light_pass_pending_count_ = 0;
       can_pass_ = true;
     } else {
       green_light_timer_ = 0.0;
@@ -195,14 +235,16 @@ bool TrafficLightDecider::Execute() {
     }
 
   } else {
+    red_light_false_count_ = 0;
+    red_light_pass_pending_count_ = 0;
     can_pass_ = true;
   }
 
   const auto& route_info_output = session_->environmental_model().get_route_info()
                                                            ->get_route_info_output();
   if (config_.enable_tfl_decider && !in_acc_func &&
-      (!route_info_output.is_ego_on_expressway) &&
-      ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
+      ((is_in_straight_lane_ && !can_pass_) ||
+      (!is_in_straight_lane_ && (!route_info_output.is_ego_on_expressway)))) {
     AddVirtualObstacle();
   }
   //此外认为已经进入路口
@@ -358,6 +400,119 @@ bool TrafficLightDecider::IsSmallFrontIntersection() {
           judge_virtual_dis);
   is_small_front_intersection_ = !is_virtual_type;
   return !is_virtual_type;
+}
+
+bool TrafficLightDecider::IsIntersectionWithCurbMatchTFL() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto curr_lane =
+      environmental_model.get_virtual_lane_manager()->get_current_lane();
+  if (curr_lane == nullptr) {
+    return false;
+  }
+
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+
+  // 获取车道参考线点
+  const auto &refline_points = curr_lane->lane_points();
+  if (refline_points.empty()) {
+    return false;
+  }
+
+  // 检查停止线到停止线外30米范围内是否有路沿
+  bool has_left_curb = true;  // 默认为true，如果有任何点不满足则设为false
+  bool has_right_curb = true;
+  int valid_point_count = 0;
+
+  const auto cur_lane_ego_s = curr_lane->get_ego_longit_s();
+  const double stopline_s = cur_lane_ego_s + dis_to_stopline;
+
+  for (const auto &point : refline_points) {
+    double point_s = point.s;
+    // 只检查停止线到停止线外30米范围内的点
+    if (point_s >= stopline_s &&
+        point_s <= stopline_s + kCurbCheckDistance) {
+      valid_point_count++;
+      // 如果左侧距离大于等于阈值，说明左侧没有路沿
+      if (point.distance_to_left_road_border >= kCurbDistanceThreshold) {
+        has_left_curb = false;
+      }
+      // 如果右侧距离大于等于阈值，说明右侧没有路沿
+      if (point.distance_to_right_road_border >= kCurbDistanceThreshold) {
+        has_right_curb = false;
+      }
+    }
+  }
+
+  // 如果没有有效点，则认为没有路沿
+  if (valid_point_count == 0) {
+    has_left_curb = false;
+    has_right_curb = false;
+  }
+
+  JSON_DEBUG_VALUE("has_left_curb", int(has_left_curb));
+  JSON_DEBUG_VALUE("has_right_curb", int(has_right_curb));
+
+  // 如果没有路沿，不使用此逻辑
+  if (!has_left_curb && !has_right_curb) {
+    return false;
+  }
+
+  // 如果有路沿，只看非路沿侧的 lane_boundary 属性
+  const auto& l_boundry = curr_lane->get_left_lane_boundary();
+  const auto& r_boundry = curr_lane->get_right_lane_boundary();
+
+  double ego_pos_x = 0.0;
+  if (l_boundry.car_points_size > 0 && r_boundry.car_points_size > 0) {
+    double first_left_x = l_boundry.car_points[0].x;
+    double first_right_x = r_boundry.car_points[0].x;
+    ego_pos_x = std::max(0 - first_left_x, 0 - first_right_x);
+  } else {
+    return false;
+  }
+
+  // 根据路沿情况判断小路口
+  double l_boundry_virtual_dis = CalcVirtualLaneDisToStopline(ego_pos_x, dis_to_stopline, l_boundry);
+  double r_boundry_virtual_dis = CalcVirtualLaneDisToStopline(ego_pos_x, dis_to_stopline, r_boundry);
+  JSON_DEBUG_VALUE("l_boundry_virtual_dis_curb", l_boundry_virtual_dis);
+  JSON_DEBUG_VALUE("r_boundry_virtual_dis_curb", r_boundry_virtual_dis);
+
+  const auto tfl_manager =
+      environmental_model.get_traffic_light_decision_manager();
+  const auto all_tfls = tfl_manager->GetTrafficLightsInfo();
+  double dis_to_tfl = 10000.0;
+  for (int i = 0; i < all_tfls.size(); i++) {
+    if (all_tfls[i].traffic_light_x > 0 &&
+        all_tfls[i].traffic_light_x < dis_to_tfl) {
+      dis_to_tfl = all_tfls[i].traffic_light_x;
+    }
+  }
+  double dis_tfl_to_stopline = std::abs(dis_to_tfl - dis_to_stopline);
+
+  // 如果左侧有路沿，且是非虚线，只看右侧 lane_boundary
+  if (has_left_curb && !has_right_curb) {
+    if(l_boundry_virtual_dis < kEpsilon && r_boundry_virtual_dis > config_.min_virtual_dis_thred &&
+       dis_tfl_to_stopline < kStoplineTFLDisValidThred &&
+       (dis_tfl_to_stopline / std::max(r_boundry_virtual_dis, kEpsilon)) < config_.dis_ratio_can_pass) {
+      return true;
+    }
+  }
+
+  // 如果右侧有路沿，只看左侧 lane_boundary
+  if (has_right_curb && !has_left_curb) {
+    if(r_boundry_virtual_dis < kEpsilon && l_boundry_virtual_dis > config_.min_virtual_dis_thred &&
+      dis_tfl_to_stopline < kStoplineTFLDisValidThred &&
+      (dis_tfl_to_stopline / std::max(l_boundry_virtual_dis, kEpsilon)) < config_.dis_ratio_can_pass) {
+      return true;
+    }
+  }
+
+  // 如果两侧都有路沿，使用原有逻辑
+  if (has_left_curb && has_right_curb) {
+    return false;
+  }
+
+  return false;
 }
 
 bool TrafficLightDecider::IsIntersectionMatchTFL() {
