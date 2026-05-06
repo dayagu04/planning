@@ -9,6 +9,7 @@
 
 #include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
+#include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "session.h"
 #include "tasks/task.h"
@@ -137,6 +138,7 @@ class AgentLongitudinalDecider : public Task {
       double* cutin_posterior, double* cutout_posterior);
 
  private:
+  AgentLongDeciderConfig config_;
   FrenetBoundary ego_frenet_boundary_;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;

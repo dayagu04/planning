@@ -38,6 +38,14 @@ constexpr int32_t kNumNots = 25;
 constexpr double kStepTime = 0.2;
 constexpr double kCrossLonDangerTTC = 2.0;
 constexpr double kCrossLatPassSafeDis = 2.0;
+constexpr double kYieldHorizonS = 3.0;
+constexpr double kYieldMinLongitudinalAccelMps2 = -5.0;
+constexpr double kYieldMinLongitudinalJerkMps3 = -5.0;
+constexpr double kYieldMinFinalGapM = 1.0;
+constexpr double kYieldSpeedBelowObsMps = 0.5;
+constexpr double kVelTol = 1e-3;
+constexpr double kGapTol = 1e-3;
+constexpr double kEps = 1e-9;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -1800,14 +1808,6 @@ bool StGraphUtils::IsNeedYield(
     const double obs_longitudinal_vel_mps,
     const double obs_longitudinal_accel_mps2,
     const double initial_gap_ego_front_to_obs_rear_m) {
-  constexpr double kYieldHorizonS = 3.0;
-  constexpr double kYieldMinLongitudinalAccelMps2 = -5.0;
-  constexpr double kYieldMinLongitudinalJerkMps3 = -5.0;
-  constexpr double kYieldMinFinalGapM = 1.0;
-  constexpr double kYieldSpeedBelowObsMps = 0.5;
-  constexpr double kVelTol = 1e-3;
-  constexpr double kGapTol = 1e-3;
-  constexpr double kEps = 1e-9;
 
   const double ego_v0 = std::max(0.0, ego_vel_mps);
   const double v_obs0 = std::max(0.0, obs_longitudinal_vel_mps);
