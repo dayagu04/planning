@@ -246,9 +246,10 @@ void BoundMaker::MakeAccBound(const double v_ego,
     }
   }
 
-  if (lane_change_decider_output.curr_state == kLaneChangeExecution ||
-      lane_change_decider_output.curr_state == kLaneChangeComplete ||
-      lane_change_decider_output.curr_state == kLaneChangePropose) {
+  if (!lon_ref_path_decider_output.is_lon_cutin &&
+      (lane_change_decider_output.curr_state == kLaneChangeExecution ||
+       lane_change_decider_output.curr_state == kLaneChangeComplete ||
+       lane_change_decider_output.curr_state == kLaneChangePropose)) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_upper_bound_[i] =
           std::fmax(acc_upper_bound_[i], kLaneChangeAccUpperBound);

@@ -207,6 +207,11 @@ class StGraphUtils {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<StGraphInput>& st_graph_input);
 
+  static bool IsNeedYield(const double ego_vel_mps, const double ego_acc_mps2,
+                          const double obs_longitudinal_vel_mps,
+                          const double obs_longitudinal_accel_mps2,
+                          const double initial_gap_ego_front_to_obs_rear_m);
+
   static SecondOrderTimeOptimalTrajectory
   GenerateMaxDecelerationCurveByAgentVel(
       const double agent_vel, const trajectory::TrajectoryPoint& init_point);

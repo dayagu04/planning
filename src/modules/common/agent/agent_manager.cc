@@ -331,6 +331,12 @@ void AgentManager::ProcessPredictionTrajectory(std::shared_ptr<Agent>& agent) {
     return;
   }
 
+  agent->set_trajectories_used_by_st_graph(agent->trajectories());
+
+  if (agent->is_static()) {
+    return;
+  }
+
   auto hist_iter = historical_agents_info_.find(agent->agent_id());
   if (hist_iter == historical_agents_info_.end() ||
       hist_iter->second.size() < static_cast<size_t>(kMinHistoryFrameCount)) {
