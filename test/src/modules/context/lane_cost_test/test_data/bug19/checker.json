@@ -1,0 +1,25 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20404_EVENT_FUNEXIT_2026-02-26-20-30-10_no_camera.bag",
+  "description": "21.6s ~ 26.1s, order 0和1的VirtualLane的is_on_route=false, order=2的is_on_route=true，order=3出现后is_on_route=true，order=2的cost最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [216, 261],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": false}},
+        {"order": 2, "expect": {"is_on_route": true}},
+        {"order": 3, "if_present": true, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [216, 261],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": ["order == 3", "order == 2"],
+      "description": "21.6s ~ 26.1s: order=3 存在时 cost 最小，否则 order=2 最小"
+    }
+  ]
+}

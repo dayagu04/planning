@@ -290,6 +290,15 @@ void Agent::set_prediction_cutin_score(const double prediction_cutin_score) {
   prediction_cutin_score_ = prediction_cutin_score;
 }
 
+const longitudinal_intention::LongitudinalIntentInfo&
+Agent::longitudinal_intent_info() const {
+  return lon_intent_info_;
+}
+void Agent::set_longitudinal_intent_info(
+    const longitudinal_intention::LongitudinalIntentInfo& info) {
+  lon_intent_info_ = info;
+}
+
 const bool Agent::is_crossing() const { return is_crossing_; }
 void Agent::set_is_crossing(const bool is_crossing) {
   is_crossing_ = is_crossing;

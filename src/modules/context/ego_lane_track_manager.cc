@@ -181,6 +181,27 @@ void EgoLaneTrackManger::TrackEgoLane(
   double road_merge_and_split_exchange_distance_thld =
       std::max(60.0, ego_state->ego_v() * 4.0);
 
+  
+  // Get Virtual Lane Cost on Route
+  const auto& route_info = session_->environmental_model().get_route_info();
+  lane_cost_.clear();
+  lane_cost_ = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
+
+  // Output VirtualLane Cost for visualization
+  JSON_DEBUG_VALUE("vl_cost_count", static_cast<int>(lane_cost_.size()));
+  for (size_t i = 0; i < lane_cost_.size() && i < 10; ++i) {
+    const auto& vc = lane_cost_[i];
+    std::string prefix = "vl_cost_" + std::to_string(i) + "_";
+    JSON_DEBUG_VALUE((prefix + "order").c_str(), vc.order_id);
+    JSON_DEBUG_VALUE((prefix + "rel").c_str(), vc.relative_id);
+    JSON_DEBUG_VALUE((prefix + "total").c_str(), vc.total_cost);
+    JSON_DEBUG_VALUE((prefix + "match").c_str(), vc.lane_match_confidence);
+    JSON_DEBUG_VALUE((prefix + "topo").c_str(), vc.topo_trace_score);
+    JSON_DEBUG_VALUE((prefix + "penalty").c_str(), vc.distance_penalty);
+    JSON_DEBUG_VALUE((prefix + "on_route").c_str(), vc.is_on_route ? 1 : 0);
+  }
+
+
   //判断自车是否处于分流场景
   ComputeIsSplitRegion(relative_id_lanes, order_ids_of_same_zero_relative_id,
                        virtual_id_mapped_lane);
@@ -1809,35 +1830,17 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  // Get Virtual Lane Cost on Route
-  const auto& route_info = session_->environmental_model().get_route_info();
-  VirtualLanesRouteCost const& lane_cost = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
-
-  // Output VirtualLane Cost for visualization
-  JSON_DEBUG_VALUE("vl_cost_count", static_cast<int>(lane_cost.size()));
-  for (size_t i = 0; i < lane_cost.size() && i < 10; ++i) {
-    const auto& vc = lane_cost[i];
-    std::string prefix = "vl_cost_" + std::to_string(i) + "_";
-    JSON_DEBUG_VALUE((prefix + "order").c_str(), vc.order_id);
-    JSON_DEBUG_VALUE((prefix + "rel").c_str(), vc.relative_id);
-    JSON_DEBUG_VALUE((prefix + "total").c_str(), vc.total_cost);
-    JSON_DEBUG_VALUE((prefix + "match").c_str(), vc.lane_match_confidence);
-    JSON_DEBUG_VALUE((prefix + "topo").c_str(), vc.topo_trace_score);
-    JSON_DEBUG_VALUE((prefix + "penalty").c_str(), vc.distance_penalty);
-    JSON_DEBUG_VALUE((prefix + "on_route").c_str(), vc.is_on_route ? 1 : 0);
-  }
-
   // find best lane in order_id_idx
   int best_order_id_idx = -1;
   double min_total_cost = 10000;
   for (int const o_idx : order_ids) {
     uint const order_id = relative_id_lanes[o_idx]->get_order_id();
 
-    auto find_it = std::find_if(lane_cost.begin(), lane_cost.end(),
+    auto find_it = std::find_if(lane_cost_.begin(), lane_cost_.end(),
                                 [order_id](VirtualLaneRouteCost const& cost) {
                                   return cost.order_id == order_id;
                                 });
-    if (lane_cost.end() == find_it || !find_it->is_on_route || find_it->total_cost > 0.3) {
+    if (lane_cost_.end() == find_it || !find_it->is_on_route || find_it->total_cost > 0.3) {
       continue;
     }
 

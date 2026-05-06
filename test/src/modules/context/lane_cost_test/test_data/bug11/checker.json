@@ -1,0 +1,25 @@
+{
+  "bag_name": "bug11",
+  "description": "bug11: frame233~290, order 0和1的is_on_route=false, order 2的is_on_route=true且cost最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [233, 290],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": false}},
+        {"order": 2, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [233, 290],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "order=2 的 cost 应该最小"
+    }
+  ]
+}
+

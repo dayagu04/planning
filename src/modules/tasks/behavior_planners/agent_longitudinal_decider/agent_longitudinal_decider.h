@@ -10,6 +10,7 @@
 
 #include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
+#include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "ego_planning_config.h"
 #include "session.h"
@@ -89,6 +90,8 @@ class AgentLongitudinalDecider : public Task {
 
   void UpdateAgentTable();
 
+  void SetPredictionCutInAgents();
+
   void FilterRearAgents();
 
   void FilterUltradistantObs();
@@ -162,6 +165,7 @@ class AgentLongitudinalDecider : public Task {
   void CleanupHppReverseHysteresis(
       const std::unordered_set<int32_t>& active_agent_ids);
   // framework::Session *session_ = nullptr;
+  AgentLongDeciderConfig config_;
   FrenetBoundary ego_frenet_boundary_;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;

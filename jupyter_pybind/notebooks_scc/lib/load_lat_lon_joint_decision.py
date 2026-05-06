@@ -484,15 +484,56 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     rear_agent_confidence_str = (
         f"{rear_agent_confidence:.3f}" if isinstance(rear_agent_confidence, (int, float)) else "N/A"
     )
-    
-    # Update planning info data for display - 仅优化器相关信息
+    rear_agent_decel_prob = planner_json.get("rear_agent_decel_prob", None)
+    rear_agent_cruise_prob = planner_json.get("rear_agent_cruise_prob", None)
+    rear_agent_accel_prob = planner_json.get("rear_agent_accel_prob", None)
+
+    def format_prob(name, value):
+        return f"{name}({value:.3f})" if isinstance(value, (int, float)) else f"{name}(N/A)"
+
+    rear_agent_intent_prob_str = " ".join([
+        format_prob("DECEL", rear_agent_decel_prob),
+        format_prob("CRUISE", rear_agent_cruise_prob),
+        format_prob("ACCEL", rear_agent_accel_prob),
+    ])
+
+    # Extract longitudinal intent data
+    lon_decel_ids = planner_json.get('lon_decel_agent_ids', [])
+    lon_decel_scores = planner_json.get('lon_decel_scores', [])
+    lon_cruise_ids = planner_json.get('lon_cruise_agent_ids', [])
+    lon_cruise_scores = planner_json.get('lon_cruise_scores', [])
+    lon_accel_ids = planner_json.get('lon_accel_agent_ids', [])
+    lon_accel_scores = planner_json.get('lon_accel_scores', [])
+
+    def parse_str_list(v):
+        if isinstance(v, str):
+            return [float(x) for x in v.split(',') if x.strip()]
+        return list(v) if v else []
+
+    def format_intent_list(ids, scores):
+        ids = parse_str_list(ids)
+        scores = parse_str_list(scores)
+        if not ids:
+            return 'N/A'
+        items = [f"{int(i)}({s:.2f})" for i, s in zip(ids, scores)]
+        if len(items) > 5:
+            return ', '.join(items[:5]) + f' ...+{len(items)-5}'
+        return ', '.join(items)
+
+    # Update planning info data for display - 包含优化器信息和意图信息
     planning_info_data = {
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence'],
-        'values': [f"{round(lat_lon_joint_planner_time, 2)}ms", 
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence',
+                   'Rear Agent Intent Prob',
+                   'Decel Intent', 'Cruise Intent', 'Accel Intent'],
+        'values': [f"{round(lat_lon_joint_planner_time, 2)}ms",
                    f"{round(obstacle_selection_time, 2)}ms", f"{round(optimization_time, 2)}ms",
                    solver_condition_name, "SUCCESS" if planning_success else "FAILED",
-                   rear_agent_label_name, rear_agent_confidence_str]
+                   rear_agent_label_name, rear_agent_confidence_str,
+                   rear_agent_intent_prob_str,
+                   format_intent_list(lon_decel_ids, lon_decel_scores),
+                   format_intent_list(lon_cruise_ids, lon_cruise_scores),
+                   format_intent_list(lon_accel_ids, lon_accel_scores)]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
 
@@ -779,11 +820,12 @@ def load_joint_plan_figure(fig1, bag_loader):
     })
     joint_plan_data['data_key_agents'] = data_key_agents
 
-    # Add planning info data source - vertical layout with labels and values (仅优化器相关)
+    # Add planning info data source - vertical layout with labels and values (包含优化器信息和意图信息)
     data_planning_info = ColumnDataSource(data={
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence'],
-        'values': ['', '', '', '', '', '', '']
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence',
+                   'Decel Intent', 'Cruise Intent', 'Accel Intent'],
+        'values': ['', '', '', '', '', '', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 
@@ -908,14 +950,14 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig9 = bkp.figure(x_axis_label='time', y_axis_label='s',
                       x_range=fig8.x_range, width=525, height=330)
 
-    # Create planning info table - vertical layout with labels and values (仅优化器相关)
+    # Create planning info table - vertical layout with labels and values (包含优化器信息和意图信息)
     planning_info_table = DataTable(
         source=data_planning_info,
         columns=[
-            TableColumn(field='labels', title='Label', width=180),
-            TableColumn(field='values', title='Value', width=340)
+            TableColumn(field='labels', title='Label', width=150),
+            TableColumn(field='values', title='Value', width=370)
         ],
-        width=520, height=220, index_position=None,  # 调整高度适应6行数据
+        width=520, height=310, index_position=None,  # 调整高度适应10行数据
         fit_columns=True,
         sortable=False,
         reorderable=False

@@ -1,0 +1,24 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-04-20-13-11-01_no_camera.bag",
+  "description": "bug6: 两车道分数接近场景，order=1 和 order=2 都 on_route，cost 接近",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [216, 226],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": true}},
+        {"order": 2, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [216, 226],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order >= 1",
+      "description": "on_route 的 VL 中，order=1 或 order=2 的 cost 最小"
+    }
+  ]
+}

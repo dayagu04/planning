@@ -352,6 +352,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
   JSON_DEBUG_VALUE("enable_overtake_confirm",
                    config_.enable_overtake_lane_change_confirmation)
   // update history
+  if (target_lane_front_node_) {
+    last_target_front_agent_id_ = target_lane_front_node_->node_agent_id();
+  } else {
+    last_target_front_agent_id_ = -1;
+  }
   if (target_lane_rear_node_) {
     last_target_rear_agent_id_ = target_lane_rear_node_->node_id();
   } else {
@@ -880,12 +885,27 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if(!risk_side_agents_nodes_.empty()) {
+    const auto& ref_path_mgr =
+        session_->environmental_model().get_reference_path_manager();
+    if (ref_path_mgr == nullptr) {
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_invalid_reason = "ref_path_mgr == nullptr";
+      return lc_state_info;
+    }
+    const auto& ref_path = ref_path_mgr->get_reference_path_by_lane(
+        lc_req_mgr_->target_lane_virtual_id());
+    if(ref_path == nullptr){
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_invalid_reason = "ref_path == nullptr";
+      return lc_state_info;
+    }
+    const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
-            continue;
+        continue;
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
-      bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
+      bool is_front_car = side_obs->node_s() + side_obs->node_length() * 0.5 > ego_sl_bd.s_end;
       CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (!lc_state_info.gap_insertable) {
         return lc_state_info;
@@ -1145,12 +1165,27 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     }
   }
   if(!risk_side_agents_nodes_.empty()) {
+    const auto& ref_path_mgr =
+        session_->environmental_model().get_reference_path_manager();
+    if (ref_path_mgr == nullptr) {
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_should_back = "ref_path_mgr == nullptr";
+      return lc_state_info;
+    }
+    const auto& ref_path = ref_path_mgr->get_reference_path_by_lane(
+        lc_req_mgr_->target_lane_virtual_id());
+    if(ref_path == nullptr){
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_should_back = "ref_path == nullptr";
+      return lc_state_info;
+    }
+    const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
             continue;
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
-      bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
+      bool is_front_car = side_obs->node_s() + side_obs->node_length() * 0.5 > ego_sl_bd.s_end;
       CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (lc_state_info.lc_should_back) {
         return lc_state_info;
@@ -2399,16 +2434,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     ego_trajs_future_[i].s = ego_opt_traj[i].s;
     ego_trajs_future_[i].t = ego_opt_traj[i].t;
   }
-  // 记录更新后的后车标签，未命中则保持默认值。
-  // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
-  const auto rear_it =
-      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-  if (rear_it == joint_decision_obstacle_labels_.end()) {
-    return;
-  }
-  if (rear_it->second != lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-    return;
-  }
+  // 判断后车是否会在短时间内超越自车
   if (ego_trajs_future_.empty()) {
     return;
   }
@@ -2417,6 +2443,22 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   if (rear_agent == nullptr) {
     return;
   }
+
+  // EGO_OVERTAKE（大车）或加速意图：直接判定 overtaking
+  const auto label_it =
+      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+  if (label_it != joint_decision_obstacle_labels_.end() &&
+      label_it->second == static_cast<int>(lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE)) {
+    rear_agent_overtaking_ = true;
+    return;
+  }
+
+  if (rear_agent->longitudinal_intent_info().intent ==
+      longitudinal_intention::LongitudinalIntent::ACCEL) {
+    rear_agent_overtaking_ = true;
+    return;
+  }
+
   const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
   if (agent_trajs.empty() || agent_trajs[0].empty()) {
     return;
@@ -2443,9 +2485,10 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   const double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
   const double predict_t = lc_safety_check_time_ + 1.5;
   const double rear_acc = rear_agent->accel_fusion();
+  const double ego_acc = ego_trajs_future_[0].a;
   double dis_diff_vel = 0.0;
   if (rear_acc > 0.3) {
-    dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+    dis_diff_vel = rel_vel * predict_t + 0.5 * std::max(0.0, rear_acc - ego_acc)  * predict_t * predict_t;
   } else if (rear_acc < -0.3) {
     dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
   } else {
@@ -2457,6 +2500,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   double risk_min_gap = traj[0].vel() * kRiskGapTime;
   bool is_rear_faster = rel_vel > kRearFasterThreshold;
   bool is_gap_tight = rear_gap < risk_min_gap;
+
   rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0)
                            || (is_rear_faster && is_gap_tight);
 }
@@ -2470,10 +2514,16 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
   if (target_lane == nullptr) {
     return;
   }
+  const auto& ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
+  if (ref_path_mgr == nullptr) {
+    return;
+  }
   const auto& ref_path =
-      session_->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(target_lane_virtual_id);
+      ref_path_mgr->get_reference_path_by_lane(target_lane_virtual_id);
+  if(ref_path == nullptr){
+      return;
+  }
   const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
   const auto& ego_sl_state = ref_path->get_frenet_ego_state();
   const auto& dynamic_world =
@@ -2576,6 +2626,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
                            std::fabs(l_mid) - std::fabs(l_start) < -0.5);
     bool is_side = !(agent_start_bd.s_start > ego_boundary.s_end ||
                         agent_start_bd.s_end < ego_boundary.s_start);
+    if(is_side){
+      continue; // 纵向重合的车作为前车会导致idm异常大减速，作为侧方车进行安全检查即可。
+    }
     const double target_lane_width = target_lane->width_by_s(agent_s);
     double safety_buff = 0.8;
     if(is_reverse){
@@ -2585,8 +2638,21 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       if (pass_in_lane) {
         continue;
       }
-    } else if (target_lane_node->is_static_type()) {  // 静止
-      safety_buff = 0.7;
+    } else if (target_lane_node->is_static_type() || target_lane_node->node_speed() < 0.3) {  // 静止
+      // 纵向重合或TTC过小的或者超过正常减速度的静止障碍物不作为前车
+      double lon_gap = std::max(0.0, agent_start_bd.s_start - ego_sl_bd.s_end);
+      double ego_v = ego_sl_state.velocity_s();
+      double ttc = (ego_v > 1.0) ? (lon_gap / ego_v) : 100.0;
+      if (ttc < 2.0) {
+        continue;
+      }
+      const double normal_decel = 2.0;
+      if(lon_gap < ego_v*ego_v /(2 * normal_decel)){
+        continue;
+      }
+      // 横向滞回：上一帧已是前车用宽松阈值，否则用严格阈值
+      bool was_front = (target_lane_node->node_agent_id() == last_target_front_agent_id_);
+      safety_buff = was_front ? 0.7 : 0.9;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
       if (pass_in_lane) {
@@ -2637,10 +2703,16 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
   if (target_lane == nullptr) {
     return;
   }
+  const auto& ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
+  if (ref_path_mgr == nullptr) {
+    return;
+  }
   const auto& ref_path =
-      session_->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(target_lane_virtual_id);
+      ref_path_mgr->get_reference_path_by_lane(target_lane_virtual_id);
+  if(ref_path == nullptr){
+      return;
+  }
   const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
   const auto& ego_sl_state = ref_path->get_frenet_ego_state();
   const auto& dynamic_world =
@@ -4510,9 +4582,23 @@ bool LaneChangeStateMachineManager::
       two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
     }
     bool is_checking_rear_overtaking = false;
+    double rear_p_decel = 0.0;
+    double rear_p_cruise = 0.0;
+    double rear_p_accel = 0.0;
     if(target_lane_rear_node_){
       is_checking_rear_overtaking = target_lane_rear_node_->node_agent_id() == agent_node->node_agent_id()
-                                 && rear_agent_overtaking_ && !is_front_agent;
+                                && !is_front_agent;
+      // 获取后车纵向意图概率
+      if (is_checking_rear_overtaking) {
+        const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
+        const auto rear_agent = dynamic_world->agent_manager()->GetAgent(agent_node->node_agent_id());
+        if (rear_agent != nullptr) {
+          const auto& info = rear_agent->longitudinal_intent_info();
+          rear_p_decel = info.decel_prob;
+          rear_p_cruise = info.cruise_prob;
+          rear_p_accel = info.accel_prob;
+        }
+      }
     }
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
@@ -4592,10 +4678,36 @@ bool LaneChangeStateMachineManager::
       double dist_ttc_interp = (rel_vel > 0.0) ? rel_vel * pred_ttc : 0.0;
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
-      // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)?
-                                      0.99: lc_safety_check_config_.ttc_decay_factor;
-      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      // 3) 时间衰减：基于后车纵向意图调节衰减策略
+      // 规则：
+      // - 加速意图：lc_safety_check_num_ 步内不衰减，之外正常衰减
+      // - 巡航意图：lc_safety_check_num_ * p_cruise 步内不衰减，之外正常衰减
+      // - 减速意图：全程正常衰减
+      double ttc_decay = 1.0;
+      if (is_checking_rear_overtaking && !is_aggressive_scence_) {
+        // 计算不衰减的步数阈值
+        int no_decay_steps = 0;
+        if (rear_p_accel > rear_p_decel && rear_p_accel > rear_p_cruise) {
+          // 加速意图：lc_safety_check_num_ 步内不衰减
+          no_decay_steps = lc_safety_check_num_;
+        } else if (rear_p_cruise > rear_p_decel && rear_p_cruise > rear_p_accel) {
+          // 巡航意图：lc_safety_check_num_ * p_cruise 步内不衰减
+          no_decay_steps = static_cast<int>(lc_safety_check_num_ * rear_p_cruise);
+        }
+        // 减速意图：no_decay_steps = 0，全程衰减
+        if (i < no_decay_steps) {
+          // 不衰减区域
+          ttc_decay = 1.0;
+        } else {
+          // 超出不衰减区域，正常衰减
+          double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+          ttc_decay = std::pow(ttc_decay_factor, i - no_decay_steps);
+        }
+      } else {
+        // 非gap后车(临时13变2 11变2后车)，正常衰减
+        double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+        ttc_decay = std::pow(ttc_decay_factor, i);
+      }
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
@@ -4608,6 +4720,9 @@ bool LaneChangeStateMachineManager::
       double min_space = interp(agent_kph, xp, fp);
       // 防止在最小值跳变
       min_space = is_executing ? min_space * 1.0 : min_space * 1.25;
+      if(!is_large_car){ // 避免低速场景下大差速导致的不合理返回
+        box_longitudinal_buff = std::min(box_longitudinal_buff, agent_traj[i].v * 2.5);
+      }
       box_longitudinal_buff = std::max(box_longitudinal_buff, min_space);
       // 两类特殊pass
       if (ego_press_line_ratio > 0.3 && is_side_clear_ && is_executing) {
@@ -5462,13 +5577,30 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
    (std::abs(inertial_lateral_offset) < std::abs(in_origin_lane_offset))
       ? inertial_lateral_offset
       : in_origin_lane_offset; //小偏移
-  if(lane_change_stage_info_.lc_back_reason == "side view back"
-    && rear_agent_overtaking_) {
+  const auto& ego_boundary = fix_ref_path->get_ego_frenet_boundary();
+  const int back_agent_id = lc_back_track_.track_id;
+  const auto& dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto& agent_mgr = dynamic_world->agent_manager();
+  bool is_side_obs_back = false; //侧方位置有车
+  if (back_agent_id > 0) {
+    const auto& lc_back_agent = agent_mgr->GetAgent(back_agent_id);
+    if(lc_back_agent != nullptr){
+      const auto& lc_back_agent_sl = GetSLboundaryFromAgent(fix_ref_path, lc_back_agent->box());
+      is_side_obs_back = !(lc_back_agent_sl.s_start > ego_boundary.s_end ||
+                            lc_back_agent_sl.s_end < ego_boundary.s_start);
+    }
+  }
+  bool is_rear_lc_back = false;//后方有快车
+  if(target_lane_rear_node_ != nullptr){
+    is_rear_lc_back = rear_agent_overtaking_ &&
+                              target_lane_rear_node_->node_agent_id() == back_agent_id;
+  }
+  if(is_rear_lc_back || is_side_obs_back) {
     return small_lateral_offset; //小偏移
   }else{
     return large_lateral_offset; //大偏移
   }
-
 }
 ThirdOrderTimeOptimalTrajectory
 LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(
@@ -5747,7 +5879,7 @@ void LaneChangeStateMachineManager::UpdateLCPath(
 }
 FrenetObstacleBoundary LaneChangeStateMachineManager::GetSLboundaryFromAgent(
     const std::shared_ptr<ReferencePath> ref_path,
-    const planning_math::Box2d& obs_box) {
+    const planning_math::Box2d& obs_box) const {
   std::vector<planning_math::Vec2d> obs_corners;
   obs_corners = obs_box.GetAllCorners();
   std::vector<double> agent_sl_boundary(4);

@@ -78,6 +78,14 @@ class StGraphInput {
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       std::vector<planning_math::PathPoint>* const ptr_path_points);
 
+  // Extend path with lateral nudge for static obstacle avoidance during lane change
+  // Returns the updated extend_start_s after nudge extension
+  double ExtendPathWithLateralNudgeForStaticObstacle(
+      const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
+      const double project_s,
+      const double project_l,
+      std::vector<planning_math::PathPoint>* const ptr_path_points);
+
   void MakePathBorderQuerier(
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
@@ -173,6 +181,12 @@ class StGraphInput {
 
   RoadRightLevel road_right_level() const { return road_right_level_; }
 
+  const std::shared_ptr<planning_math::KDPath> lane_change_kd_path() const {
+    return lane_change_kd_path_;
+  }
+
+  bool is_emergency_speed_adjust() const { return is_emergency_speed_adjust_; }
+
  private:
   planning::framework::Session* session_ = nullptr;
   STGraphConfig config_;
@@ -225,8 +239,12 @@ class StGraphInput {
   double backward_extend_time_s_ = 0.0;
   planning_math::Box2d planning_init_point_box_;
   RoadRightLevel road_right_level_ = RoadRightLevel::HIGH_RIGHT;
-  
+
   std::unordered_set<int32_t> follow_agent_ids_;
+
+  std::shared_ptr<planning_math::KDPath> lane_change_kd_path_ = nullptr;
+
+  bool is_emergency_speed_adjust_ = false;
 };
 }  // namespace speed
 }  // namespace planning

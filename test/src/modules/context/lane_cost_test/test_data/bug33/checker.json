@@ -1,0 +1,25 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20404_EVENT_KEY_2026-02-11-21-38-41_no_camera.bag",
+  "description": "24.8s ~ 29.9s, order 0和1的VirtualLane的is_on_route=false,  order=2的is_on_route=true，order=3出现后is_on_route=true，order=2的cost最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [248, 299],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": false}},
+        {"order": 2, "expect": {"is_on_route": true}},
+        {"order": 3, "if_present": true, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [248, 299],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "24.8s ~ 29.9s: order=2 的 cost 应该最小"
+    }
+  ]
+}

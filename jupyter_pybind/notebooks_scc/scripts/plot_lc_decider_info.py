@@ -16,7 +16,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/docker_share/data/converted_bags/bug6/data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-04-20-13-11-01_no_camera.bag.1776838350.close-loop.noa.plan"
+bag_path = "/home/code/bags/data_collection_CHERY_M32T_82006_EVENT_FUNEXIT_2025-10-14-17-16-27_1760433372000_1760433392000_no_camera_9d5895e02c392aa16833026421de46234675a22c.bag.1776912748.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -212,6 +212,7 @@ def update_safety_check_data(plan_debug_json_msg):
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
     lc_safety_check_time = plan_debug_json_msg.get('lc_safety_check_time', None)
     rear_agent_overtaking = plan_debug_json_msg.get('rear_agent_overtaking', None)
+
     safety_summary_data.data = {
         'name': ['压线率', '安全检查时长(s)', '后车超越'],
         'data': [
@@ -338,6 +339,7 @@ def slider_callback(bag_time):
 # +
 
 # 创建可切换的右侧面板
+# Tab 1: Longtime（联合规划图表）+ 纵向意图表格
 # Tab 1: Longtime（联合规划图表）
 tab_longtime = Panel(child=pans, title="Longtime")
 
@@ -417,7 +419,7 @@ safety_summary_columns = [
 safety_summary_table = DataTable(
     source=safety_summary_data,
     columns=safety_summary_columns,
-    width=525,
+    width=700,
     height=330,
     index_position=None,
 )

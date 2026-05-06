@@ -3285,6 +3285,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_strong_deceleration_mode_ = false;
     construction_strong_mode_frame_count_ = 0;
     construction_lat_dist_flag_ = false;
+    construction_lat_dist_exit_frame_count_ = 0;
     construction_v_limit_set_ = false;
     construction_manual_intervention_detected_ = false;
     construction_intrusion_active_ = false;
@@ -3449,19 +3450,31 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                    construction_strong_mode_frame_count_);
 
-  // Construction Lateral Dis Flag
+  // Construction Lateral Dis Flag (with exit delay, same pattern as near_lane_center_flag)
+  bool should_be_lat_dist = false;
   if (!construction_lat_dist_flag_) {
-    if (std::abs(construction_nearest_l) <
-        speed_limit_config_.construction_lat_dist_entry) {
-      construction_lat_dist_flag_ = true;
+    should_be_lat_dist = (std::abs(construction_nearest_l) <
+                          speed_limit_config_.construction_lat_dist_entry);
+  } else {
+    should_be_lat_dist = (std::abs(construction_nearest_l) <
+                          speed_limit_config_.construction_lat_dist_exit);
+  }
+
+  if (should_be_lat_dist) {
+    construction_lat_dist_flag_ = true;
+    construction_lat_dist_exit_frame_count_ = 0;
+  } else if (construction_lat_dist_flag_) {
+    construction_lat_dist_exit_frame_count_++;
+    if (construction_lat_dist_exit_frame_count_ >= kConstructionIntrusionExitDelayFrames) {
+      construction_lat_dist_flag_ = false;
+      construction_lat_dist_exit_frame_count_ = 0;
     }
   } else {
-    if (std::abs(construction_nearest_l) >
-        speed_limit_config_.construction_lat_dist_exit) {
-      construction_lat_dist_flag_ = false;
-    }
+    construction_lat_dist_exit_frame_count_ = 0;
   }
   JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
+  JSON_DEBUG_VALUE("construction_lat_dist_exit_frame_count",
+                   construction_lat_dist_exit_frame_count_);
 
   // Construction zone info
   dis_to_construction = std::max(construction_s_nearest - ego_s, 0.0);
@@ -3476,6 +3489,55 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   double lane_boundary = half_lane_width;
   double warning_buffer = 0.5;      // 车道线外 0.5m 范围
   double warning_boundary = lane_boundary + warning_buffer;
+
+  // ========== 基于车道中心线的横向接近判断 ==========
+  // 用于 near_construction 距离限速，不受规划路径偏移影响
+  const double near_lane_entry_thr = warning_boundary + perception_margin;
+  const double near_lane_exit_thr = near_lane_entry_thr + 0.3;
+  const int kNearLaneCenterExitDelayFrames = 30;
+
+  const auto lane_frenet_coord =
+      current_lane ? current_lane->get_lane_frenet_coord() : nullptr;
+
+  bool should_be_near_lane = false;
+  if (lane_frenet_coord != nullptr) {
+    double min_abs_l_to_lane = std::numeric_limits<double>::max();
+    for (const auto &[cluster_id, construction_area] :
+         construction_scene.construction_agent_cluster_attribute_map) {
+      for (const auto &pt : construction_area.points) {
+        Point2D frenet_pt;
+        if (!lane_frenet_coord->XYToSL(Point2D(pt.x, pt.y), frenet_pt)) continue;
+        double s = frenet_pt.x;
+        double l = frenet_pt.y;
+        if (s < ego_s || s > ego_s + 125.0) continue;
+        if (std::abs(l) < min_abs_l_to_lane) {
+          min_abs_l_to_lane = std::abs(l);
+        }
+      }
+    }
+    if (!construction_near_lane_center_flag_) {
+      should_be_near_lane = (min_abs_l_to_lane < near_lane_entry_thr);
+    } else {
+      should_be_near_lane = (min_abs_l_to_lane < near_lane_exit_thr);
+    }
+  }
+
+  if (should_be_near_lane) {
+    construction_near_lane_center_flag_ = true;
+    construction_near_lane_center_exit_frame_count_ = 0;
+  } else if (construction_near_lane_center_flag_) {
+    construction_near_lane_center_exit_frame_count_++;
+    if (construction_near_lane_center_exit_frame_count_ >= kNearLaneCenterExitDelayFrames) {
+      construction_near_lane_center_flag_ = false;
+      construction_near_lane_center_exit_frame_count_ = 0;
+    }
+  } else {
+    construction_near_lane_center_exit_frame_count_ = 0;
+  }
+  JSON_DEBUG_VALUE("construction_near_lane_center_flag",
+                   construction_near_lane_center_flag_);
+  JSON_DEBUG_VALUE("construction_near_lane_center_exit_frame_count",
+                   construction_near_lane_center_exit_frame_count_);
 
   // ========== 侵入等级判断 ==========
   bool has_intruding_point = false;
@@ -3546,10 +3608,12 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       if (level > 0) {
         has_intruding_point = true;
         double relative_s = s - ego_s;
-        if (relative_s < min_intruding_distance) {
+        // 优先选择 level 最高的点，同 level 时选距离最近的
+        if (level > max_intrusion_level ||
+            (level == max_intrusion_level && relative_s < min_intruding_distance)) {
+          max_intrusion_level = level;
           min_intruding_distance = relative_s;
           min_abs_l_at_intrusion = abs_l;
-          max_intrusion_level = std::max(max_intrusion_level, level);
         }
       }
     }
@@ -3601,7 +3665,6 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       construction_intrusion_last_abs_l_ = 0.0;
       construction_intrusion_last_distance_ = 0.0;
       construction_v_limit_set_ = false;
-      return;
     }
     // 延时期间沿用上一次的侵入等级
     final_intrusion_level = construction_intrusion_last_level_;
@@ -3610,7 +3673,6 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   } else {
     // 没有侵入，不减速
     construction_v_limit_set_ = false;
-    return;
   }
 
   if ((is_on_construction && construction_lat_dist_flag_) ||
@@ -3632,8 +3694,6 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       // 车道线外 0.5m 内且有侵入趋势：100 kph
       target_speed = speed_limit_config_.v_limit_near_construction;
       speed_limit_type = SpeedLimitType::NEAR_CONSTRUCTION;
-    } else {
-      return;
     }
 
     // 强减速模式覆盖
@@ -3700,7 +3760,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
 
   if (dis_to_construction <= speed_limit_config_.dis_near_construction &&
       v_cruise > construction_speed_threshold && is_exist_construction &&
-      construction_lat_dist_flag_) {
+      construction_near_lane_center_flag_) {
     double pre_brake_dis_near_construction = std::max(
         dis_to_construction - speed_limit_config_.brake_dis_near_construction,
         0.0);

@@ -5567,6 +5567,11 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_obs_omega_weight, "lane_change_joint_decision",
                      "q_obs_omega_weight");
 
+    ReadItem<double>(json, q_obs_acc_bound_weight, "lane_change_joint_decision",
+                     "q_obs_acc_bound_weight");
+    ReadItem<double>(json, obs_acc_max, "lane_change_joint_decision", "obs_acc_max");
+    ReadItem<double>(json, obs_acc_min, "lane_change_joint_decision", "obs_acc_min");
+
     ReadItem<double>(json, q_ego_acc_bound_weight, "lane_change_joint_decision",
                      "q_ego_acc_bound_weight");
     ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision",
@@ -5641,6 +5646,10 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double q_ego_delta_weight = 50.0;
   double q_obs_jerk_weight = 30.0;
   double q_obs_omega_weight = 5.0;
+
+  double q_obs_acc_bound_weight = 100.0;
+  double obs_acc_max = 3.0;
+  double obs_acc_min = -1.0;
 
   double q_ego_acc_bound_weight = 100.0;
   double ego_acc_max = 1.35;
@@ -7947,6 +7956,202 @@ struct ReferencePathManagerConfig : public EgoPlanningConfig {
 
 struct NarrowSpaceDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override { EgoPlanningConfig::init(json); }
+};
+
+struct LongitudinalIntentionConfig : public Config {
+  // Bayesian prior probabilities
+  double lon_bayes_decel_prior = 0.10;
+  double lon_bayes_cruise_prior = 0.60;
+  double lon_bayes_accel_prior = 0.30;
+  double lon_bayes_smooth_alpha = 0.7;
+  double lon_intent_confidence_threshold = 0.35;
+
+  // Acceleration source weights
+  double accel_fusion_weight = 0.4;
+  double accel_vel_weight = 0.3;
+  double accel_pred_weight = 0.3;
+
+  // Gaussian parameters for accel_fusion
+  double accel_fusion_decel_mu = -0.35;
+  double accel_fusion_decel_sigma = 0.5;
+  double accel_fusion_cruise_mu = 0.0;
+  double accel_fusion_cruise_sigma = 0.3;
+  double accel_fusion_accel_mu = 0.3;
+  double accel_fusion_accel_sigma = 0.5;
+
+  // Gaussian parameters for accel_vel
+  double accel_vel_decel_mu = -0.35;
+  double accel_vel_decel_sigma = 0.5;
+  double accel_vel_cruise_mu = 0.0;
+  double accel_vel_cruise_sigma = 0.3;
+  double accel_vel_accel_mu = 0.3;
+  double accel_vel_accel_sigma = 0.5;
+
+  // Gaussian parameters for accel_pred
+  double accel_pred_decel_mu = -0.35;
+  double accel_pred_decel_sigma = 0.5;
+  double accel_pred_cruise_mu = 0.0;
+  double accel_pred_cruise_sigma = 0.3;
+  double accel_pred_accel_mu = 0.3;
+  double accel_pred_accel_sigma = 0.5;
+
+  void init(const Json& json) override {
+    ReadItem(json, lon_bayes_decel_prior, "intention_decider", "longitudinal_intention", "lon_bayes_decel_prior");
+    ReadItem(json, lon_bayes_cruise_prior, "intention_decider", "longitudinal_intention", "lon_bayes_cruise_prior");
+    ReadItem(json, lon_bayes_accel_prior, "intention_decider", "longitudinal_intention", "lon_bayes_accel_prior");
+    ReadItem(json, lon_bayes_smooth_alpha, "intention_decider", "longitudinal_intention", "lon_bayes_smooth_alpha");
+    ReadItem(json, lon_intent_confidence_threshold, "intention_decider", "longitudinal_intention", "lon_intent_confidence_threshold");
+
+    ReadItem(json, accel_fusion_weight, "intention_decider", "longitudinal_intention", "accel_fusion_weight");
+    ReadItem(json, accel_vel_weight, "intention_decider", "longitudinal_intention", "accel_vel_weight");
+    ReadItem(json, accel_pred_weight, "intention_decider", "longitudinal_intention", "accel_pred_weight");
+
+    ReadItem(json, accel_fusion_decel_mu, "intention_decider", "longitudinal_intention", "accel_fusion_decel_mu");
+    ReadItem(json, accel_fusion_decel_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_decel_sigma");
+    ReadItem(json, accel_fusion_cruise_mu, "intention_decider", "longitudinal_intention", "accel_fusion_cruise_mu");
+    ReadItem(json, accel_fusion_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_cruise_sigma");
+    ReadItem(json, accel_fusion_accel_mu, "intention_decider", "longitudinal_intention", "accel_fusion_accel_mu");
+    ReadItem(json, accel_fusion_accel_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_accel_sigma");
+
+    ReadItem(json, accel_vel_decel_mu, "intention_decider", "longitudinal_intention", "accel_vel_decel_mu");
+    ReadItem(json, accel_vel_decel_sigma, "intention_decider", "longitudinal_intention", "accel_vel_decel_sigma");
+    ReadItem(json, accel_vel_cruise_mu, "intention_decider", "longitudinal_intention", "accel_vel_cruise_mu");
+    ReadItem(json, accel_vel_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_vel_cruise_sigma");
+    ReadItem(json, accel_vel_accel_mu, "intention_decider", "longitudinal_intention", "accel_vel_accel_mu");
+    ReadItem(json, accel_vel_accel_sigma, "intention_decider", "longitudinal_intention", "accel_vel_accel_sigma");
+
+    ReadItem(json, accel_pred_decel_mu, "intention_decider", "longitudinal_intention", "accel_pred_decel_mu");
+    ReadItem(json, accel_pred_decel_sigma, "intention_decider", "longitudinal_intention", "accel_pred_decel_sigma");
+    ReadItem(json, accel_pred_cruise_mu, "intention_decider", "longitudinal_intention", "accel_pred_cruise_mu");
+    ReadItem(json, accel_pred_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_pred_cruise_sigma");
+    ReadItem(json, accel_pred_accel_mu, "intention_decider", "longitudinal_intention", "accel_pred_accel_mu");
+    ReadItem(json, accel_pred_accel_sigma, "intention_decider", "longitudinal_intention", "accel_pred_accel_sigma");
+  }
+};
+
+struct AgentLongDeciderConfig : public EgoPlanningConfig {
+  double ignore_speed_diff_threshold = 2.5;
+  double agent_front_edge_s_diff_threshold = -0.2;
+  double large_speed_diff_threshold = 5.56;
+  double filter_ultra_distance_threshold = 300.0;
+
+  double bayes_cut_in_threshold = 0.5;
+  double bayes_cut_out_threshold = 0.5;
+
+  double reverse_heading_threshold = 2.09;
+  double low_speed_threshold = 3.0;
+  double min_filter_distance_threshold = 30.0;
+  double low_speed_lateral_ignore_dist_threshold = 10.0;
+  double high_speed_lateral_ignore_dist_threshold = 15.0;
+
+  double longitudinal_ttc_threshold = 6.0;
+  double rear_overlap_threshold = 0.2;
+
+  double cross_lane_threshold = 0.1;
+  double lanes_distance_threshold = 5.0;
+  double considered_lon_distance_in_curve_threshold = 80.0;
+  double distance_curvature_threshold = 30.0;
+  double time_curvature_threshold = 2.0;
+
+  double lateral_safe_buffer_threshold = 0.3;
+  double low_speed_threshold_mps = 2.0;
+  double suppression_lateral_speed_threshold_mps = 0.1;
+  double suppression_lateral_penetration_threshold = 0.3;
+
+  double lateral_ttc_threshold = 3.0;
+  double longitudinal_ttc_lower_threshold = 1.5;
+  double longitudinal_ttc_upper_threshold = 3.0;
+
+  double min_cut_in_headway_threshold = 5.0;
+  double min_cut_in_lateral_distance_threshold = 1.0;
+  double cut_in_lateral_dist_min_range_threshold = 5.625;
+  double cut_in_lateral_dist_max_range_threshold = 9.375;
+
+  double lateral_vel_threshold_low = 0.35;
+  double lateral_vel_threshold_high = 1.5;
+
+  double relative_theta_threshold = 0.1;
+  double pure_pursuit_max_steer_angle_threshold = 0.5;
+
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    ReadItem<double>(json, ignore_speed_diff_threshold,
+                     "agent_long_decider", "ignore_speed_diff_threshold");
+    ReadItem<double>(json, agent_front_edge_s_diff_threshold,
+                     "agent_long_decider", "agent_front_edge_s_diff_threshold");
+    ReadItem<double>(json, large_speed_diff_threshold,
+                     "agent_long_decider", "large_speed_diff_threshold");
+    ReadItem<double>(json, filter_ultra_distance_threshold,
+                     "agent_long_decider", "filter_ultra_distance_threshold");
+
+    ReadItem<double>(json, bayes_cut_in_threshold,
+                     "agent_long_decider", "bayes_cut_in_threshold");
+    ReadItem<double>(json, bayes_cut_out_threshold,
+                     "agent_long_decider", "bayes_cut_out_threshold");
+
+    ReadItem<double>(json, reverse_heading_threshold,
+                     "agent_long_decider", "reverse_heading_threshold");
+    ReadItem<double>(json, low_speed_threshold,
+                     "agent_long_decider", "low_speed_threshold");
+    ReadItem<double>(json, min_filter_distance_threshold,
+                     "agent_long_decider", "min_filter_distance_threshold");
+    ReadItem<double>(json, low_speed_lateral_ignore_dist_threshold,
+                     "agent_long_decider", "low_speed_lateral_ignore_dist_threshold");
+    ReadItem<double>(json, high_speed_lateral_ignore_dist_threshold,
+                     "agent_long_decider", "high_speed_lateral_ignore_dist_threshold");
+
+    ReadItem<double>(json, longitudinal_ttc_threshold,
+                     "agent_long_decider", "longitudinal_ttc_threshold");
+    ReadItem<double>(json, rear_overlap_threshold,
+                     "agent_long_decider", "rear_overlap_threshold");
+
+    ReadItem<double>(json, cross_lane_threshold,
+                     "agent_long_decider", "cross_lane_threshold");
+    ReadItem<double>(json, lanes_distance_threshold,
+                     "agent_long_decider", "lanes_distance_threshold");
+    ReadItem<double>(json, considered_lon_distance_in_curve_threshold,
+                     "agent_long_decider", "considered_lon_distance_in_curve_threshold");
+    ReadItem<double>(json, distance_curvature_threshold,
+                     "agent_long_decider", "distance_curvature_threshold");
+    ReadItem<double>(json, time_curvature_threshold,
+                     "agent_long_decider", "time_curvature_threshold");
+
+    ReadItem<double>(json, lateral_safe_buffer_threshold,
+                     "agent_long_decider", "lateral_safe_buffer_threshold");
+    ReadItem<double>(json, low_speed_threshold_mps,
+                     "agent_long_decider", "low_speed_threshold_mps");
+    ReadItem<double>(json, suppression_lateral_speed_threshold_mps,
+                     "agent_long_decider", "suppression_lateral_speed_threshold_mps");
+    ReadItem<double>(json, suppression_lateral_penetration_threshold,
+                     "agent_long_decider", "suppression_lateral_penetration_threshold");
+
+    ReadItem<double>(json, lateral_ttc_threshold,
+                     "agent_long_decider", "lateral_ttc_threshold");
+    ReadItem<double>(json, longitudinal_ttc_lower_threshold,
+                     "agent_long_decider", "longitudinal_ttc_lower_threshold");
+    ReadItem<double>(json, longitudinal_ttc_upper_threshold,
+                     "agent_long_decider", "longitudinal_ttc_upper_threshold");
+
+    ReadItem<double>(json, min_cut_in_headway_threshold,
+                     "agent_long_decider", "min_cut_in_headway_threshold");
+    ReadItem<double>(json, min_cut_in_lateral_distance_threshold,
+                     "agent_long_decider", "min_cut_in_lateral_distance_threshold");
+    ReadItem<double>(json, cut_in_lateral_dist_min_range_threshold,
+                     "agent_long_decider", "cut_in_lateral_dist_min_range_threshold");
+    ReadItem<double>(json, cut_in_lateral_dist_max_range_threshold,
+                     "agent_long_decider", "cut_in_lateral_dist_max_range_threshold");
+
+    ReadItem<double>(json, lateral_vel_threshold_low,
+                     "agent_long_decider", "lateral_vel_threshold_low");
+    ReadItem<double>(json, lateral_vel_threshold_high,
+                     "agent_long_decider", "lateral_vel_threshold_high");
+
+    ReadItem<double>(json, relative_theta_threshold,
+                     "agent_long_decider", "relative_theta_threshold");
+    ReadItem<double>(json, pure_pursuit_max_steer_angle_threshold,
+                     "agent_long_decider", "pure_pursuit_max_steer_angle_threshold");
+  }
 };
 
 }  // namespace planning

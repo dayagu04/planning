@@ -1,0 +1,23 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_36716_EVENT_MANUAL_2026-04-19-11-09-50_no_camera.bag",
+  "description": "bug10: 匝道出口场景，仅 order=2 on_route，order=2 cost 最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [90, 136],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 2, "expect": {"is_on_route": true}},
+        {"order": "!2", "expect": {"is_on_route": false}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [90, 136],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "order=2 的 cost 应该最小"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_36716_EVENT_MANUAL_2026-04-18-15-28-00_no_camera.bag",
+  "description": "bug3: 正常行驶场景，应选择 order=0 的车道（当前车道）",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [149, 179],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": true}},
+        {"order": ">=1", "expect": {"is_on_route": false}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [149, 179],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_all_lanes",
+      "expect": "order == 0",
+      "description": "order=0 的 cost 应该最小"
+    }
+  ]
+}

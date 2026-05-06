@@ -72,6 +72,12 @@ bool LateralOffsetDecider::Execute() {
 }
 
 void LateralOffsetDecider::PostProcess() {
+  const auto& reference_path = session_->planning_context()
+                                   .lane_change_decider_output()
+                                   .coarse_planning_info.reference_path;
+  const double ego_init_l = reference_path->get_frenet_ego_state()
+                          .planning_init_point()
+                          .frenet_state.r;
   const auto& front_avoid_info = lateral_offset_calculatorv2_.avoid_info();
   const auto& side_nudge_info = side_nudge_lateral_offset_decider_.nudge_info();
   double front_lat_offset = lateral_offset_calculatorv2_.lat_offset();
@@ -106,10 +112,33 @@ void LateralOffsetDecider::PostProcess() {
     }
   }
 
+  
   constexpr double lateral_offset_change_rate = 0.05;
-  lateral_offset_ =
-      clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
-           lateral_offset_ - lateral_offset_change_rate);
+  if ((lateral_offset_tmp < lateral_offset_ &&
+       lateral_offset_tmp > ego_init_l) ||
+      (lateral_offset_tmp > lateral_offset_ &&
+       lateral_offset_tmp < ego_init_l)) {
+    lateral_offset_ = lateral_offset_tmp;
+  } else if ((lateral_offset_ < lateral_offset_tmp &&
+              lateral_offset_ > ego_init_l) ||
+             (lateral_offset_ > lateral_offset_tmp &&
+              lateral_offset_ < ego_init_l)) {
+    lateral_offset_ =
+        clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
+             lateral_offset_ - lateral_offset_change_rate);
+  } else {
+    if (lateral_offset_tmp > ego_init_l) {
+      lateral_offset_ = std::max(
+          clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
+               lateral_offset_ - lateral_offset_change_rate),
+          ego_init_l);
+    } else {
+      lateral_offset_ = std::min(
+          clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
+               lateral_offset_ - lateral_offset_change_rate),
+          ego_init_l);
+    }
+  }
 }
 
 void LateralOffsetDecider::CheckAvoidObstaclesDecision() {

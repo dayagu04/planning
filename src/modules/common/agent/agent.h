@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "agent_decision.h"
+#include "longitudinal_intent_info.h"
 #include "math/box2d.h"
 #include "math/polygon2d.h"
 #include "prediction_object.h"
@@ -216,6 +217,10 @@ class Agent {
   const double prediction_cutin_score() const;
   void set_prediction_cutin_score(const double prediction_cutin_score);
 
+  const longitudinal_intention::LongitudinalIntentInfo& longitudinal_intent_info() const;
+  void set_longitudinal_intent_info(
+      const longitudinal_intention::LongitudinalIntentInfo& info);
+
   const bool is_crossing() const;
   void set_is_crossing(const bool is_crossing);
 
@@ -328,6 +333,8 @@ class Agent {
   double prediction_cutin_score_ = 0.0;
 
   double rule_base_cutin_score_ = 0.0;
+
+  longitudinal_intention::LongitudinalIntentInfo lon_intent_info_;
 
   bool is_cutout_ = false;
 

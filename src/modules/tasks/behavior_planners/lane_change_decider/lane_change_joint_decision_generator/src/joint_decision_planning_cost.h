@@ -57,6 +57,9 @@ enum iLqrCostconfigId {
   SOFT_HALFPLANE_S0,
   SOFT_HALFPLANE_TAU,
   SOFT_HALFPLANE_COST_ALLOCATION_RATIO,
+  W_OBS_ACC_BOUND,
+  OBS_ACC_MAX,
+  OBS_ACC_MIN,
   OBS_CONFIG_START,
 };
 
@@ -86,6 +89,18 @@ inline int GetObsLongitudinalLabelIdx(int obs_idx, int obs_num) {
   return OBS_CONFIG_START + 3 * obs_num + obs_num * OBS_STATE_SIZE + obs_idx;
 }
 
+inline int GetObsPDecelIdx(int obs_idx, int obs_num) {
+  return OBS_CONFIG_START + 4 * obs_num + obs_num * OBS_STATE_SIZE + obs_idx;
+}
+
+inline int GetObsPCruiseIdx(int obs_idx, int obs_num) {
+  return OBS_CONFIG_START + 5 * obs_num + obs_num * OBS_STATE_SIZE + obs_idx;
+}
+
+inline int GetObsPAccelIdx(int obs_idx, int obs_num) {
+  return OBS_CONFIG_START + 6 * obs_num + obs_num * OBS_STATE_SIZE + obs_idx;
+}
+
 enum iLqrCostId {
   EGO_REFERENCE_COST,
   OBS_REFERENCE_COST,
@@ -100,6 +115,7 @@ enum iLqrCostId {
   EGO_ACC_BOUND_COST,
   EGO_JERK_BOUND_COST,
   EGO_VEL_BOUND_COST,
+  OBS_ACC_BOUND_COST,
   HARD_HALFPLANE_COST,
   SOFT_HALFPLANE_COST,
   COST_SIZE,
@@ -351,6 +367,19 @@ class EgoVelBoundCostTerm : public ilqr_solver::BaseCostTerm {
   uint8_t GetCostId() override { return EGO_VEL_BOUND_COST; }
 };
 
+class ObsAccBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  ObsAccBoundCostTerm() = default;
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control &) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control &, ilqr_solver::LxMT &lx,
+                          ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+                          ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return OBS_ACC_BOUND_COST; }
+};
+
 class SoftHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
  public:
   SoftHalfplaneCostTerm() = default;
@@ -372,6 +401,7 @@ class SoftHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
     double s_target;   // 目标安全距离
     double normal_x;   // 参考朝向法向量x
     double normal_y;   // 参考朝向法向量y
+    double p_decel = 0.0;
   };
   std::vector<SoftHalfplaneResult> CalculateSoftHalfplane(
       const ilqr_solver::State &x);
@@ -397,6 +427,7 @@ class HardHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
     double plane_dist;  // 半平面距离
     double normal_x;    // 参考朝向法向量x
     double normal_y;    // 参考朝向法向量y
+    double p_decel = 0.0;
   };
   std::vector<HardHalfplaneResult> CalculateObsHardHalfplane(
       const ilqr_solver::State &x);

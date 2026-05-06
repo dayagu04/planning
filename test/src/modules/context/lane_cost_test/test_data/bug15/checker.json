@@ -1,0 +1,24 @@
+{
+  "bag_name": "bug15",
+  "description": "bug15: 20.3s~23s, order=0 off_route, order=1和2 on_route, order=2的cost最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [203, 230],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": true}},
+        {"order": 2, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [203, 230],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "order=2 的 cost 应该最小"
+    }
+  ]
+}
