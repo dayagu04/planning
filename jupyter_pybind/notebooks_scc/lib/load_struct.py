@@ -2416,6 +2416,9 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
         'color':[],
         'text_color':[]
       }
+    # 车位（23）和地锁（25）不显示
+    if obstacle_list[i].fusion_obstacle.common_info.type == 23 or obstacle_list[i].fusion_obstacle.common_info.type == 25:
+      continue
     obs_info_all[source] = obs_info
     try:
       frenet_vs, frenet_vl = 255, 255
