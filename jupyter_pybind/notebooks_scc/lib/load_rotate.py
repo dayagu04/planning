@@ -28,16 +28,20 @@ class coord_transformer:
         local_x_vec = []
         local_y_vec = []
         local_x_vec, local_y_vec = global2local(np.array(global_x_vec), np.array(global_y_vec), self.cur_pos_xn, self.cur_pos_yn, self.cur_yaw)
-        return local_x_vec.tolist(), local_y_vec.tolist()
+        if isinstance(local_x_vec, np.ndarray):
+            return local_x_vec.tolist(), local_y_vec.tolist()
+        return float(local_x_vec), float(local_y_vec)
 
 def rotate(x, y, theta):
     x_rotated = x * math.cos(theta) - y * math.sin(theta)
     y_rotated = x * math.sin(theta) + y * math.cos(theta)
-    return x_rotated, y_rotated
+    if isinstance(x_rotated, np.ndarray):
+        return x_rotated, y_rotated
+    return float(x_rotated), float(y_rotated)
 
 def local2global(x, y, ox, oy, otheta):
     tx, ty = rotate(x, y, otheta)
-    return (tx+ox, ty+oy)
+    return (float(tx+ox), float(ty+oy))
 
 def global2local(x, y, ox, oy, otheta):
     x1 = x-ox
@@ -60,4 +64,3 @@ def getposbodyandworld(ref_x_vec, ref_y_vec, cur_pos_xn, cur_pos_yn, cur_yaw, cu
         ref_yb_vec.append(tmpy)
 
     return ref_xn_vec, ref_yn_vec, ref_xb_vec, ref_yb_vec
-

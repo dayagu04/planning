@@ -51,6 +51,35 @@ start_stop_status_dict = {
     2: "START"
 }
 
+turnstile_stage_dict = {
+    0: "IDLE",
+    1: "APPROACHING",
+    2: "FOLLOW_WAIT",
+    3: "FOLLOW_WAIT_GATE_CLOSE",
+    4: "HEAD_WAIT_CLOSED",
+    5: "HEAD_WAIT_REOPEN",
+    6: "HEAD_WAIT_FULLY_OPEN",
+    7: "PASSABLE_RELEASE",
+    8: "PASSING",
+    9: "PASSED",
+    10: "EMERGENCY_BLOCK",
+}
+
+turnstile_scene_type_dict = {
+    0: "TURNSTILE_SCENE_NONE",
+    1: "TURNSTILE_SCENE_LEFT_SINGLE",
+    2: "TURNSTILE_SCENE_RIGHT_SINGLE",
+    3: "TURNSTILE_SCENE_MID_DOUBLE",
+    4: "TURNSTILE_SCENE_SIDE_DOUBLE",
+}
+
+gate_barrier_status_dict = {
+    0: "MOTION_DIR_UNKNOWN",
+    1: "MOTION_DIR_STATIC",
+    2: "MOTION_DIR_OPEN",
+    3: "MOTION_DIR_CLOSE",
+}
+
 def load_st_label(st_graph_data):
   st_label = []
   st_boundary_list = st_graph_data.st_boundaries
@@ -398,6 +427,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "turnstile_gate_snapshot_is_static", "turnstile_gate_snapshot_is_opening",
       "turnstile_gate_snapshot_is_closing", "turnstile_gate_snapshot_is_closed",
       "turnstile_gate_snapshot_is_opened", "turnstile_gate_snapshot_is_passable",
+      "turnstile_has_gate_base_fallback", "turnstile_gate_base_stop_s",
+      "turnstile_enable_gate_base_fallback", "turnstile_ego_s_end",
+      "turnstile_gate_base_count", "turnstile_gate_base_min_lateral_dist",
   ]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
@@ -477,6 +509,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         'turnstile_gate_snapshot_is_closed': turnstile_debug.gate_snapshot_is_closed,
         'turnstile_gate_snapshot_is_opened': turnstile_debug.gate_snapshot_is_opened,
         'turnstile_gate_snapshot_is_passable': turnstile_debug.gate_snapshot_is_passable,
+        'turnstile_has_gate_base_fallback': getattr(turnstile_debug, 'has_gate_base_fallback', False),
+        'turnstile_gate_base_stop_s': getattr(turnstile_debug, 'gate_base_stop_s', 0.0),
+        'turnstile_enable_gate_base_fallback': getattr(turnstile_debug, 'enable_gate_base_fallback', False),
+        'turnstile_ego_s_end': getattr(turnstile_debug, 'ego_s_end', 0.0),
+        'turnstile_gate_base_count': getattr(turnstile_debug, 'gate_base_count', 0),
+        'turnstile_gate_base_min_lateral_dist': getattr(turnstile_debug, 'gate_base_min_lateral_dist', 0.0),
     })
 
   # load new st boundaries
@@ -917,7 +955,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   st_search_attr_vec = []
   for ind in range(len(st_search_value_list)):
-    val = plan_debug_json_info[st_search_value_list[ind]]
+    val = plan_debug_json_info.get(st_search_value_list[ind], None)
     # 转换枚举值为可读的字符串
     if st_search_value_list[ind] == 'lane_change_status' and isinstance(val, int):
       val = lane_change_status_dict.get(val, str(val))
@@ -1032,6 +1070,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(turnstile_debug_value_list)):
      key = turnstile_debug_value_list[ind]
      val = turnstile_debug_value_map.get(key, None)
+     # 转换枚举值为可读字符串
+     if key == 'turnstile_stage' and isinstance(val, int):
+       val = turnstile_stage_dict.get(val, str(val))
+     elif key == 'turnstile_scene_type' and isinstance(val, int):
+       val = turnstile_scene_type_dict.get(val, str(val))
+     elif key == 'turnstile_gate_status_raw' and isinstance(val, int):
+       val = gate_barrier_status_dict.get(val, str(val))
      turnstile_debug_attr_vec.append(key)
      turnstile_debug_val_vec.append(val)
 
@@ -1166,8 +1211,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   hard_pos_min_vec = lon_motion_plan_input.hard_pos_min_vec
   soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
   soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
-  extend_pos_max_vec = lon_motion_plan_input.extend_pos_max_vec
-  extend_pos_min_vec = lon_motion_plan_input.extend_pos_min_vec
+  extend_pos_max_vec = list(getattr(lon_motion_plan_input, 'extend_pos_max_vec', []))
+  extend_pos_min_vec = list(getattr(lon_motion_plan_input, 'extend_pos_min_vec', []))
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
@@ -1196,6 +1241,14 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
+
+  # Older generated Python protos may not expose V3 extend position bounds even
+  # when the C++ proto has them. Keep the ColumnDataSource columns the same
+  # length so the other longitudinal curves still render.
+  if len(extend_pos_max_vec) != len(time_vec):
+    extend_pos_max_vec = [np.nan] * len(time_vec)
+  if len(extend_pos_min_vec) != len(time_vec):
+    extend_pos_min_vec = [np.nan] * len(time_vec)
 
   weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
   # print(weight_maker_replay_info)
@@ -2169,6 +2222,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
+                   'data_hpp_debug':data_hpp_debug, \
+                   'data_turnstile_debug':data_turnstile_debug, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
                    'data_tv':data_tv, \

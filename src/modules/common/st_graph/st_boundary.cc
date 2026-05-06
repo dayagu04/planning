@@ -112,6 +112,16 @@ bool STBoundary::GetBoundaryBounds(const double curr_time,
   return true;
 }
 
+bool STBoundary::GetBoundaryBoundsAtFirstValidTime(
+    STPoint* const lower_point, STPoint* const upper_point) const {
+  if (lower_points_.empty() || upper_points_.empty()) {
+    return false;
+  }
+  *lower_point = lower_points_.front();
+  *upper_point = upper_points_.front();
+  return true;
+}
+
 STBoundary::DecisionType STBoundary::decision_type() const {
   return decision_type_;
 }

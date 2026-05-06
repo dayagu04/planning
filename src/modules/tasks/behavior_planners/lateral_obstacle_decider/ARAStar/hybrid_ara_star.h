@@ -126,6 +126,7 @@ class HybridARAStar {
   double spline_s_min_ = 0.0;
   double spline_s_max_ = 0.0;
   bool enable_stitching_cost_ = false;
+  bool enable_debug_info_ = false;
   std::shared_ptr<ReferencePath> reference_path_ptr_ = nullptr;
   double ego_s_ = 0.0;
   double ego_l_ = 0.0;

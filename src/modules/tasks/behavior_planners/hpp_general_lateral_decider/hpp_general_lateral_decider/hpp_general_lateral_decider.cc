@@ -488,50 +488,32 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
 
   is_point_in_turning_ = false;
 
-  constexpr double kPreviewBeforeTurn = 5.0;
-  constexpr double kExitRecoverDist = 5.0;
+  constexpr double kPreviewDist = 20.0;
+  constexpr double kMinCruiseV = 2.0;
+  constexpr double kLateralAcc = 0.75;
+  constexpr double kCurveRadiusThreshold = 200.0;
+  constexpr double kPreviewBeforeTurn = 10.0;
+  constexpr double kExitRecoverDist = 10.0;
 
-  if (static_analysis_storage) {
-    const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
-                                    CElemType::Ignore);
-    const auto &front_turn_range =
-        static_analysis_storage->GetFrontSRange(turn_query, s_ref);
-    const auto &back_turn_range =
-        static_analysis_storage->GetBackSRange(turn_query, s_ref);
+  const double reference_end_s =
+      reference_path_ptr_->get_points().back().path_point.s();
 
-    const double origin_cruise_v = cruise_v;
-    const double kMinCruiseV = 2.0;
-
-    double factor = 1.0;
-
-    if (front_turn_range.second > front_turn_range.first) {
-      const double dist_to_turn = std::max(front_turn_range.first - s_ref, 0.0);
-      if (dist_to_turn <= kPreviewBeforeTurn) {
-        const double ratio = std::clamp(
-            1.0 - dist_to_turn / kPreviewBeforeTurn, 0.0, 1.0);
-        factor = 1.0 - 0.5 * ratio;
-        is_point_in_turning_ = true;
-      }
+  double max_kappa = 0.0;
+  for (double ds = 0.0; ds <= kPreviewDist; ds += 1.0) {
+    const double sample_s = std::min(s_ref + ds, reference_end_s);
+    ReferencePathPoint refpath_pt{};
+    if (reference_path_ptr_->get_reference_point_by_lon(sample_s, refpath_pt)) {
+      max_kappa = std::max(max_kappa, std::fabs(refpath_pt.path_point.kappa()));
     }
-
-    if (back_turn_range.second > back_turn_range.first &&
-                back_turn_range.second < s_ref) {
-      const double dist_since_turn_end =
-          std::max(s_ref - back_turn_range.second, 0.0);
-      if (dist_since_turn_end <= kExitRecoverDist) {
-        const double ratio = std::clamp(
-            dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-        factor = std::min(factor, 0.5 + 0.5 * ratio);
-        is_point_in_turning_ = true;
-      }
-    }
-
-    factor = std::clamp(factor, 0.5, 1.0);
-    const double adjusted =
-        std::clamp(origin_cruise_v * factor, kMinCruiseV, std::max(kMinCruiseV, origin_cruise_v));
-    cruise_v = adjusted;
   }
 
+  const double min_radius = 1.0 / std::max(max_kappa, 1e-6);
+
+  if (min_radius < kCurveRadiusThreshold) {
+    is_point_in_turning_ = true;
+    const double v_limit = std::sqrt(kLateralAcc * min_radius);
+    cruise_v = std::clamp(v_limit, kMinCruiseV, cruise_v);
+  }
   double ref_len_based_on_speed = 0.0;
   double span_t = config_.delta_t * config_.num_step;
   if (ego_v < cruise_v) {
@@ -551,7 +533,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
       ref_len_based_on_speed += (span_t - t) * cruise_v;
     }
   }
-
+  JSON_DEBUG_VALUE("ref_len_based_on_speed", ref_len_based_on_speed)
   const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
   constexpr double kStraightCheckLength = 20.0;
   double ref_len_based_on_straight = 20.0;
@@ -560,66 +542,22 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
         std::min(cart_ref_info.s_vec.back(), frenet_coord->Length());
     const double s_end = std::min(s_ref + kStraightCheckLength, s_max);
     if (s_end > s_ref + 1e-3) {
-      ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
+      constexpr double kTurnInnerPreview = 12.0;
+      const double min_len_base_straight = 12.0;
 
-      if (static_analysis_storage) {
-        const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
-                                       CElemType::Ignore);
-        const auto front_turn_range =
-            static_analysis_storage->GetFrontSRange(turn_query, s_ref);
-
-        constexpr double kTurnInnerPreview = 12.0;
-        constexpr double kExitRecoverDist = 10.0;
-
-        const double min_len_base_straight = 12.0;
-
-        if (is_point_in_turning_) {  // 当前位于弯道内
-          double ref_len_in_turn = -1.0;
-
-          bool is_in_turn = s_ref > front_turn_range.first &&
-                            s_ref < front_turn_range.second;
-
-          if (is_in_turn) {
-            ref_len_in_turn = kTurnInnerPreview;
-          } else if (front_turn_range.second > front_turn_range.first &&
-                      s_ref < front_turn_range.first) {
-            auto t = std::clamp(
-                (kPreviewBeforeTurn - front_turn_range.first + s_ref) /
-                    kPreviewBeforeTurn, 0.0, 1.0);
-            ref_len_in_turn = kTurnInnerPreview + (1.0 - t) *
-                (kStraightCheckLength - kTurnInnerPreview);
-          } else {
-            const auto &back_turn_range =
-                static_analysis_storage->GetBackSRange(turn_query, s_ref);
-            auto t = std::clamp((s_ref - back_turn_range.second) /
-                                  kExitRecoverDist, 0.0, 1.0);
-            ref_len_in_turn = kTurnInnerPreview + t *
-                (kStraightCheckLength - kTurnInnerPreview);
-          }
-          ref_len_based_on_straight =
-              std::max(min_len_base_straight, ref_len_in_turn);
-        } else {
-          const auto back_turn_range =
-              static_analysis_storage->GetBackSRange(turn_query, s_ref);
-          if (back_turn_range.second > back_turn_range.first &&
-              back_turn_range.second <= s_ref) {
-            const double dist_since_turn_end =
-                std::max(s_ref - back_turn_range.second, 0.0);
-            if (dist_since_turn_end <= kExitRecoverDist) {
-              const double recover_ratio = std::clamp(
-                  dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-              const double ref_len_recover =
-                  kTurnInnerPreview +
-                  recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-              ref_len_based_on_straight =
-                  std::max(min_len_base_straight, ref_len_recover);
-            }
-          }
-        }
+      double ref_len_in_turn = kStraightCheckLength;
+      if (min_radius < kCurveRadiusThreshold) {
+        const double ratio = std::clamp(
+            (min_radius - 25.0) / (200.0 - 25.0), 0.0, 1.0);
+        ref_len_in_turn = kTurnInnerPreview +
+                          ratio * (kStraightCheckLength - kTurnInnerPreview);
       }
+
+      ref_len_based_on_straight =
+          std::max(min_len_base_straight, ref_len_in_turn);
     }
   }
-
+  JSON_DEBUG_VALUE("ref_len_based_on_straight", ref_len_based_on_straight)
   double ref_len_based_on_target_slot = std::numeric_limits<double>::max();
   if (parking_slot_manager->IsExistTargetSlot()) {
     const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
@@ -709,6 +647,38 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
   const double half_ego_width = vehicle_param.max_width * 0.5;
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
+
+  // 预计算目标库位 s，用于接近库位时缩小 ego buffer
+  constexpr double kNearTargetDist = 15.0;  // 距离目标15m内开始缩小buffer
+  double target_slot_s = std::numeric_limits<double>::max();
+  const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+  if (parking_slot_manager && parking_slot_manager->IsExistTargetSlot()) {
+    const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
+    double target_slot_l_unused;
+    if (!frenet_coord->XYToSL(target_slot_point.x(), target_slot_point.y(),
+                              &target_slot_s, &target_slot_l_unused)) {
+      target_slot_s = std::numeric_limits<double>::max();
+    }
+  }
+
+  // Lambda: 接近目标库位时缩小 buffer
+  auto shrink_buffer_near_target = [&](double current_s,
+                                        std::pair<double, double>& lbuffer,
+                                        std::pair<double, double>& rbuffer) {
+    const double dist_to_target = target_slot_s - current_s;
+    if (dist_to_target > 0 && dist_to_target < kNearTargetDist) {
+      const double shrink_ratio = dist_to_target / kNearTargetDist;
+      if (lbuffer.second > half_ego_width) {
+        lbuffer.second = half_ego_width +
+            (lbuffer.second - half_ego_width) * shrink_ratio;
+      }
+      if (rbuffer.second < -half_ego_width) {
+        rbuffer.second = -half_ego_width +
+            (rbuffer.second + half_ego_width) * shrink_ratio;
+      }
+    }
+  };
 
   std::vector<double> left_outline_s;
   std::vector<double> left_outline_l;
@@ -803,6 +773,8 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
       ego_lbuffer.second = std::max(ego_lbuffer.second, half_ego_width);
       ego_rbuffer.second = std::min(ego_rbuffer.second, -half_ego_width);
 
+      shrink_buffer_near_target(last_lat_path_s, ego_lbuffer, ego_rbuffer);
+
       if ((ego_lbuffer.first > left_outline_s.back()) &&
           (ego_rbuffer.first > right_outline_s.back())) {
         left_outline_s.emplace_back(ego_lbuffer.first);
@@ -837,6 +809,8 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
           }
         }
       }
+
+      shrink_buffer_near_target(point.s, ego_lbuffer, ego_rbuffer);
 
       if ((ego_lbuffer.first > left_outline_s.back()) &&
           (ego_rbuffer.first > right_outline_s.back())) {
@@ -1271,6 +1245,13 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
+
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-min_road_radius_, min_road_radius_};
     Bound hard_bound_road{-min_road_radius_, min_road_radius_};
@@ -1282,25 +1263,36 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     if (map_obstacle_decision.tp.s -
             ego_frenet_state_.planning_init_point().frenet_state.s <
         config_.care_lon_area_road_border) {
+      const double road_type_hard_extra =
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
+              ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, true);
+      const double effective_hard_buffer2road =
+          config_.hard_buffer2road + road_type_hard_extra;
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
                                  0.5 * vehicle_param.max_width -
-                                 config_.hard_buffer2road),
+                                 effective_hard_buffer2road),
                     hard_bound_road.upper);
       hard_bound_road.lower = std::fmax(
           std::min(-config_.hard_min_distance_road2center,
                    -ref_path_points_[i].distance_to_right_road_border +
                        0.5 * vehicle_param.max_width +
-                       config_.hard_buffer2road),
+                       effective_hard_buffer2road),
           hard_bound_road.lower);
+
+      const double road_type_soft_extra =
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
+              ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, false);
       soft_bound_road.upper =
           std::fmin(std::max(config_.soft_min_distance_road2center,
-                             hard_bound_road.upper - left_road_extra_buffer),
+                             hard_bound_road.upper - left_road_extra_buffer -
+                                 road_type_soft_extra),
                     soft_bound_road.upper);
       soft_bound_road.lower =
           std::fmax(std::min(-config_.soft_min_distance_road2center,
-                             hard_bound_road.lower + right_road_extra_buffer),
+                             hard_bound_road.lower + right_road_extra_buffer +
+                                 road_type_soft_extra),
                     soft_bound_road.lower);
     }
 
@@ -1525,6 +1517,21 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
     const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
+  // 收集闸机障碍物的 s 范围，用于给闸机及其前方范围内障碍物增加 buffer
+  const double gate_extra_lat_buffer = config_.gate_extra_lat_buffer;
+  const double gate_front_range = config_.gate_front_range;
+  std::vector<std::pair<double, double>> gate_s_ranges;
+  if (gate_extra_lat_buffer > 1e-6) {
+    for (const auto &obs : obs_vec) {
+      if (obs->obstacle()->ground_line_type() ==
+          iflyauto::GroundLineType::GROUND_LINE_TYPE_GATE_BASE) {
+        gate_s_ranges.emplace_back(obs->frenet_obstacle_boundary().s_start,
+                                   obs->frenet_obstacle_boundary().s_end);
+      }
+    }
+  }
+  const bool has_gate = !gate_s_ranges.empty();
+
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
       continue;
@@ -1536,13 +1543,24 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
       continue;
     }
 
+    double gate_extra_buffer = 0.0;
+    if (has_gate) {
+      const double obs_s = obstacle->frenet_s();
+      for (const auto &range : gate_s_ranges) {
+        if (obs_s >= range.first - gate_front_range && obs_s <= range.second) {
+          gate_extra_buffer = gate_extra_lat_buffer;
+          break;
+        }
+      }
+    }
+
     const auto &obstacle_id = obstacle->id();
     auto obstacle_decision = ObstacleDecision{obstacle_id, {}, {}};
 
     GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
-                                   obstacle_decision, true);
+                                   obstacle_decision, true, gate_extra_buffer);
     GenerateStaticObstacleDecision(obstacle, obstacle_sl_polygon,
-                                   obstacle_decision, false);
+                                   obstacle_decision, false, gate_extra_buffer);
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -1552,7 +1570,8 @@ void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
 void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     const Polygon2d &obstacle_sl_polygon,
-    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound,
+    double extra_lat_buffer) {
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1609,7 +1628,9 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
-    if (t > config_.care_static_object_t_threshold) {
+    const double s_from_ego = traj_point.s - ref_traj_points_.front().s;
+    if (t > config_.care_static_object_t_threshold &&
+        s_from_ego > kCareStaticObjectSThreshold) {
       continue;
     }
 
@@ -1650,7 +1671,13 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     double lat_buf_dis =
         hpp_general_lateral_decider_utils::CalDesireStaticLateralDistance(
             config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
-            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound, config_);
+            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound,
+            config_);
+    const double road_type_dis =
+        hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
+            ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, obstacle);
+    lat_buf_dis += road_type_dis;
+    lat_buf_dis += extra_lat_buffer;
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1854,7 +1881,12 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   double extra_decrease_buffer =
       CalculateExtraDecreaseBuffer(obstacle, is_nudge_left);
-
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -1918,6 +1950,17 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
         hpp_general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle, is_nudge_left,
             in_intersection, config_);
+    const auto &indexes = match_index_map_[i];
+    double road_type_dis = 0.0;
+    for (auto index : indexes) {
+      road_type_dis +=
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
+              ref_traj_points_[index].s, ref_s_length, static_storage, ego_v_for_road, obstacle);
+    }
+    if (indexes.size() > 0) {
+      road_type_dis = road_type_dis / ((double)indexes.size());
+    }
+    lat_buf_dis += road_type_dis;
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1935,7 +1978,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
       // TBD:add logs
     }
 
-    const auto &indexes = match_index_map_[i];
+    // const auto &indexes = match_index_map_[i];
     if (is_cut_out_side_obstacle || extra_decrease_buffer < 1e-5) {
       for (auto index : indexes) {
         GenerateObstaclePreliminaryDecision(
@@ -2042,7 +2085,7 @@ void HppGeneralLateralDecider::AddObstacleDecisionBound(
         !lbuffer_s_spline_.get_y().empty()) {
       Vec2d key_point = overlap_polygon.GetAllVertices()[0];
       for (const auto &vertice : overlap_polygon.GetAllVertices()) {
-        if (vertice.y() < key_point.y()) {
+        if (vertice.y() > key_point.y()) {
           key_point = vertice;
         }
       }
@@ -2058,7 +2101,7 @@ void HppGeneralLateralDecider::AddObstacleDecisionBound(
         !rbuffer_s_spline_.get_y().empty()) {
       Vec2d key_point = overlap_polygon.GetAllVertices()[0];
       for (const auto &vertice : overlap_polygon.GetAllVertices()) {
-        if (vertice.y() > key_point.y()) {
+        if (vertice.y() < key_point.y()) {
           key_point = vertice;
         }
       }
@@ -2493,32 +2536,46 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
            ref_traj_points_[idx].l > hard_bounds[idx].second;
   };
 
-  size_t break_start = n;
+  bool has_any_break = false;
   for (size_t i = 0; i < n; ++i) {
     if (is_break_hard_bound(i)) {
-      break_start = std::max(i, kBlendRadius);
+      has_any_break = true;
       break;
     }
   }
 
-  if (break_start == n) {
+  if (!has_any_break) {
     return;
   }
-
+  // 连续 break 0.5m 以上，则认为 break
+  // 持续 recover 3.0m 以上，则认为 recover
+  // 如果 recover 直到终点忽略 3m 条件
   constexpr double kRecoverConfirmDist = 3.0;
+  constexpr double kBreakConfirmDist = 0.5;
   std::vector<std::pair<size_t, size_t>> break_recover_ranges;
   break_recover_ranges.reserve(4);
 
   bool in_break = false;
   size_t cur_break_start = n;
+  size_t tentative_break_start = n;
   size_t recover_window_start = n;
   for (size_t i = 0; i < n; ++i) {
     const bool is_break = is_break_hard_bound(i);
     if (!in_break) {
       if (is_break) {
-        cur_break_start = std::max(i, kBlendRadius);
-        in_break = true;
-        recover_window_start = n;
+        if (tentative_break_start == n) {
+          tentative_break_start = i;
+        }
+        const double break_dist =
+            ref_traj_points_[i].s - ref_traj_points_[tentative_break_start].s;
+        if (break_dist >= kBreakConfirmDist) {
+          cur_break_start = std::max(tentative_break_start, kBlendRadius);
+          in_break = true;
+          recover_window_start = n;
+          tentative_break_start = n;
+        }
+      } else {
+        tentative_break_start = n;
       }
       continue;
     }
@@ -2529,7 +2586,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
       }
       const double recover_dist =
           ref_traj_points_[i].s - ref_traj_points_[recover_window_start].s;
-      if (recover_dist >= kRecoverConfirmDist) {
+      const bool is_last_point = (i == n - 1);
+      if (recover_dist >= kRecoverConfirmDist || is_last_point) {
         break_recover_ranges.emplace_back(cur_break_start, recover_window_start);
         in_break = false;
         cur_break_start = n;
@@ -2545,7 +2603,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   if (break_recover_ranges.empty()) {
-    break_recover_ranges.emplace_back(break_start, n - 1);
+    return;
   }
 
   TrajectoryPoints merged = ref_traj_points_;
@@ -3182,8 +3240,8 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
   hard_bounds_output = enu_hard_bounds_;
 
   // 临时 hack（flli9）：避免折返约束
-  static constexpr double kReverseTurnDegThreshold = 95.0 * M_PI / 180.0;
-  static constexpr double kMinSegmentLength = 0.1;
+  static constexpr double kReverseTurnDegThreshold = 90.0 * M_PI / 180.0;
+  static constexpr double kMinSegmentLength = 1e-4;
   const auto smooth_reverse_points = [&](const int current_index,
                                          const bool use_lower) {
     if (current_index <= 0 ||
@@ -3276,14 +3334,13 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
   }
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
-  enu_ref_path.clear();
-  enu_ref_theta.clear();
   enu_ref_path.resize(ref_traj_points_.size());
+  enu_ref_theta.resize(ref_traj_points_.size());
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     enu_ref_path[i].first = ref_traj_points_[i].x;
     enu_ref_path[i].second = ref_traj_points_[i].y;
-    enu_ref_theta.emplace_back(ref_traj_points_[i].heading_angle);
+    enu_ref_theta[i] = ref_traj_points_[i].heading_angle;
   }
 
   const auto &s_start = ref_traj_points_.front().s;

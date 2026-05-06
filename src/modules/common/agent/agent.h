@@ -85,6 +85,8 @@ struct AgentDefaultInfo {
   const static int32_t kRadsVirtualAgentId_Base = 200000;
   // HPP virtual agent id base (前进记忆泊车场景)
   const static int32_t kHppVirtualAgentId_Base = 300000;
+  // HPP cross obstacle virtual agent id base (横穿动态障碍物虚拟agent)
+  const static int32_t kHppCrossObstacleVirtualAgentId_Base = 400000;
 
   /***specific id which is defined by user***/
   const static int32_t kRadsStopDestinationVirtualAgentId =

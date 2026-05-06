@@ -32,6 +32,7 @@ HPPLateralMotionPlanner::HPPLateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseLateralMotionPlanner(config_builder, session) {
   name_ = "HPPLateralMotionPlanner";
+  InitInputAndOutput();
   Init();
 };
 

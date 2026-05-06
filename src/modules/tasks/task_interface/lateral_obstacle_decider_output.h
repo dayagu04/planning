@@ -49,6 +49,11 @@ struct FollowObstacleInfo {
   double follow_confidence = 0;
 };
 
+struct CrossObstacleInfo{
+  bool has_overlap = false;//自车和横穿障碍物是否有碰撞
+  double overlap_position_s = 0.0;//发生碰撞时，自车的s
+};
+
 struct TimeInterval {
   double start = 0.0;  // 决策的时间起点
   double end = 0.0;    // 决策的时间终点
@@ -88,6 +93,7 @@ struct LateralObstacleDeciderOutput {
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
   std::unordered_map<uint32_t, FollowObstacleInfo> follow_obstacle_info;
+  std::unordered_map<uint32_t, CrossObstacleInfo> Cross_obstacle_info;
   std::vector<int> obstacles_id_behind_ego;
   SearchResult search_result = SearchResult::NO_SEARCH;
   bool in_intersection = false;
