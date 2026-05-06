@@ -9,7 +9,7 @@ namespace planning {
 constexpr int CONTROL_TIME = 30;
 constexpr int COOLING_TIME = 40;
 constexpr int END_DEBOUNCE_TIME = 3;
-enum class EmergecyLevel { NONE, LOW, MEDIUM, HIGH };
+enum class EmergencyLevel { NONE, LOW, MEDIUM, HIGH };
 enum class CancelNudgeReason {
   NONE,
   NO_OVERLAP,
@@ -22,7 +22,7 @@ struct NudgeInfo {
   NudgeInfo() {}
   NudgeInfo(uint32 i_id, NudgeDirection i_nudge_direction,
             double i_min_l_to_ref, double i_max_l_to_ref,
-            EmergecyLevel i_emergency_level) {
+            EmergencyLevel i_emergency_level) {
     id = i_id;
     nudge_direction = i_nudge_direction;
     min_l_to_ref = i_min_l_to_ref;
@@ -34,14 +34,14 @@ struct NudgeInfo {
     nudge_direction = NudgeDirection::NONE;
     min_l_to_ref = 0;
     max_l_to_ref = 0;
-    emergency_level = EmergecyLevel::NONE;
+    emergency_level = EmergencyLevel::NONE;
   }
 
   uint32 id;
   NudgeDirection nudge_direction = NudgeDirection::NONE;
   double min_l_to_ref = 0;
   double max_l_to_ref = 0;
-  EmergecyLevel emergency_level;
+  EmergencyLevel emergency_level;
   CancelNudgeReason cancel_nudge_reason;
 };
 
@@ -53,7 +53,8 @@ class SideNudgeLateralOffsetDecider {
   SideNudgeLateralOffsetDecider(framework::Session* session,
                                 const EgoPlanningConfigBuilder* config_builder);
   ~SideNudgeLateralOffsetDecider() = default;
-  bool Process(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
+  bool Process(const LaneInfo& lane_info,
+               const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
   double lat_offset() const { return lateral_offset_; }
   const NudgeInfo& nudge_info() const { return nudge_info_; }
   void Reset();
@@ -69,7 +70,8 @@ class SideNudgeLateralOffsetDecider {
   bool IsStopNudgeDirectly();
   void UpdateCurrentState();
   void ResetIdleState();
-  bool Init(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
+  bool Init(const LaneInfo& lane_info,
+            const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
   double DesireLateralOffsetSideWay(double base_distance);
   void Log();
   framework::Session* session_;

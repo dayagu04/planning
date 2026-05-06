@@ -328,7 +328,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       left_need_nudge = true;
       left_nudge_info = NudgeInfo(left_side_obstacle->id(),
                                   NudgeDirection::LEFT, limit_overlap_min_y,
-                                  limit_overlap_max_y, EmergecyLevel::LOW);
+                                  limit_overlap_max_y, EmergencyLevel::LOW);
     }
   }
 
@@ -385,7 +385,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       right_need_nudge = true;
       right_nudge_info = NudgeInfo(right_side_obstacle->id(),
                                    NudgeDirection::RIGHT, limit_overlap_min_y,
-                                   limit_overlap_max_y, EmergecyLevel::LOW);
+                                   limit_overlap_max_y, EmergencyLevel::LOW);
     }
   }
 
@@ -467,10 +467,10 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
   offset_change_rate_ = kOffsetChangeRateLow;
   if (std::fabs(desire_lateral_offset) > std::fabs(lateral_offset_)) {
     switch (nudge_info_.emergency_level) {
-      case EmergecyLevel::HIGH:
+      case EmergencyLevel::HIGH:
         offset_change_rate_ = kOffsetChangeRateHigh;
         break;
-      case EmergecyLevel::MEDIUM:
+      case EmergencyLevel::MEDIUM:
         offset_change_rate_ = kOffsetChangeRateMedium;
         break;
       default:
@@ -557,32 +557,32 @@ void SideNudgeLateralOffsetDecider::UpdateNudgeInfo() {
     lat_approach_v = frenet_obstacle->frenet_velocity_l();
   }
 
-  EmergecyLevel raw_level = EmergecyLevel::LOW;
+  EmergencyLevel raw_level = EmergencyLevel::LOW;
   if (lat_distance <= kLatDistanceMedium ||
       lat_approach_v >= kLatApproachVMedium) {
-    raw_level = EmergecyLevel::MEDIUM;
+    raw_level = EmergencyLevel::MEDIUM;
   }
   if (lat_distance <= kLatDistanceHigh || lat_approach_v >= kLatApproachVHigh) {
-    raw_level = EmergecyLevel::HIGH;
+    raw_level = EmergencyLevel::HIGH;
   }
 
-  EmergecyLevel last_level = last_nudge_info_.emergency_level;
-  EmergecyLevel level = raw_level;
+  EmergencyLevel last_level = last_nudge_info_.emergency_level;
+  EmergencyLevel level = raw_level;
   if (raw_level < last_level) {
     // 降级需满足释放阈值，否则保持当前等级
-    if (last_level == EmergecyLevel::HIGH) {
+    if (last_level == EmergencyLevel::HIGH) {
       if (lat_distance > kLatDistanceReleaseHigh &&
           lat_approach_v < kLatApproachVReleaseHigh) {
-        level = EmergecyLevel::MEDIUM;
+        level = EmergencyLevel::MEDIUM;
       } else {
-        level = EmergecyLevel::HIGH;
+        level = EmergencyLevel::HIGH;
       }
-    } else if (last_level == EmergecyLevel::MEDIUM) {
+    } else if (last_level == EmergencyLevel::MEDIUM) {
       if (lat_distance > kLatDistanceReleaseMedium &&
           lat_approach_v < kLatApproachVReleaseMedium) {
-        level = EmergecyLevel::LOW;
+        level = EmergencyLevel::LOW;
       } else {
-        level = EmergecyLevel::MEDIUM;
+        level = EmergencyLevel::MEDIUM;
       }
     }
   }
