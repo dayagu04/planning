@@ -752,8 +752,6 @@ void AgentLongitudinalDecider::UpdateAndGetAgentState(
       const double agent_relative_theta = planning_math::NormalizeAngle(
           agent.theta() - agent_matched_path_point.theta());
       current_state.l_dot = agent.speed() * std::sin(agent_relative_theta);
-      current_state.s_dot = agent.speed() * std::cos(agent_relative_theta);
-      current_state.s_ddot = 0.0;
     }
   }
 
