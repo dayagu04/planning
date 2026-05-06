@@ -729,19 +729,14 @@ void AgentLongitudinalDecider::UpdateAndGetAgentState(
   if (ego_lane_coord->XYToSL(current_state.x, current_state.y, &current_s,
                              &current_l)) {
     current_state.l = current_l;
-    current_state.s = current_s;
     auto it = agent_history_map_.find(agent_id);
     if (it != agent_history_map_.end() && !it->second.empty()) {
       const auto& prev_state = it->second.back();
       double dt = current_state.timestamp - prev_state.timestamp;
       if (dt > 1e-3) {
         current_state.l_dot = (current_state.l - prev_state.l) / dt;
-        current_state.s_dot = (current_state.s - prev_state.s) / dt;
-        current_state.s_ddot = (current_state.s_dot - prev_state.s_dot) / dt;
       } else {
         current_state.l_dot = prev_state.l_dot;
-        current_state.s_dot = prev_state.s_dot;
-        current_state.s_ddot = prev_state.s_ddot;
       }
     } else {
       double current_s = 0.0, current_l = 0.0;

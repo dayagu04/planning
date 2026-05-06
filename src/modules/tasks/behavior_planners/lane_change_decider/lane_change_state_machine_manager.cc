@@ -836,10 +836,20 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if(!risk_side_agents_nodes_.empty()) {
-    const auto& ref_path =
-        session_->environmental_model()
-            .get_reference_path_manager()
-            ->get_reference_path_by_lane(lc_req_mgr_->target_lane_virtual_id());
+    const auto& ref_path_mgr =
+        session_->environmental_model().get_reference_path_manager();
+    if (ref_path_mgr == nullptr) {
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_invalid_reason = "ref_path_mgr == nullptr";
+      return lc_state_info;
+    }
+    const auto& ref_path = ref_path_mgr->get_reference_path_by_lane(
+        lc_req_mgr_->target_lane_virtual_id());
+    if(ref_path == nullptr){
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_invalid_reason = "ref_path == nullptr";
+      return lc_state_info;
+    }
     const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
@@ -1106,10 +1116,20 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     }
   }
   if(!risk_side_agents_nodes_.empty()) {
-    const auto& ref_path =
-        session_->environmental_model()
-            .get_reference_path_manager()
-            ->get_reference_path_by_lane(lc_req_mgr_->target_lane_virtual_id());
+    const auto& ref_path_mgr =
+        session_->environmental_model().get_reference_path_manager();
+    if (ref_path_mgr == nullptr) {
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_should_back = "ref_path_mgr == nullptr";
+      return lc_state_info;
+    }
+    const auto& ref_path = ref_path_mgr->get_reference_path_by_lane(
+        lc_req_mgr_->target_lane_virtual_id());
+    if(ref_path == nullptr){
+      lc_state_info.gap_insertable = false;
+      lc_state_info.lc_should_back = "ref_path == nullptr";
+      return lc_state_info;
+    }
     const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
     for (const auto& side_obs : risk_side_agents_nodes_) {
       if (side_obs == nullptr) {
@@ -2436,10 +2456,16 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
   if (target_lane == nullptr) {
     return;
   }
+  const auto& ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
+  if (ref_path_mgr == nullptr) {
+    return;
+  }
   const auto& ref_path =
-      session_->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(target_lane_virtual_id);
+      ref_path_mgr->get_reference_path_by_lane(target_lane_virtual_id);
+  if(ref_path == nullptr){
+      return;
+  }
   const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
   const auto& ego_sl_state = ref_path->get_frenet_ego_state();
   const auto& dynamic_world =
@@ -2619,10 +2645,16 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
   if (target_lane == nullptr) {
     return;
   }
+  const auto& ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
+  if (ref_path_mgr == nullptr) {
+    return;
+  }
   const auto& ref_path =
-      session_->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(target_lane_virtual_id);
+      ref_path_mgr->get_reference_path_by_lane(target_lane_virtual_id);
+  if(ref_path == nullptr){
+      return;
+  }
   const auto& ego_sl_bd = ref_path->get_ego_frenet_boundary();
   const auto& ego_sl_state = ref_path->get_frenet_ego_state();
   const auto& dynamic_world =
