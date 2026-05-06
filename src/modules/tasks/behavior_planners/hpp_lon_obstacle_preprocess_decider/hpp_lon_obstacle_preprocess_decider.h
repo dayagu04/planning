@@ -27,6 +27,7 @@ class HppLonObstaclePreprocessDecider : public Task {
 
  private:
   void ProcessGroundLines();
+  void ProcessCrossObstacles();
   void ProcessDynamicObstacles();
 
   void CreateVirtualAgentFromGroundLine(

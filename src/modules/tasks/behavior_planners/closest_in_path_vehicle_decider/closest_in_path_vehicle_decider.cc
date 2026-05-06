@@ -1,7 +1,10 @@
 #include "closest_in_path_vehicle_decider.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
+#include <tuple>
+#include <vector>
 
 #include "debug_info_log.h"
 #include "environmental_model_manager.h"
@@ -18,6 +21,8 @@ constexpr double dangerous_level_ttc_thr_1 = 1.0;
 constexpr double dangerous_level_ttc_thr_2 = 0.8;
 constexpr double dangerous_level_ttc_thr_3 = 0.5;
 constexpr double kLargeAgentLengthM = 8.0;
+constexpr double kHppMaxFirstValidTimeThr = 1.5;
+constexpr double kHppTimeTolerance = 0.01;
 }  // namespace
 
 ClosestInPathVehicleDecider::ClosestInPathVehicleDecider(
@@ -58,6 +63,11 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
   if (nullptr == ptr_st_graph_helper) {
     return false;
   }
+
+  if (session_->is_hpp_scene()) {
+    return CipvDecisionForHpp();
+  }
+
   const auto &st_boundaries = ptr_st_graph_helper->GetAllStBoundaries();
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
@@ -139,6 +149,139 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
       }
     }
   }
+  return true;
+}
+
+bool ClosestInPathVehicleDecider::CipvDecisionForHpp() {
+  const auto ptr_st_graph_helper =
+      session_->planning_context().st_graph_helper();
+  const auto &st_boundaries = ptr_st_graph_helper->GetAllStBoundaries();
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto &mutable_cipv_decider_output =
+      session_->mutable_planning_context()->mutable_cipv_decider_output();
+
+  if (st_boundaries.empty()) {
+    int32_t id = kInvalidId;
+    double releative_s = 0.0;
+    double cipv_v_frenet = 0.0;
+    double cipv_ttc = kDefaultTTC;
+    int32_t dangerous_level = -1;
+    bool is_virtual = false;
+    bool is_turnstile_virtual_obs = false;
+    bool is_large = false;
+    Reset(&id, &releative_s, &cipv_v_frenet, &cipv_ttc, &dangerous_level,
+          &is_virtual, &is_turnstile_virtual_obs, &is_large);
+    mutable_cipv_decider_output.set_cipv_id(id);
+    mutable_cipv_decider_output.set_relative_s(releative_s);
+    mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+    mutable_cipv_decider_output.set_v_fusion_frenet(0.0);
+    mutable_cipv_decider_output.set_acceleration(0.0);
+    mutable_cipv_decider_output.set_acceleration_fusion(0.0);
+    mutable_cipv_decider_output.set_ttc(cipv_ttc);
+    mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
+    mutable_cipv_decider_output.set_is_virtual(is_virtual);
+    mutable_cipv_decider_output.set_is_turnstile_virtual_obs(
+        is_turnstile_virtual_obs);
+    mutable_cipv_decider_output.set_is_large(is_large);
+    return true;
+  }
+
+  // <start_time, lower_s, st_boundary_ptr>
+  std::vector<std::tuple<double, double, const speed::STBoundary *>> candidates;
+
+  for (const auto &item : st_boundaries) {
+    const auto *ptr_st_boundary = item.second.get();
+    if (nullptr == ptr_st_boundary) {
+      continue;
+    }
+
+    speed::STPoint lower_point;
+    speed::STPoint upper_point;
+    bool success =
+        ptr_st_boundary->GetBoundaryBounds(0.0, &lower_point, &upper_point);
+
+    if (!success) {
+      if (!ptr_st_boundary->GetBoundaryBoundsAtFirstValidTime(&lower_point,
+                                                              &upper_point)) {
+        continue;
+      }
+      if (lower_point.t() > kHppMaxFirstValidTimeThr) {
+        continue;
+      }
+    }
+
+    double lower_s = lower_point.s();
+    if (lower_s < 0.0) {
+      continue;
+    }
+
+    candidates.emplace_back(lower_point.t(), lower_s, ptr_st_boundary);
+
+    if (agent_manager != nullptr) {
+      const auto *agent_ptr = agent_manager->GetAgent(lower_point.agent_id());
+      if (agent_ptr != nullptr) {
+        agents_distance_id_map_[lower_s] =
+            std::make_pair(agent_ptr->type() == agent::AgentType::VIRTUAL,
+                           lower_point.agent_id());
+      }
+    }
+  }
+
+  if (candidates.empty()) {
+    mutable_cipv_decider_output.Reset();
+    return true;
+  }
+
+  std::sort(candidates.begin(), candidates.end(),
+            [](const auto &a, const auto &b) {
+              if (std::abs(std::get<0>(a) - std::get<0>(b)) > kHppTimeTolerance) {
+                return std::get<0>(a) < std::get<0>(b);
+              }
+              return std::get<1>(a) < std::get<1>(b);
+            });
+
+  const auto *selected_boundary = std::get<2>(candidates[0]);
+  speed::STPoint lower_point;
+  speed::STPoint upper_point;
+  if (!selected_boundary->GetBoundaryBounds(0.0, &lower_point, &upper_point)) {
+    selected_boundary->GetBoundaryBoundsAtFirstValidTime(&lower_point,
+                                                         &upper_point);
+  }
+
+  int32_t id = lower_point.agent_id();
+  ILOG_INFO << "HPP CIPV selected: agent_id=" << id
+            << ", start_time=" << std::get<0>(candidates[0])
+            << ", lower_s=" << std::get<1>(candidates[0])
+            << ", candidates=" << candidates.size();
+
+  double releative_s = 0.0;
+  double cipv_v_frenet = 0.0;
+  double cipv_v_fusion_frenet = 0.0;
+  double cipv_acc = 0.0;
+  double cipv_acc_fusion = 0.0;
+  double cipv_ttc = kDefaultTTC;
+  int32_t dangerous_level = -1;
+  bool is_virtual = false;
+  bool is_turnstile_virtual_obs = false;
+  bool is_large = false;
+
+  MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_v_fusion_frenet,
+               &cipv_acc, &cipv_acc_fusion, &cipv_ttc, &dangerous_level,
+               &is_virtual, &is_turnstile_virtual_obs, &is_large);
+
+  mutable_cipv_decider_output.set_cipv_id(id);
+  mutable_cipv_decider_output.set_relative_s(releative_s);
+  mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+  mutable_cipv_decider_output.set_v_fusion_frenet(cipv_v_fusion_frenet);
+  mutable_cipv_decider_output.set_acceleration(cipv_acc);
+  mutable_cipv_decider_output.set_acceleration_fusion(cipv_acc_fusion);
+  mutable_cipv_decider_output.set_ttc(cipv_ttc);
+  mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
+  mutable_cipv_decider_output.set_is_virtual(is_virtual);
+  mutable_cipv_decider_output.set_is_turnstile_virtual_obs(
+      is_turnstile_virtual_obs);
+  mutable_cipv_decider_output.set_is_large(is_large);
   return true;
 }
 

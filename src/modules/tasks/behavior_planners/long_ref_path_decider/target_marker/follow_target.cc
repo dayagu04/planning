@@ -233,8 +233,7 @@ void FollowTarget::GenerateHppFollowTarget() {
     double s_target_value = std::min(upper_bound_s, target_s);
 
     if (cipv_info.cipv_id() ==
-            stop_destination_decider_output.stop_destination_virtual_agent_id() ||
-        cipv_info.is_turnstile_virtual_obs()) {
+            stop_destination_decider_output.stop_destination_virtual_agent_id()) {
       target_s_disatnce = vel * follow_time_gap;
       s_target_value =
           std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);

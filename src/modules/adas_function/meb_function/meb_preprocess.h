@@ -167,8 +167,8 @@ class MebPreprocess {
   ~MebPreprocess() = default;
 
   void UpdateMebInput(void);
-  MebFunctionInput GetMebInput() { return meb_input_; };
-  MebParameters GetMebParam() { return meb_param_; };
+  const MebFunctionInput& GetMebInput() const { return meb_input_; };
+  const MebParameters& GetMebParam() const { return meb_param_; };
 
   RearKeyObjStr GetRearKeyObjInfo() { return rear_key_obj_info_; };
 

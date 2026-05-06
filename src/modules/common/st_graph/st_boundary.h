@@ -44,6 +44,9 @@ class STBoundary : public planning_math::Polygon2d {
   bool GetBoundaryBounds(const double curr_time, STPoint* const lower_point,
                          STPoint* const upper_point) const;
 
+  bool GetBoundaryBoundsAtFirstValidTime(STPoint* const lower_point,
+                                         STPoint* const upper_point) const;
+
   enum class DecisionType {
     UNKNOWN,
     STOP,

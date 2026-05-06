@@ -43,6 +43,7 @@
   "car_body_lat_safe_buffer": 0.1,
   "lon_safe_buffer": 0.1,
   "mirror_buffer": 0.1,
+  "edt_resolution": 0.05,
   "is_select_split_nearing_ramp": false,
   "bound_return_speed": 0.5,
   "physical_road_bound_buffer": 0.5,

@@ -17,7 +17,7 @@ class FrenetObstacle {
   FrenetObstacle(const Obstacle* obstacle_ptr,
                  const ReferencePath& reference_path,
                  const std::shared_ptr<EgoStateManager> ego_state_info,
-                 bool is_location_valid,bool is_hpp_scene = false);
+                 bool is_location_valid, bool is_hpp_scene = false);
 
   int id() const { return id_; }
   iflyauto::ObjectType type() const { return obstacle_ptr_->type(); }
@@ -59,6 +59,7 @@ class FrenetObstacle {
   }
   const bool is_static() const { return is_static_; }
   SourceType source_type() const { return source_type_; }
+  
   const FrenetObstacleBoundary& frenet_obstacle_boundary() const {
     return frenet_obstacle_boundary_;
   }
@@ -69,6 +70,9 @@ class FrenetObstacle {
 
   const SLPolygonSeq& frenet_polygon_sequence() const {
     return frenet_polygon_sequence_;
+  }
+  const std::vector<planning_math::Polygon2d>& frenet_dynamic_obs_polygones() const {
+    return frenet_dynamic_obs_polygones_;
   }
 
   const std::vector<planning_math::Vec2d>& corner_points() const {
@@ -98,6 +102,8 @@ class FrenetObstacle {
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
+
+  void compute_dynamic_obs_frenet_polygon_sequence(const ReferencePath& reference_path);
 
   static void generate_precise_frenet_polygon(
       planning_math::Polygon2d& polygon,
@@ -130,9 +136,10 @@ class FrenetObstacle {
 
   const Obstacle* obstacle_ptr_ = nullptr;
 
-  FrenetObstacleBoundary frenet_obstacle_boundary_;
+  FrenetObstacleBoundary frenet_obstacle_boundary_; //frenet 坐标系下的 AABB box
   FrenetBoundaryCorners frenet_obstacle_corners_;
   SLPolygonSeq frenet_polygon_sequence_;
+  std::vector<planning_math::Polygon2d> frenet_dynamic_obs_polygones_;
 
   bool b_frenet_valid_ = false;
   bool b_frenet_polygon_sequence_invalid_ = false;

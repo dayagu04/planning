@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "ego_planning_config.h"
+#include "unified_static_cluster.h"
 #include "environmental_model.h"
 #include "euler_distance_transform.h"
 #include "frenet_obstacle.h"
@@ -15,6 +16,10 @@
 using namespace planning::planning_math;
 namespace planning {
 
+struct PointsClusterInfo {
+  planning_math::Vec2d center;
+  int id;
+};
 class ObstacleManager {
  public:
   ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
@@ -138,6 +143,26 @@ class ObstacleManager {
 
   void UpdateGroundLineObstacle();
 
+  void UpdateUnifiedStaticObstacle();
+
+  void RunCluster(const std::vector<planning_math::Vec2d> &points,
+                  std::vector<ClusterObstacle> &cluster_results);
+
+  void ClusterIdAssignment(const std::vector<ClusterObstacle> &cluster_results,
+                           std::vector<int> &new_to_id,
+                           std::vector<PointsClusterInfo> &prev_clusters,
+                           int &next_id, int id_offset);
+
+  void UpdateUnifiedGroundLineObstacle(
+      const iflyauto::FusionGroundLineInfo &ground_line_perception,
+      KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+      const Point2D &ego_point, std::vector<planning_math::Vec2d> &points);
+
+  void UpdateUnifiedOccObstacle(
+      const iflyauto::FusionOccupancyObjectsInfo& fusion_occupancy_objects_info,
+      KDPathPtr frenet_coord, ConstReferencePathPtr ref_path_ptr,
+      const Point2D &ego_point, std::vector<planning_math::Vec2d> &points);
+
   void UpdateParkingSpaceObstacle();
 
   void UpdateMapStaticObstacle();
@@ -218,6 +243,16 @@ class ObstacleManager {
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
   std::shared_ptr<planning::GroundLineManager> ground_line_manager_ptr_ =
       nullptr;
+  std::unique_ptr<UnifiedStaticCluster> unified_cluster_;
+
+  std::vector<PointsClusterInfo> prev_unified_clusters_;
+  int unified_cluster_next_id_ = 100000;
+
+  std::vector<PointsClusterInfo> prev_gt_clusters_;
+  int gt_cluster_next_id_ = 100000;
+
+  std::vector<PointsClusterInfo> prev_occ_clusters_;
+  int occ_cluster_next_id_ = 100000;
 };
 
 using ObstacleManagerPtr = std::shared_ptr<ObstacleManager>;

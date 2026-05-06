@@ -599,11 +599,6 @@ void BoundMaker::GenerateUpperBoundInfo() {
   if (agent_manager == nullptr) {
     return;
   }
-  const double virtual_front_s = plan_time_ * kPerSecondPlanLenth;
-  const auto current_lane = session_->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->get_current_lane();
-  const auto current_frenet_coord = current_lane->get_lane_frenet_coord();
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -628,8 +623,10 @@ void BoundMaker::GenerateUpperBoundInfo() {
   }
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_lat_follow ||
-      lon_ref_path_decider_output.is_lon_cutin) {
+  if ((lon_ref_path_decider_output.is_lat_follow ||
+       lon_ref_path_decider_output.is_lon_cutin) &&
+      lon_ref_path_decider_output.comfort_target_upper_bound_infos.size() ==
+          plan_points_num_) {
     for (size_t i = 0; i < plan_points_num_; i++) {
       const auto& comfort_upper_bound_info =
           lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];

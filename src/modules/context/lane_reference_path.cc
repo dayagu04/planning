@@ -286,9 +286,13 @@ void LaneReferencePath::update_obstacles() {
   }
   if (session_->is_hpp_scene()) {
     frenet_obstacles_.clear();
+    frenet_obstacles_map_.clear();
     speed_bump_frenet_obstacles_.clear();
+    speed_bump_frenet_obstacles_map_.clear();
     turnstile_frenet_obstacles_.clear();
+    turnstile_frenet_obstacles_map_.clear();
     semantic_sign_frenet_obstacles_.clear();
+    semantic_sign_frenet_obstacles_map_.clear();
     generate_frenet_obstacles(obstacle_manager->get_obstacles(),
                               frenet_obstacles_, frenet_obstacles_map_);
     generate_frenet_obstacles(obstacle_manager->get_groundline_obstacles(),

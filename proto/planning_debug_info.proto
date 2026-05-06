@@ -41,8 +41,8 @@ import "potential_dangerous_agent_decider_info.proto";
 import "reference_path_smooth.proto";
 import "joint_decision_planner.proto";
 import "static_analysis_result.proto";
-import "hpp_speed_limit_decider_debug.proto";
 import "hpp_lateral_obstacle_decider_result.proto";
+import "hpp_speed_limit_decider_debug.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -180,6 +180,13 @@ message TurnstileLongitudinalDebug {
   optional bool gate_snapshot_is_closed = 29;
   optional bool gate_snapshot_is_opened = 30;
   optional bool gate_snapshot_is_passable = 31;
+
+  optional bool has_gate_base_fallback = 32;
+  optional double gate_base_stop_s = 33;
+  optional bool enable_gate_base_fallback = 34;
+  optional double ego_s_end = 35;
+  optional int32 gate_base_count = 36;
+  optional double gate_base_min_lateral_dist = 37;
 }
 
 message PlanningDebugInfo {

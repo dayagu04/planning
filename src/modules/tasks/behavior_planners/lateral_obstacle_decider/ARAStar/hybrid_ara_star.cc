@@ -73,6 +73,7 @@ HybridARAStar::HybridARAStar(framework::Session* session) {
   longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend;
   lateral_extend_ = hybrid_ara_star_conf_.lateral_extend;
   hpp_min_search_range_ = hybrid_ara_star_conf_.hpp_min_search_range;
+  enable_debug_info_ = hybrid_ara_star_conf_.enable_ara_debug_info;
 
   ILOG_DEBUG << "HybridARAStar::HybridARAStar() ===========";
   ILOG_DEBUG << "x_grid_resolution_: " << x_grid_resolution_;
@@ -162,14 +163,16 @@ bool HybridARAStar::GetResult(ara_star::HybridARAStarResult& result) const {
   hybrid_ara_path_cost->Clear();
 
   while (current_node->GetPreNode() != nullptr) {
-    hybrid_ara_path_cost->add_x(current_node->GetX());
-    hybrid_ara_path_cost->add_y(current_node->GetY());
-    hybrid_ara_path_cost->add_phi(current_node->GetPhi());
-    hybrid_ara_path_cost->add_agent_cost(current_node->GetAgentCost());
-    hybrid_ara_path_cost->add_boundary_cost(current_node->GetBoundaryCost());
-    hybrid_ara_path_cost->add_center_cost(current_node->GetCenterCost());
-    hybrid_ara_path_cost->add_motion_cost(current_node->GetMotionCost());
-    hybrid_ara_path_cost->add_stitching_cost(current_node->GetStitchingCost());
+    if(enable_debug_info_) {
+      hybrid_ara_path_cost->add_x(current_node->GetX());
+      hybrid_ara_path_cost->add_y(current_node->GetY());
+      hybrid_ara_path_cost->add_phi(current_node->GetPhi());
+      hybrid_ara_path_cost->add_agent_cost(current_node->GetAgentCost());
+      hybrid_ara_path_cost->add_boundary_cost(current_node->GetBoundaryCost());
+      hybrid_ara_path_cost->add_center_cost(current_node->GetCenterCost());
+      hybrid_ara_path_cost->add_motion_cost(current_node->GetMotionCost());
+      hybrid_ara_path_cost->add_stitching_cost(current_node->GetStitchingCost());
+    }
 
     /*
     // here skip the final node which we don't control due to the stop
@@ -587,8 +590,9 @@ bool HybridARAStar::ImprovePath() {
       break;
     }
 
-    LogNodeDebugInfo(current_node);
-
+    if(enable_debug_info_) {
+      LogNodeDebugInfo(current_node);
+    }
   }  // end while loop
 
   if (!search_find_result) {
@@ -1459,6 +1463,9 @@ bool HybridARAStar::Init(const SearchResult search_result) {
            ;
 
   // prepare for edt
+  if(session_->is_hpp_scene()){
+    session_->environmental_model().get_edt_manager()->update();
+  }
   edt_ = session_->environmental_model()
              .get_edt_manager()
              ->GetEulerDistanceTransform();
@@ -1509,7 +1516,9 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   auto time6 = (uint64_t)IflyTime::Now_ms();
   ILOG_DEBUG << "MergeCloseAgent time: " << time6 - time5 << " ms";
 
-  LogAgent();
+  if(enable_debug_info_) {
+    LogAgent();
+  }
 
   FindClosestUncoveredInterval();
   auto time7 = (uint64_t)IflyTime::Now_ms();
@@ -1622,7 +1631,6 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   ILOG_DEBUG << "total search time: " << diff << " ms";
   return true;
 }
-
 
 bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
     const std::vector<TrajectoryPoint>& last_traj_points) {

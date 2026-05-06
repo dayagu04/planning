@@ -37,38 +37,32 @@ static constexpr int kGroundLineIdOffset = 5000000;
 static constexpr int kSpeedBumpIdOffset = 9000000;
 static constexpr int kIntersectionIdOffset = 10000000;
 static constexpr int kUssObjectIdOffset = 11000000;
+static constexpr int kUnifiedStaticIdOffset = 12000000;  // Unified OCC+GroundLine cluster
 }  // namespace
 class Obstacle {
  public:
-  // explicit Obstacle(int id,
-  //                   const iflyauto::PredictionObject &prediction_object,
-  //                   bool is_static, double start_relative_timestamp);
-
   explicit Obstacle(int id, const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
   explicit Obstacle(const Obstacle *obstacle);
 
-  // explicit Obstacle(int id,
-  //                   const iflyauto::FusionObject &perception_obstacle,
-  //                   bool is_static);
-
-  // explicit Obstacle(int id, double x, double y, double heading_angle,
-  //                   double length, double width, double height,
-  //                   iflyauto::ObjectType type);
-
-  // for ground line
-  explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
+  // for ground line and occ
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
-  explicit Obstacle(int id,
-                    const iflyauto::FusionGroundLine &groundline_cluster);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
                     iflyauto::ObjectType type);
+  explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
+                    iflyauto::ObjectType type, iflyauto::GroundLineType ground_line_type);
+
   const std::vector<planning_math::Vec2d> &perception_points() const {
     return perception_points_;
   }
 
   int id() const { return id_; }
+  bool has_object_detection_id() const { return object_detection_id_ != -1; }
+  int object_detection_id() const { return object_detection_id_; }
+  void set_object_detection_id(int objecyt_detection_id) {
+    object_detection_id_ = objecyt_detection_id;
+  }
   double timestamp() const { return timestamp_; }
   void set_x_center(const double x_center) {
     x_center_ = x_center;
@@ -99,6 +93,9 @@ class Obstacle {
   bool is_static() const { return is_static_; }
   iflyauto::ObjectType type() const { return type_; }
   SourceType source_type() const { return source_type_; }
+  iflyauto::GroundLineType ground_line_type() const {
+    return ground_line_type_;
+  }
   bool is_vaild() const { return valid_; }
   bool is_reverse() const { return is_reverse_; }
   void set_is_reverse(bool is_reverse) { is_reverse_ = is_reverse; }
@@ -157,9 +154,16 @@ class Obstacle {
   void extract_point_at_specified_resolution(
       std::vector<planning_math::Vec2d> &points) const;
 
+  // Common initialization from point set: sets type_/source_type_ based on id_,
+  // computes convex hull, bounding box, ego-frame polygon, and sets center/size.
+  // type_hint: if UNKNOWN, infer type from id; otherwise use this type.
+  // small_area_valid_types: types exempt from the area < 0.01 check.
+  void InitFromPoints();
+
  private:
   int id_{};
   int perception_id_ = 0;
+  int object_detection_id_ = -1; // 针对 HPP, 记录 OCC 障碍物绑定的 OD 障碍物 id
   double timestamp_ = 0;  // 单位：s
   bool is_static_ = false;
   double x_center_;
@@ -197,13 +201,15 @@ class Obstacle {
   bool is_normal_ = true;
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;
-  planning_math::Box2d perception_bounding_box_;
-  planning_math::Polygon2d perception_polygon_;
-  planning_math::Polygon2d obstacle_ego_polygon_;
-  planning_math::Polygon2d car_ego_polygon_;
-  std::vector<planning_math::Vec2d> perception_points_;
+  planning_math::Box2d perception_bounding_box_;  //全局坐标系下的 OOBB bounding box
+  planning_math::Polygon2d perception_polygon_;   //全局坐标系下的 polygon
+  planning_math::Polygon2d obstacle_ego_polygon_; //障碍物坐标系下的 polygon
+  planning_math::Polygon2d car_ego_polygon_;      //自车坐标系下的 polygon
+  std::vector<planning_math::Vec2d> perception_points_; //全局坐标系下的角点
   unsigned int fusion_source_;
   SourceType source_type_;
+  iflyauto::GroundLineType ground_line_type_ =
+      iflyauto::GroundLineType::GROUND_LINE_TYPE_UNKNOWN;
 
   /************* for hpp start *************/
   int floor_id_ = 0;                                        // 楼层 id
