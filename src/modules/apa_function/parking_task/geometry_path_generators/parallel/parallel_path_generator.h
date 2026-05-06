@@ -341,7 +341,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const std::vector<pnc::geometry_lib::PathSegment>& path_vec,
       const TlaneCorner& tlane_corner) const;
 
-  void DeleteFirstSegPath();
+  const bool DeleteFirstSegPath();
 
   const bool CheckPreviousPathSegVecCollided(
       const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
