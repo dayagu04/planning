@@ -112,6 +112,9 @@ bool GeneralLateralDecider::InitInfo() {
   ref_curve_info_.Clear();
   current_desire_final_nudge_l_map_.clear();
   min_road_radius_ = 20.0;
+  left_road_extra_buffer_ = 0.0;
+  right_road_extra_buffer_ = 0.0;
+  road_segments_frenet_.clear();
   return true;
 }
 
@@ -1281,45 +1284,24 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
 }
 
 void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
-  GenerateRoadHardSoftBoundary();
+  PreProcessRoadInformation();
+  GenerateRoadBoundary(BoundHierarchy::HARD_BOUND);
+  GenerateRoadBoundary(BoundHierarchy::SECOND_SOFT_BOUND);
   GenerateLaneSoftBoundary();
-  PostProcessRoadSoftBoundary();
+  // PostProcessRoadSoftBoundary();
   // 道路边缘双层软约束是一样的(暂定)
   first_soft_bounds_ = second_soft_bounds_;
 }
 
-void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
-  auto& general_lateral_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
-  const auto& coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  
+void GeneralLateralDecider::PreProcessRoadInformation() {
+  // buffer
+  GetDesireRoadExtraBuffer(&left_road_extra_buffer_, &right_road_extra_buffer_);
+  JSON_DEBUG_VALUE("left_road_extra_buffer", left_road_extra_buffer_);
+  JSON_DEBUG_VALUE("right_road_extra_buffer", right_road_extra_buffer_);
 
-  double left_road_extra_buffer, right_road_extra_buffer;
-  GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
-  JSON_DEBUG_VALUE("left_road_extra_buffer", left_road_extra_buffer);
-  JSON_DEBUG_VALUE("right_road_extra_buffer", right_road_extra_buffer);
-
-  const double kDefaultDistanceToRoad = 10.0;
-  double init_dist_to_bound =
-      std::min(kDefaultDistanceToRoad, min_road_radius_);
-  hard_bounds_.resize(ref_traj_points_.size());
-  second_soft_bounds_.resize(ref_traj_points_.size());
-  first_soft_bounds_.resize(ref_traj_points_.size());
-  double max_care_lon_area_road_border = 0;
   // buffer衰减率
-  double uncertain_decrease_slope = 0.2;
-  double uncertain_decrease_buffer = 0.0;
   const double change_rate = 0.5;
-  double compensation_buffer = 0.0;
-
-  const std::vector<double> curv_bp{50, 150, 400, 600};
   const std::vector<double> extra_uncertain_decrease_slopes{2.5, 1, 0.5, 0.0};
-
   double extra_uncertain_decrease_slope = 0.0;
   if (ref_curve_info_.curve_type ==
       ReferencePathCurveInfo::CurveType::BIG_CURVE) {
@@ -1331,19 +1313,43 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
       clip(extra_uncertain_decrease_slope,
            last_uncertain_decrease_slope_ + change_rate,
            last_uncertain_decrease_slope_ - change_rate);
-  uncertain_decrease_slope += last_uncertain_decrease_slope_;
 
-
-  const double rear_lon_buf_dis = 0.5;
-  const double front_lon_buf_dis = 1.0;
   // 预处理：获取路沿边界并转换到frenet坐标系（只做一次）
-  std::vector<std::pair<LineSegment2d, bool>> road_segments_frenet;
-  ConvertRoadBoundariesToFrenet(road_segments_frenet);
+  ConvertRoadBoundariesToFrenet();
 
+  // init
+  hard_bounds_.resize(ref_traj_points_.size());
+  second_soft_bounds_.resize(ref_traj_points_.size());
+  first_soft_bounds_.resize(ref_traj_points_.size());
+}
+
+void GeneralLateralDecider::GenerateRoadBoundary(
+    BoundHierarchy bound_hierarchy) {
+  auto& general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  const auto& coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double kDefaultDistanceToRoad = 10.0;
+  double init_dist_to_bound =
+      std::min(kDefaultDistanceToRoad, min_road_radius_);
+  const double rear_lon_buf_dis = 0.5;
+  double front_lon_buf_dis = 1.0;
+  if (bound_hierarchy != BoundHierarchy::HARD_BOUND) {
+    front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(
+        ego_frenet_state_.velocity_s(), 0, false, config_);
+  }
+  double max_care_lon_area_road_border = 0;
+  double uncertain_decrease_buffer = 0.0;
+  double uncertain_decrease_slope = 0.2;
+  uncertain_decrease_slope += last_uncertain_decrease_slope_;
+  constexpr double kEps = 1e-4;
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
-    Bound hard_bound_road{-init_dist_to_bound, init_dist_to_bound};
+    Bound bound_road{-init_dist_to_bound, init_dist_to_bound};
 
     MapObstaclePositionDecision map_obstacle_decision;
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
@@ -1363,75 +1369,83 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
       // 构建自车膨胀区域的polygon
       const double ego_s = ref_traj_points_[i].s;
       const double s_start = ego_s - vehicle_param.rear_edge_to_rear_axle -rear_lon_buf_dis;
-      const double s_end = ego_s + vehicle_param.length -
+      double s_end = ego_s + vehicle_param.length -
                            vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
+      s_end = std::min(s_end,
+                       ego_frenet_state_.planning_init_point().frenet_state.s +
+                           config_.care_lon_area_road_border);
+      if (s_end - s_start > kEps) {
+        const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
+        const double ego_length = s_end - s_start;
+        const auto ego_box =
+            Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
+        const auto ego_polygon = Polygon2d(ego_box);
 
-      const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
-      const double ego_length = s_end - s_start;
-      const auto ego_box =
-          Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
-      const auto ego_polygon = Polygon2d(ego_box);
+        // 计算到路沿的最小距离
+        double min_left_road_dist = kDefaultDistanceToRoad;
+        double min_right_road_dist = kDefaultDistanceToRoad;
 
-      // 计算到路沿的最小距离
-      double min_left_road_dist = kDefaultDistanceToRoad;
-      double min_right_road_dist = kDefaultDistanceToRoad;
+        for (const auto& segment_info : road_segments_frenet_) {
+          const LineSegment2d& road_segment = segment_info.first;
+          const bool is_left = segment_info.second;
 
-      for (const auto& segment_info : road_segments_frenet) {
-        const LineSegment2d& road_segment = segment_info.first;
-        const bool is_left = segment_info.second;
+          // 只处理与自车膨胀区域纵向重叠的路沿线段
+          const double seg_s_min =
+              std::min(road_segment.start().x(), road_segment.end().x());
+          const double seg_s_max =
+              std::max(road_segment.start().x(), road_segment.end().x());
+          if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
+            continue;
+          }
 
-        // 只处理与自车膨胀区域纵向重叠的路沿线段
-        const double seg_s_min =
-            std::min(road_segment.start().x(), road_segment.end().x());
-        const double seg_s_max =
-            std::max(road_segment.start().x(), road_segment.end().x());
-        if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
-          continue;
+          const double dist = ego_polygon.DistanceTo(road_segment);
+
+          if (is_left) {
+            min_left_road_dist = std::fmin(min_left_road_dist, dist);
+          } else {
+            min_right_road_dist = std::fmin(min_right_road_dist, dist);
+          }
         }
 
-        const double dist = ego_polygon.DistanceTo(road_segment);
-
-        if (is_left) {
-          min_left_road_dist = std::fmin(min_left_road_dist, dist);
-        } else {
-          min_right_road_dist = std::fmin(min_right_road_dist, dist);
+        // 根据计算出的距离生成 bound
+        bound_road.upper =
+            std::fmin(std::max(config_.hard_min_distance_road2center,
+                               min_left_road_dist - config_.hard_buffer2road),
+                      bound_road.upper);
+        bound_road.lower =
+            std::fmax(std::min(-config_.hard_min_distance_road2center,
+                               -min_right_road_dist + config_.hard_buffer2road),
+                      bound_road.lower);
+        if (bound_hierarchy != BoundHierarchy::HARD_BOUND) {
+          bound_road.upper =
+              std::fmin(std::max(config_.soft_min_distance_road2center,
+                                 bound_road.upper - left_road_extra_buffer_ +
+                                     uncertain_decrease_buffer),
+                        init_dist_to_bound);
+          bound_road.lower =
+              std::fmax(std::min(-config_.soft_min_distance_road2center,
+                                 bound_road.lower + right_road_extra_buffer_ -
+                                     uncertain_decrease_buffer),
+                        -init_dist_to_bound);
+          max_care_lon_area_road_border = std::max(
+              map_obstacle_decision.tp.s -
+                  ego_frenet_state_.planning_init_point().frenet_state.s,
+              max_care_lon_area_road_border);
         }
       }
-
-      // 根据计算出的距离生成 bound
-      hard_bound_road.upper =
-          std::fmin(std::max(config_.hard_min_distance_road2center,
-                             min_left_road_dist - config_.hard_buffer2road),
-                    hard_bound_road.upper);
-      hard_bound_road.lower =
-          std::fmax(std::min(-config_.hard_min_distance_road2center,
-                             -min_right_road_dist + config_.hard_buffer2road),
-                    hard_bound_road.lower);
-      soft_bound_road.upper =
-          std::fmin(std::max(config_.soft_min_distance_road2center,
-                             hard_bound_road.upper - left_road_extra_buffer +
-                                 uncertain_decrease_buffer),
-                    soft_bound_road.upper);
-      soft_bound_road.lower =
-          std::fmax(std::min(-config_.soft_min_distance_road2center,
-                             hard_bound_road.lower + right_road_extra_buffer -
-                                 uncertain_decrease_buffer),
-                    soft_bound_road.lower);
-      max_care_lon_area_road_border =
-          std::max(map_obstacle_decision.tp.s -
-                       ego_frenet_state_.planning_init_point().frenet_state.s,
-                   max_care_lon_area_road_border);
     }
-
-    hard_bounds_[i].emplace_back(WeightedBound{
-        hard_bound_road.lower, hard_bound_road.upper, config_.kHardBoundWeight,
-        BoundInfo{-100, BoundType::ROAD_BORDER}});
-    second_soft_bounds_[i].emplace_back(WeightedBound{
-        soft_bound_road.lower, soft_bound_road.upper,
-        config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+    if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
+      hard_bounds_[i].emplace_back(WeightedBound{
+          bound_road.lower, bound_road.upper, config_.kHardBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
+    } else {
+      second_soft_bounds_[i].emplace_back(WeightedBound{
+          bound_road.lower, bound_road.upper, config_.kPhysicalBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
+      general_lateral_decider_output.care_lon_area_road_border =
+          max_care_lon_area_road_border;
+    }
   }
-  general_lateral_decider_output.care_lon_area_road_border =
-      max_care_lon_area_road_border;
 }
 
 void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
@@ -6176,8 +6190,7 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
   return true;
 }
 
-void GeneralLateralDecider::ConvertRoadBoundariesToFrenet(
-    std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet) {
+void GeneralLateralDecider::ConvertRoadBoundariesToFrenet() {
   const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -6195,7 +6208,7 @@ void GeneralLateralDecider::ConvertRoadBoundariesToFrenet(
       estimated_size += boundary_segments.size() - 1;
     }
   }
-  road_segments_frenet.reserve(estimated_size);
+  road_segments_frenet_.reserve(estimated_size);
 
   for (const auto& boundary_segments : road_boundaries) {
     if (boundary_segments.empty()) continue;
@@ -6229,7 +6242,7 @@ void GeneralLateralDecider::ConvertRoadBoundariesToFrenet(
       has_prev = true;
 
       // 直接在emplace_back中构造，减少临时对象
-      road_segments_frenet.emplace_back(
+      road_segments_frenet_.emplace_back(
           std::move(LineSegment2d(Vec2d(pt1_sl.x, pt1_sl.y),
                                   Vec2d(pt2_sl.x, pt2_sl.y))),
           (pt1_sl.y + pt2_sl.y) * 0.5 > 0.0);

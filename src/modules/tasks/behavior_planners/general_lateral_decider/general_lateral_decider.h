@@ -48,6 +48,9 @@ class GeneralLateralDecider : public Task {
   // 2. construct the lane and boundary bound
   void GenerateRoadAndLaneBoundary();
   void GenerateRoadHardSoftBoundary();
+  void GenerateRoadBoundary(BoundHierarchy bound_hierarchy);
+  void PreProcessRoadInformation();
+
   void GenerateLaneSoftBoundary();
 
   void GetDesireRoadExtraBuffer(double *const left_road_extra_buffer,
@@ -158,8 +161,7 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void ConvertRoadBoundariesToFrenet(
-      std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet);
+  void ConvertRoadBoundariesToFrenet();
 
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
@@ -323,7 +325,9 @@ class GeneralLateralDecider : public Task {
   std::unordered_map<uint32_t, double> current_desire_final_nudge_l_map_;
   std::unordered_map<uint32_t, double> last_desire_final_nudge_l_map_;
   double trust_prediction_t_threshold_ = 2.5;
-
+  double left_road_extra_buffer_ = 0.0;
+  double right_road_extra_buffer_ = 0.0;
+  std::vector<std::pair<LineSegment2d, bool>> road_segments_frenet_;
 };
 
 }  // namespace planning
