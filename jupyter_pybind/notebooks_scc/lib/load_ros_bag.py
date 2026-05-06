@@ -740,6 +740,7 @@ class LoadRosbag:
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores",
+                          "lon_decel_agent_ids", "lon_decel_scores", "lon_cruise_agent_ids", "lon_cruise_scores", "lon_accel_agent_ids", "lon_accel_scores",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
                           "joint_lead_one_id", "joint_key_agent_ids", "prediction_cut_in_agent_ids", "joint_decision_limit_speed", "joint_limit_speed", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", "cipv_emergency_braking", "rule_base_cut_in_agent_ids", "upper_bound_agent_ids",
@@ -753,7 +754,9 @@ class LoadRosbag:
                           "ego_front_edge", "ego_rear_edge",
                           "front_agent_front_edge", "front_agent_rear_edge",
                           "rear_agent_front_edge", "rear_agent_rear_edge",
-                         "rear_agent_longitudinal_label", "rear_agent_confidence", "lane_change_reason",
+                         "rear_agent_longitudinal_label", "rear_agent_confidence",
+                         "rear_agent_decel_prob", "rear_agent_cruise_prob", "rear_agent_accel_prob",
+                         "lane_change_reason",
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
@@ -838,6 +841,7 @@ class LoadRosbag:
                          "state_accelerator_pedal_pos", "state_brake_pedal_pos","meb_od_straight_scene_code_","meb_occ_straight_scene_code_","meb_uss_straight_scene_code_","meb_od_crossing_scene_code"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
+                         "forward_extend_path_x", "forward_extend_path_y", "forward_extend_path_heading",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
                          "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
                          "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",

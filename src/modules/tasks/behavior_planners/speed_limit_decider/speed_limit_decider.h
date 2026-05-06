@@ -170,6 +170,7 @@ class SpeedLimitDecider : public Task {
   bool construction_strong_deceleration_mode_ = false;
   int construction_strong_mode_frame_count_ = 0;
   bool construction_lat_dist_flag_ = false;
+  int construction_lat_dist_exit_frame_count_ = 0;
   bool construction_v_limit_set_ = false;
   bool construction_manual_intervention_detected_ = false;
   double last_v_cruise_fsm_ = 0.0;
@@ -286,6 +287,10 @@ class SpeedLimitDecider : public Task {
   int construction_intrusion_last_level_ = 0;
   double construction_intrusion_last_abs_l_ = 0.0;
   double construction_intrusion_last_distance_ = 0.0;
+
+  // Construction near lane center flag (based on lane centerline, not planned path)
+  bool construction_near_lane_center_flag_ = false;
+  int construction_near_lane_center_exit_frame_count_ = 0;
 };
 
 }  // namespace planning

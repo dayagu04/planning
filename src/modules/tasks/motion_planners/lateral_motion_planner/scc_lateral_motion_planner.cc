@@ -88,6 +88,7 @@ void SCCLateralMotionPlanner::Init() {
   enter_split_time_ = 0.0;
   enter_lccnoa_time_ = 0.0;
   driving_away_lane_time_ = 100.0;
+  lc_remain_time_ = 100.0;
   const size_t N = config_.horizon + 1;
   expected_steer_vec_.resize(N, 0.0);
   history_steer_vec_.reserve(N);
@@ -216,9 +217,31 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   //
   const auto target_state =
       lane_change_decider_output.coarse_planning_info.target_state;
-  bool is_merge_lc =
-      lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
-      lane_change_decider_output.lc_request_source == MAP_REQUEST;
+  bool merge_point_valid = session_->planning_context()
+                               .ego_lane_road_right_decider_output()
+                               .boundary_merge_point_valid;
+  const auto& merge_point = session_->planning_context()
+                                .ego_lane_road_right_decider_output()
+                                .boundary_merge_point;
+  double dist_to_merge_point = 10000.0;
+  if (merge_point_valid) {
+    dist_to_merge_point = std::min(
+        std::hypot(planning_init_point.lat_init_state.x() - merge_point.x,
+                   planning_init_point.lat_init_state.y() - merge_point.y),
+        dist_to_merge_point);
+  }
+  const auto& route_info = session_->environmental_model().get_route_info();
+  double distance_to_first_road_merge = 10000.0;
+  if (route_info != nullptr) {
+    distance_to_first_road_merge = 
+        route_info->get_route_info_output().distance_to_first_road_merge;    
+  }
+  dist_to_merge_point =
+      std::min(dist_to_merge_point, distance_to_first_road_merge);
+  bool is_merge_lc = std::fabs(dist_to_merge_point) <
+      (planning_input_.ref_vel() * 6.0) &&
+      (lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
+       lane_change_decider_output.lc_request_source == MAP_REQUEST);
   // need to keep
   NudgeDirection drive_away_direction = CalculateDrivingDirectionForLeavingLane();
   bool is_check_left_line = drive_away_direction == NudgeDirection::LEFT;
@@ -306,35 +329,17 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
   bool is_cone_lc =
       lane_change_decider_output.lc_request_source == CONE_REQUEST;
-  bool merge_point_valid = session_->planning_context()
-                               .ego_lane_road_right_decider_output()
-                               .boundary_merge_point_valid;
-  const auto &merge_point = session_->planning_context()
-                                .ego_lane_road_right_decider_output()
-                                .boundary_merge_point;
-  double dist_to_merge_point = 10000.0;
-  if (merge_point_valid) {
-    dist_to_merge_point = std::min(
-        std::hypot(planning_init_point.lat_init_state.x() - merge_point.x,
-                   planning_init_point.lat_init_state.y() - merge_point.y),
-        dist_to_merge_point);
-  }
-  double distance_to_first_road_merge = session_->environmental_model()
-                                            .get_route_info()
-                                            ->get_route_info_output()
-                                            .distance_to_first_road_merge;
-  dist_to_merge_point =
-      std::min(dist_to_merge_point, distance_to_first_road_merge);
-  double lc_time_for_merge_point = std::fabs(dist_to_merge_point) / std::max(planning_input_.ref_vel(), 1e-6);
+  // double lc_time_for_merge_point = std::fabs(dist_to_merge_point) / std::max(planning_input_.ref_vel(), 1e-6);
   bool is_prevent_solid_line_lc =
       lane_change_decider_output.is_dash_not_enough_for_lc;
-  double lc_remain_time = 10.0;
   // if (lane_change_scene && !lane_change_back && !lane_change_hold) {
   if (target_state == kLaneChangeExecution) {
-    lc_remain_time = remain_nonsolid_line_time;
+    lc_remain_time_ = std::min(lc_remain_time_, remain_nonsolid_line_time);
+  } else {
+    lc_remain_time_ = 100.0;
   }
-  // lc_remain_time = std::min(lc_remain_time, lc_time_for_merge_point);
-  planning_weight_ptr_->SetLCRemainTime(std::max(lc_remain_time, 0.0));
+  // lc_remain_time_ = std::min(lc_remain_time_, lc_time_for_merge_point);
+  planning_weight_ptr_->SetLCRemainTime(std::max(lc_remain_time_, 0.0));
   bool is_dynamic_agent_emergency_lane_change =
       lane_change_decider_output.lc_request_source ==
       DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
@@ -364,10 +369,8 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   if (is_emergency_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 ||
-             is_risk_lc || is_dynamic_agent_emergency_lane_change ||
-             (is_merge_lc && std::fabs(dist_to_merge_point) <
-                                 planning_input_.ref_vel() * 5.0)) {
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time_ < 4.5 ||
+             is_risk_lc || is_dynamic_agent_emergency_lane_change || is_merge_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }

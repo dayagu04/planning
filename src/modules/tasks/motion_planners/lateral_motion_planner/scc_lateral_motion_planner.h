@@ -60,6 +60,7 @@ class SCCLateralMotionPlanner : public BaseLateralMotionPlanner {
   double enter_split_time_;
   double enter_lccnoa_time_;
   double driving_away_lane_time_;
+  double lc_remain_time_;
 
   std::vector<double> history_steer_vec_;
   std::vector<double> expected_steer_vec_;

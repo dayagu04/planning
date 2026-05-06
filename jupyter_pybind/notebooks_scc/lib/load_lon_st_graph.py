@@ -330,6 +330,20 @@ def load_processed_trajectory(st_graph_data):
       agents_trajectories_info.append(agent_trajectory_info)
   return agents_trajectories_info
 
+def load_lane_change_path(st_graph_data):
+  lane_change_path_info = {'x_vec': [], 'y_vec': []}
+
+  if hasattr(st_graph_data, 'lane_change_path') and len(st_graph_data.lane_change_path) > 0:
+    x_vec = []
+    y_vec = []
+    for point in st_graph_data.lane_change_path:
+      x_vec.append(point.x)
+      y_vec.append(point.y)
+    lane_change_path_info['x_vec'] = x_vec
+    lane_change_path_info['y_vec'] = y_vec
+
+  return lane_change_path_info
+
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   if bag_loader.loc_msg['enable'] == True:
     cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
@@ -525,6 +539,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   processed_trajectory_all = load_processed_trajectory(plan_debug_info.st_graph_data)
   try:
     cut_in_st_info_all = load_cut_in_st_boundaries(plan_debug_info.st_graph_data)
+    lane_change_path_data = load_lane_change_path(plan_debug_info.st_graph_data)
   except Exception as e:
     print(f"[load_lon_st_graph] load_cut_in_st_boundaries failed: {e}")
     cut_in_st_info_all = []
@@ -546,6 +561,19 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'y_vec_{}'.format(i): y_vec,
       'cutin_x_vec_{}'.format(i): cutin_x_vec,
       'cutin_y_vec_{}'.format(i): cutin_y_vec,
+    })
+
+  # Update lane change path
+  if len(lane_change_path_data['x_vec']) > 0:
+    lc_x_vec, lc_y_vec = coord_tf.global_to_local(lane_change_path_data['x_vec'], lane_change_path_data['y_vec'])
+    lon_plan_data['data_lane_change_path'].data.update({
+      'lc_path_x': lc_x_vec,
+      'lc_path_y': lc_y_vec,
+    })
+  else:
+    lon_plan_data['data_lane_change_path'].data.update({
+      'lc_path_x': [],
+      'lc_path_y': [],
     })
 
   for i in range(20):
@@ -2219,6 +2247,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                              'agent_id': [],
                                                              })
 
+  data_lane_change_path = ColumnDataSource(data = {'lc_path_x':[], 'lc_path_y':[]})
+
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
@@ -2234,6 +2264,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_planning':data_planning, \
                    'data_lat_lon_opt_trajectory': data_lat_lon_opt_trajectory, \
                    'data_joint_motion_plan': data_joint_motion_plan, \
+                   'data_lane_change_path':data_lane_change_path, \
                    'data_st_searcher':data_st_searcher, \
                    'data_st_search_nodes' : data_st_search_nodes, \
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
@@ -2340,6 +2371,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   ])
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+
+  # Lane change path
+  fig1.line('lc_path_y', 'lc_path_x', source = data_lane_change_path, line_width = 5, line_color = 'purple', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'lane change path', visible=True)
 
   # Lat-Lon joint planner optimized trajectory
   fig1.line('lat_lon_opt_traj_y', 'lat_lon_opt_traj_x', source = data_lat_lon_opt_trajectory, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'lat_lon_opt_trajectory', visible=False)

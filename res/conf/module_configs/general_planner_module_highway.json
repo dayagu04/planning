@@ -860,6 +860,9 @@
     "q_ego_delta_weight": 100.0,
     "q_obs_jerk_weight": 30.0,
     "q_obs_omega_weight": 80.0,
+    "q_obs_acc_bound_weight": 1600.0,
+    "obs_acc_max": 3.0,
+    "obs_acc_min": -1.0,
     "q_ego_acc_bound_weight": 1600.0,
     "ego_acc_max": 1.2,
     "ego_acc_min": -1.8,
@@ -1474,7 +1477,7 @@
       0.4, 0.6, 0.7, 0.85, 1.0, 1.15, 1.5, 2.2, 999.9
     ],
     "road_boundary_speed_limits": [
-      8.33, 11.11, 16.67, 22.22, 27.78, 33.33, 36.11, 41.67, 41.67
+      11.11, 16.67, 22.22, 27.78, 33.33, 36.11, 41.67, 41.67, 41.67
     ],
     "road_boundary_speed_limits_highway": [
       11.11, 16.67, 22.22, 27.78, 33.33, 36.11, 41.67, 41.67, 41.67
@@ -2381,5 +2384,70 @@
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true
+  },
+  "intention_decider": {
+    "longitudinal_intention": {
+      "lon_bayes_decel_prior": 0.10,
+      "lon_bayes_cruise_prior": 0.60,
+      "lon_bayes_accel_prior": 0.30,
+      "lon_bayes_smooth_alpha": 0.7,
+      "lon_intent_confidence_threshold": 0.35,
+      "accel_fusion_weight": 0.4,
+      "accel_vel_weight": 0.3,
+      "accel_pred_weight": 0.3,
+      "accel_fusion_decel_mu": -0.35,
+      "accel_fusion_decel_sigma": 0.5,
+      "accel_fusion_cruise_mu": 0.0,
+      "accel_fusion_cruise_sigma": 0.3,
+      "accel_fusion_accel_mu": 0.3,
+      "accel_fusion_accel_sigma": 0.5,
+      "accel_vel_decel_mu": -0.35,
+      "accel_vel_decel_sigma": 0.5,
+      "accel_vel_cruise_mu": 0.0,
+      "accel_vel_cruise_sigma": 0.3,
+      "accel_vel_accel_mu": 0.3,
+      "accel_vel_accel_sigma": 0.5,
+      "accel_pred_decel_mu": -0.35,
+      "accel_pred_decel_sigma": 0.5,
+      "accel_pred_cruise_mu": 0.0,
+      "accel_pred_cruise_sigma": 0.3,
+      "accel_pred_accel_mu": 0.3,
+      "accel_pred_accel_sigma": 0.5
+    }
+  },
+  "agent_long_decider": {
+    "ignore_speed_diff_threshold": 2.5,
+    "agent_front_edge_s_diff_threshold": -0.2,
+    "large_speed_diff_threshold": 5.56,
+    "filter_ultra_distance_threshold": 300.0,
+    "bayes_cut_in_threshold": 0.5,
+    "bayes_cut_out_threshold": 0.5,
+    "reverse_heading_threshold": 2.09,
+    "low_speed_threshold": 3.0,
+    "min_filter_distance_threshold": 30.0,
+    "low_speed_lateral_ignore_dist_threshold": 10.0,
+    "high_speed_lateral_ignore_dist_threshold": 15.0,
+    "longitudinal_ttc_threshold": 6.0,
+    "rear_overlap_threshold": 0.2,
+    "cross_lane_threshold": 0.1,
+    "lanes_distance_threshold": 5.0,
+    "considered_lon_distance_in_curve_threshold": 80.0,
+    "distance_curvature_threshold": 30.0,
+    "time_curvature_threshold": 2.0,
+    "lateral_safe_buffer_threshold": 0.3,
+    "low_speed_threshold_mps": 2.0,
+    "suppression_lateral_speed_threshold_mps": 0.1,
+    "suppression_lateral_penetration_threshold": 0.3,
+    "lateral_ttc_threshold": 3.0,
+    "longitudinal_ttc_lower_threshold": 1.5,
+    "longitudinal_ttc_upper_threshold": 3.0,
+    "min_cut_in_headway_threshold": 5.0,
+    "min_cut_in_lateral_distance_threshold": 1.0,
+    "cut_in_lateral_dist_min_range_threshold": 5.625,
+    "cut_in_lateral_dist_max_range_threshold": 9.375,
+    "lateral_vel_threshold_low": 0.35,
+    "lateral_vel_threshold_high": 1.5,
+    "relative_theta_threshold": 0.1,
+    "pure_pursuit_max_steer_angle_threshold": 0.5
   }
 }

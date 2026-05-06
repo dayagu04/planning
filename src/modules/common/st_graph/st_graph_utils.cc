@@ -1,5 +1,7 @@
 #include "st_graph_utils.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 #include "common_c.h"
@@ -36,6 +38,14 @@ constexpr int32_t kNumNots = 25;
 constexpr double kStepTime = 0.2;
 constexpr double kCrossLonDangerTTC = 2.0;
 constexpr double kCrossLatPassSafeDis = 2.0;
+constexpr double kYieldHorizonS = 3.0;
+constexpr double kYieldMinLongitudinalAccelMps2 = -5.0;
+constexpr double kYieldMinLongitudinalJerkMps3 = -5.0;
+constexpr double kYieldMinFinalGapM = 1.0;
+constexpr double kYieldSpeedBelowObsMps = 0.5;
+constexpr double kVelTol = 1e-3;
+constexpr double kGapTol = 1e-3;
+constexpr double kEps = 1e-9;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -1804,6 +1814,77 @@ StGraphUtils::GenerateMaxDecelerationCurveByAgentVel(
   state_limit.j_min = jerk_lower_bound;
 
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
+}
+
+bool StGraphUtils::IsNeedYield(
+    const double ego_vel_mps, const double ego_acc_mps2,
+    const double obs_longitudinal_vel_mps,
+    const double obs_longitudinal_accel_mps2,
+    const double initial_gap_ego_front_to_obs_rear_m) {
+
+  const double ego_v0 = std::max(0.0, ego_vel_mps);
+  const double v_obs0 = std::max(0.0, obs_longitudinal_vel_mps);
+  const double obs_acc = obs_longitudinal_accel_mps2;
+
+  const double v_cap0 = std::max(v_obs0 - kYieldSpeedBelowObsMps, 0.0);
+  if (ego_v0 <= v_cap0 + kVelTol &&
+      initial_gap_ego_front_to_obs_rear_m >= kYieldMinFinalGapM - kGapTol)
+    return false;
+
+  const double T = kYieldHorizonS;
+  const double amin = kYieldMinLongitudinalAccelMps2;
+  const double jmin = kYieldMinLongitudinalJerkMps3;
+
+  double s_obs = 0.0, v_obs = 0.0;
+  if (std::fabs(obs_acc) < kEps) {
+    s_obs = v_obs0 * T;
+    v_obs = v_obs0;
+  } else if (obs_acc >= 0.0) {
+    s_obs = v_obs0 * T + 0.5 * obs_acc * T * T;
+    v_obs = std::max(0.0, v_obs0 + obs_acc * T);
+  } else {
+    if (v_obs0 <= 0.0) {
+      s_obs = 0.0;
+      v_obs = 0.0;
+    } else {
+      const double t_stop = -v_obs0 / obs_acc;
+      if (t_stop >= T - kEps) {
+        s_obs = v_obs0 * T + 0.5 * obs_acc * T * T;
+        v_obs = std::max(0.0, v_obs0 + obs_acc * T);
+      } else {
+        s_obs = v_obs0 * t_stop + 0.5 * obs_acc * t_stop * t_stop;
+        v_obs = 0.0;
+      }
+    }
+  }
+
+  double s_ego = 0.0, v_ego = 0.0;
+  const double a0 = std::max(ego_acc_mps2, amin);
+  if (a0 <= amin + kEps) {
+    s_ego = ego_v0 * T + 0.5 * amin * T * T;
+    v_ego = ego_v0 + amin * T;
+  } else {
+    const double t_ramp = (a0 - amin) / (-jmin);
+    if (T <= t_ramp + kEps) {
+      s_ego = ego_v0 * T + 0.5 * a0 * T * T + (1.0 / 6.0) * jmin * T * T * T;
+      v_ego = ego_v0 + a0 * T + 0.5 * jmin * T * T;
+    } else {
+      const double t1 = t_ramp;
+      const double s1 =
+          ego_v0 * t1 + 0.5 * a0 * t1 * t1 + (1.0 / 6.0) * jmin * t1 * t1 * t1;
+      const double v1 = ego_v0 + a0 * t1 + 0.5 * jmin * t1 * t1;
+      const double t2 = T - t1;
+      s_ego = s1 + v1 * t2 + 0.5 * amin * t2 * t2;
+      v_ego = v1 + amin * t2;
+    }
+  }
+  v_ego = std::max(0.0, v_ego);
+
+  const double gap_at_horizon =
+      initial_gap_ego_front_to_obs_rear_m + s_obs - s_ego;
+  const double v_cap_final = std::max(v_obs - kYieldSpeedBelowObsMps, 0.0);
+  return !((v_ego <= v_cap_final + kVelTol) &&
+           (gap_at_horizon >= kYieldMinFinalGapM - kGapTol));
 }
 
 bool StGraphUtils::IsBoundaryAboveRearTargetBoundary(

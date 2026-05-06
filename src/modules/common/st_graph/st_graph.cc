@@ -615,10 +615,30 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
   const auto* front_agent_of_target = st_graph_input_->front_agent_of_target();
 
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double agent_s = nearest_s;
+  const double ego_s = init_point.s();
+  const double distance =
+      agent_s - agent.length() * 0.5 - ego_s - rear_axle_to_front_edge;
+  const double ego_v = init_point.vel();
+  const double heading_diff = agent.theta() - init_point.theta();
+  const double object_v = agent.speed() * std::cos(heading_diff);
+  const double object_a = agent.accel() * std::cos(heading_diff);
+  const double vel_diff = ego_v - object_v;
+  bool is_need_yield = false;
+  if (!st_graph_input_->is_emergency_speed_adjust()) {
+    if (distance > 0.0 && vel_diff > 0.0) {
+      is_need_yield = StGraphUtils::IsNeedYield(
+              ego_v, init_point.acc(), object_v, object_a, distance);
+    }
+  }
+
   const bool is_target_front_agent =
       is_lane_change_execution && front_agent_of_target != nullptr &&
       front_agent_of_target->agent_id() == agent.agent_id() &&
-      agent.speed() < init_point.vel() + kMinLcAgentSpeedBuffer;
+      object_v < init_point.vel() + kMinLcAgentSpeedBuffer;
 
   if (is_lane_change_execution && rear_agent_of_target != nullptr &&
       rear_agent_of_target->agent_id() == agent.agent_id()) {
@@ -629,8 +649,7 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
   }
 
-  if (agent.is_prediction_cutin() &&
-      agent.speed() < init_point.vel() + kMinLcAgentSpeedBuffer) {
+  if (agent.is_prediction_cutin() && is_need_yield) {
     if (road_right_level_ == RoadRightLevel::LOW_RIGHT ||
         road_right_level_ == RoadRightLevel::MID_RIGHT) {
       const auto& trajectory_cutin = agent.trajectory_cutin_postprocessed();
@@ -702,20 +721,24 @@ void STGraph::MakeDynamicAgentStBoundary(
       double upper_s = std::numeric_limits<double>::lowest();
 
       bool st_project_success = false;
-      if (is_target_front_agent) {
-        const double max_s = agent_sl_boundary[0];
-        const double min_s = agent_sl_boundary[1];
-        const auto& vehicle_param =
-            VehicleConfigurationContext::Instance()->get_vehicle_param();
-        const double front_edge_to_center =
-            vehicle_param.front_edge_to_rear_axle;
-        const double back_edge_to_center = vehicle_param.rear_edge_to_rear_axle;
-
-        lower_s = min_s - front_edge_to_center;
-        upper_s = max_s + back_edge_to_center;
-        lower_s = std::fmax(0.0, std::fmin(lower_s, path_range.second));
-        upper_s = std::fmax(0.0, std::fmin(upper_s, path_range.second));
-        st_project_success = (lower_s > kMathEpsilon || upper_s > kMathEpsilon);
+      const auto& lane_change_kd_path = st_graph_input_->lane_change_kd_path();
+      bool use_lane_change_path = false;
+      if (is_target_front_agent && lane_change_kd_path &&
+          lane_change_kd_path->KdtreeValid()) {
+        double lc_s = 0.0, lc_l = 0.0;
+        lane_change_kd_path->XYToSL(point.x(), point.y(), &lc_s, &lc_l);
+        if (lc_s < lane_change_kd_path->Length() - agent.length()) {
+          use_lane_change_path = true;
+        }
+      }
+      if (use_lane_change_path) {
+        StGraphUtils::CalculateAgentSLBoundary(
+            lane_change_kd_path, obs_box, path_range, type, &agent_sl_boundary,
+            &considered_corners);
+        st_project_success = StGraphUtils::CalculateSRange(
+            lane_change_kd_path, *path_border_querier, agent, obs_box, type,
+            path_range, agent_sl_boundary, considered_corners,
+            planning_init_point_box, &lower_s, &upper_s, is_rads_scene, is_hpp_scene);
       } else {
         st_project_success = StGraphUtils::CalculateSRange(
             planned_kd_path, *path_border_querier, agent, obs_box, type,
@@ -1929,6 +1952,16 @@ void STGraph::AddStGraphDataToProto() {
     const auto& path_points = processed_path->path_points();
     for (const auto& point : path_points) {
       auto* p = st_graph_data_pb_.add_planned_path();
+      p->set_x(point.x());
+      p->set_y(point.y());
+    }
+  }
+
+  const auto& lane_change_kd_path = st_graph_input_->lane_change_kd_path();
+  if (lane_change_kd_path != nullptr && lane_change_kd_path->KdtreeValid()) {
+    const auto& lc_path_points = lane_change_kd_path->path_points();
+    for (const auto& point : lc_path_points) {
+      auto* p = st_graph_data_pb_.add_lane_change_path();
       p->set_x(point.x());
       p->set_y(point.y());
     }

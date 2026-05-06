@@ -17,10 +17,11 @@ namespace scc_longitudinal_planning_v3 {
 
 class SccLonAliLqr : public al_ilqr_solver::AliLqr {
  public:
+  static constexpr size_t kConstraintStartPoints = 2;
   double MaxConstraintViolation() override {
     double max_violation = 0.0;
     const size_t N = solver_config_ptr_->horizon + 1;
-    for (size_t k = 0; k < N; ++k) {
+    for (size_t k = kConstraintStartPoints; k < N; ++k) {
       const double pos = xk_vec_[k][POS];
       const double vel = xk_vec_[k][VEL];
       const double hard_pos_max = cost_config_vec_ptr_->at(k)[HARD_POS_MAX];
@@ -43,7 +44,7 @@ class SccLonAliLqr : public al_ilqr_solver::AliLqr {
     const double phi = solver_config_ptr_->penalty_scaling;
     const double rho_max = solver_config_ptr_->penalty_max;
 
-    for (size_t k = 0; k < N; ++k) {
+    for (size_t k = kConstraintStartPoints; k < N; ++k) {
       auto &cfg = constraint_config_vec_ptr_->at(k);
       const double pos = xk_vec_[k][POS];
       const double vel = xk_vec_[k][VEL];

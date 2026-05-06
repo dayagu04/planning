@@ -1,0 +1,24 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20250_EVENT_FUNEXIT_2026-04-19-22-41-22_no_camera.bag",
+  "description": "bug8: order=1 和 order=2 on_route，relative=0 中 order=1 的 cost 最小",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [270, 320],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {"order": 0, "expect": {"is_on_route": false}},
+        {"order": 1, "expect": {"is_on_route": true}},
+        {"order": 2, "expect": {"is_on_route": true}}
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [270, 320],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_relative_id_0",
+      "expect": "order == 1",
+      "description": "在 relative_id=0 的 VL 中，order=1 的 cost 最小"
+    }
+  ]
+}
