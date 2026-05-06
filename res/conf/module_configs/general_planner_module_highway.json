@@ -2372,5 +2372,35 @@
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true
+  },
+  "intention_decider": {
+    "longitudinal_intention": {
+      "lon_bayes_decel_prior": 0.10,
+      "lon_bayes_cruise_prior": 0.60,
+      "lon_bayes_accel_prior": 0.30,
+      "lon_bayes_smooth_alpha": 0.7,
+      "lon_intent_confidence_threshold": 0.35,
+      "accel_fusion_weight": 0.4,
+      "accel_vel_weight": 0.3,
+      "accel_pred_weight": 0.3,
+      "accel_fusion_decel_mu": -0.35,
+      "accel_fusion_decel_sigma": 0.5,
+      "accel_fusion_cruise_mu": 0.0,
+      "accel_fusion_cruise_sigma": 0.3,
+      "accel_fusion_accel_mu": 0.3,
+      "accel_fusion_accel_sigma": 0.5,
+      "accel_vel_decel_mu": -0.35,
+      "accel_vel_decel_sigma": 0.5,
+      "accel_vel_cruise_mu": 0.0,
+      "accel_vel_cruise_sigma": 0.3,
+      "accel_vel_accel_mu": 0.3,
+      "accel_vel_accel_sigma": 0.5,
+      "accel_pred_decel_mu": -0.35,
+      "accel_pred_decel_sigma": 0.5,
+      "accel_pred_cruise_mu": 0.0,
+      "accel_pred_cruise_sigma": 0.3,
+      "accel_pred_accel_mu": 0.3,
+      "accel_pred_accel_sigma": 0.5
+    }
   }
 }

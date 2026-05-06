@@ -15,53 +15,15 @@
 
 namespace planning {
 namespace {
+// Fixed constants (not configurable)
 constexpr double kEpsilon = 1.0e-4;
 constexpr double kLonIntentMaxDistance = 100.0;
 constexpr double kLonIntentMinDistance = -80.0;
 constexpr double kLonIntentMaxLateralDistance = 8.0;
 constexpr int kMaxHistorySize = 5;
 constexpr int kMinHistoryForLonBayes = 5;
-
-constexpr double kLonBayesDecelPrior = 0.10;
-constexpr double kLonBayesCruisePrior = 0.60;
-constexpr double kLonBayesAccelPrior = 0.30;
-constexpr double kLonBayesSmoothAlpha = 0.7;
-constexpr double kLonIntentThreshold = 0.4;
-constexpr double kLonIntentConfidenceThreshold = 0.35;
-
-// 三种加速度来源的权重
-constexpr double kAccelFusionWeight = 0.4;   // 融合加速度权重
-constexpr double kAccelVelWeight = 0.3;      // 观测差速加速度权重
-constexpr double kAccelPredWeight = 0.3;     // 预测轨迹加速度权重
-
-// 融合加速度 (accel_fusion) 高斯参数
-constexpr double kAccelFusionDecelMu = -0.35;
-constexpr double kAccelFusionDecelSigma = 0.5;
-constexpr double kAccelFusionCruiseMu = 0.0;
-constexpr double kAccelFusionCruiseSigma = 0.3;
-constexpr double kAccelFusionAccelMu = 0.3;
-constexpr double kAccelFusionAccelSigma = 0.5;
-
-// 观测差速加速度 (accel_vel) 高斯参数
-constexpr double kAccelVelDecelMu = -0.35;
-constexpr double kAccelVelDecelSigma = 0.5;
-constexpr double kAccelVelCruiseMu = 0.0;
-constexpr double kAccelVelCruiseSigma = 0.3;
-constexpr double kAccelVelAccelMu = 0.3;
-constexpr double kAccelVelAccelSigma = 0.5;
-
-// 预测轨迹加速度 (accel_pred) 高斯参数
-constexpr double kAccelPredDecelMu = -0.35;
-constexpr double kAccelPredDecelSigma = 0.5;
-constexpr double kAccelPredCruiseMu = 0.0;
-constexpr double kAccelPredCruiseSigma = 0.3;
-constexpr double kAccelPredAccelMu = 0.3;
-constexpr double kAccelPredAccelSigma = 0.5;
-
-constexpr int kPredFrames = 6;
-constexpr double kPredFrameInterval = 0.2;
-
-}
+constexpr double kForgetFactor = 0.1;
+}  // namespace
 namespace longitudinal_intention {
 
 IntentionDecider::IntentionDecider(
@@ -69,6 +31,7 @@ IntentionDecider::IntentionDecider(
     framework::Session* session)
     : Task(config_builder, session) {
   name_ = "IntentionDecider";
+  config_ = config_builder->cast<LongitudinalIntentionConfig>();
 }
 
 bool IntentionDecider::Execute() {
@@ -240,9 +203,9 @@ void IntentionDecider::UpdateAgentTable(
     }
     if (processed_lon_intent_agent_ids_.find(pair.first) ==
         processed_lon_intent_agent_ids_.end()) {
-      lon_decel_posterior_[pair.first] = kLonBayesDecelPrior;
-      lon_cruise_posterior_[pair.first] = kLonBayesCruisePrior;
-      lon_accel_posterior_[pair.first] = kLonBayesAccelPrior;
+      lon_decel_posterior_[pair.first] = config_.lon_bayes_decel_prior;
+      lon_cruise_posterior_[pair.first] = config_.lon_bayes_cruise_prior;
+      lon_accel_posterior_[pair.first] = config_.lon_bayes_accel_prior;
       pair.second = static_cast<int>(LongitudinalIntent::CRUISE);
     }//当前帧存在但本轮被过滤掉没算贝叶斯[超出范围、历史帧数还不够]
   }
@@ -416,53 +379,53 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
     const double accel_vel = features.accel_vel_vec[i];
     const double accel_pred = features.accel_pred_vec[i];
 
-    const double d_fusion_decel = accel_fusion - kAccelFusionDecelMu;
-    const double d_fusion_cruise = accel_fusion - kAccelFusionCruiseMu;
-    const double d_fusion_accel = accel_fusion - kAccelFusionAccelMu;
-    log_L_decel += kAccelFusionWeight *
+    const double d_fusion_decel = accel_fusion - config_.accel_fusion_decel_mu;
+    const double d_fusion_cruise = accel_fusion - config_.accel_fusion_cruise_mu;
+    const double d_fusion_accel = accel_fusion - config_.accel_fusion_accel_mu;
+    log_L_decel += config_.accel_fusion_weight *
                    (-0.5 * d_fusion_decel * d_fusion_decel /
-                        (kAccelFusionDecelSigma * kAccelFusionDecelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelFusionDecelSigma * kAccelFusionDecelSigma));
-    log_L_cruise += kAccelFusionWeight *
+                        (config_.accel_fusion_decel_sigma * config_.accel_fusion_decel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_fusion_decel_sigma * config_.accel_fusion_decel_sigma));
+    log_L_cruise += config_.accel_fusion_weight *
                     (-0.5 * d_fusion_cruise * d_fusion_cruise /
-                         (kAccelFusionCruiseSigma * kAccelFusionCruiseSigma) -
-                     0.5 * std::log(2.0 * M_PI * kAccelFusionCruiseSigma * kAccelFusionCruiseSigma));
-    log_L_accel += kAccelFusionWeight *
+                         (config_.accel_fusion_cruise_sigma * config_.accel_fusion_cruise_sigma) -
+                     0.5 * std::log(2.0 * M_PI * config_.accel_fusion_cruise_sigma * config_.accel_fusion_cruise_sigma));
+    log_L_accel += config_.accel_fusion_weight *
                    (-0.5 * d_fusion_accel * d_fusion_accel /
-                        (kAccelFusionAccelSigma * kAccelFusionAccelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelFusionAccelSigma * kAccelFusionAccelSigma));
+                        (config_.accel_fusion_accel_sigma * config_.accel_fusion_accel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_fusion_accel_sigma * config_.accel_fusion_accel_sigma));
 
-    const double d_vel_decel = accel_vel - kAccelVelDecelMu;
-    const double d_vel_cruise = accel_vel - kAccelVelCruiseMu;
-    const double d_vel_accel = accel_vel - kAccelVelAccelMu;
-    log_L_decel += kAccelVelWeight *
+    const double d_vel_decel = accel_vel - config_.accel_vel_decel_mu;
+    const double d_vel_cruise = accel_vel - config_.accel_vel_cruise_mu;
+    const double d_vel_accel = accel_vel - config_.accel_vel_accel_mu;
+    log_L_decel += config_.accel_vel_weight *
                    (-0.5 * d_vel_decel * d_vel_decel /
-                        (kAccelVelDecelSigma * kAccelVelDecelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelVelDecelSigma * kAccelVelDecelSigma));
-    log_L_cruise += kAccelVelWeight *
+                        (config_.accel_vel_decel_sigma * config_.accel_vel_decel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_vel_decel_sigma * config_.accel_vel_decel_sigma));
+    log_L_cruise += config_.accel_vel_weight *
                     (-0.5 * d_vel_cruise * d_vel_cruise /
-                         (kAccelVelCruiseSigma * kAccelVelCruiseSigma) -
-                     0.5 * std::log(2.0 * M_PI * kAccelVelCruiseSigma * kAccelVelCruiseSigma));
-    log_L_accel += kAccelVelWeight *
+                         (config_.accel_vel_cruise_sigma * config_.accel_vel_cruise_sigma) -
+                     0.5 * std::log(2.0 * M_PI * config_.accel_vel_cruise_sigma * config_.accel_vel_cruise_sigma));
+    log_L_accel += config_.accel_vel_weight *
                    (-0.5 * d_vel_accel * d_vel_accel /
-                        (kAccelVelAccelSigma * kAccelVelAccelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelVelAccelSigma * kAccelVelAccelSigma));
+                        (config_.accel_vel_accel_sigma * config_.accel_vel_accel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_vel_accel_sigma * config_.accel_vel_accel_sigma));
 
-    const double d_pred_decel = accel_pred - kAccelPredDecelMu;
-    const double d_pred_cruise = accel_pred - kAccelPredCruiseMu;
-    const double d_pred_accel = accel_pred - kAccelPredAccelMu;
-    log_L_decel += kAccelPredWeight *
+    const double d_pred_decel = accel_pred - config_.accel_pred_decel_mu;
+    const double d_pred_cruise = accel_pred - config_.accel_pred_cruise_mu;
+    const double d_pred_accel = accel_pred - config_.accel_pred_accel_mu;
+    log_L_decel += config_.accel_pred_weight *
                    (-0.5 * d_pred_decel * d_pred_decel /
-                        (kAccelPredDecelSigma * kAccelPredDecelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelPredDecelSigma * kAccelPredDecelSigma));
-    log_L_cruise += kAccelPredWeight *
+                        (config_.accel_pred_decel_sigma * config_.accel_pred_decel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_pred_decel_sigma * config_.accel_pred_decel_sigma));
+    log_L_cruise += config_.accel_pred_weight *
                     (-0.5 * d_pred_cruise * d_pred_cruise /
-                         (kAccelPredCruiseSigma * kAccelPredCruiseSigma) -
-                     0.5 * std::log(2.0 * M_PI * kAccelPredCruiseSigma * kAccelPredCruiseSigma));
-    log_L_accel += kAccelPredWeight *
+                         (config_.accel_pred_cruise_sigma * config_.accel_pred_cruise_sigma) -
+                     0.5 * std::log(2.0 * M_PI * config_.accel_pred_cruise_sigma * config_.accel_pred_cruise_sigma));
+    log_L_accel += config_.accel_pred_weight *
                    (-0.5 * d_pred_accel * d_pred_accel /
-                        (kAccelPredAccelSigma * kAccelPredAccelSigma) -
-                    0.5 * std::log(2.0 * M_PI * kAccelPredAccelSigma * kAccelPredAccelSigma));
+                        (config_.accel_pred_accel_sigma * config_.accel_pred_accel_sigma) -
+                    0.5 * std::log(2.0 * M_PI * config_.accel_pred_accel_sigma * config_.accel_pred_accel_sigma));
   }
 
   // 归一化 log-likelihood：除以数据点数量，防止似然比过于极端
@@ -497,18 +460,16 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
   // p_accel = kLonBayesSmoothAlpha * p_accel + (1.0 - kLonBayesSmoothAlpha) * prev_accel;
 
   // --- 新方案：上一帧后验作为本帧先验 + 遗忘因子防坍塌 ---
-  constexpr double kForgetFactor = 0.1;
-
   auto it_decel = lon_decel_posterior_.find(agent_id);
-  const double prev_decel = (it_decel != lon_decel_posterior_.end()) ? it_decel->second : kLonBayesDecelPrior;
+  const double prev_decel = (it_decel != lon_decel_posterior_.end()) ? it_decel->second : config_.lon_bayes_decel_prior;
   auto it_cruise = lon_cruise_posterior_.find(agent_id);
-  const double prev_cruise = (it_cruise != lon_cruise_posterior_.end()) ? it_cruise->second : kLonBayesCruisePrior;
+  const double prev_cruise = (it_cruise != lon_cruise_posterior_.end()) ? it_cruise->second : config_.lon_bayes_cruise_prior;
   auto it_accel = lon_accel_posterior_.find(agent_id);
-  const double prev_accel = (it_accel != lon_accel_posterior_.end()) ? it_accel->second : kLonBayesAccelPrior;
+  const double prev_accel = (it_accel != lon_accel_posterior_.end()) ? it_accel->second : config_.lon_bayes_accel_prior;
 
-  const double prior_decel = (1.0 - kForgetFactor) * prev_decel + kForgetFactor * kLonBayesDecelPrior;
-  const double prior_cruise = (1.0 - kForgetFactor) * prev_cruise + kForgetFactor * kLonBayesCruisePrior;
-  const double prior_accel = (1.0 - kForgetFactor) * prev_accel + kForgetFactor * kLonBayesAccelPrior;
+  const double prior_decel = (1.0 - kForgetFactor) * prev_decel + kForgetFactor * config_.lon_bayes_decel_prior;
+  const double prior_cruise = (1.0 - kForgetFactor) * prev_cruise + kForgetFactor * config_.lon_bayes_cruise_prior;
+  const double prior_accel = (1.0 - kForgetFactor) * prev_accel + kForgetFactor * config_.lon_bayes_accel_prior;
 
   const double denominator = L_decel * prior_decel + L_cruise * prior_cruise +
                              L_accel * prior_accel;
@@ -532,9 +493,9 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
   if (it_decel_prev != lon_decel_posterior_.end() &&
       it_cruise_prev != lon_cruise_posterior_.end() &&
       it_accel_prev != lon_accel_posterior_.end()) {
-    p_decel = kLonBayesSmoothAlpha * p_decel + (1.0 - kLonBayesSmoothAlpha) * it_decel_prev->second;
-    p_cruise = kLonBayesSmoothAlpha * p_cruise + (1.0 - kLonBayesSmoothAlpha) * it_cruise_prev->second;
-    p_accel = kLonBayesSmoothAlpha * p_accel + (1.0 - kLonBayesSmoothAlpha) * it_accel_prev->second;
+    p_decel = config_.lon_bayes_smooth_alpha * p_decel + (1.0 - config_.lon_bayes_smooth_alpha) * it_decel_prev->second;
+    p_cruise = config_.lon_bayes_smooth_alpha * p_cruise + (1.0 - config_.lon_bayes_smooth_alpha) * it_cruise_prev->second;
+    p_accel = config_.lon_bayes_smooth_alpha * p_accel + (1.0 - config_.lon_bayes_smooth_alpha) * it_accel_prev->second;
 
     // 重新归一化
     const double sum_smoothed = p_decel + p_cruise + p_accel;
@@ -555,7 +516,7 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
   result.accel_prob = p_accel;
   result.confidence = max_prob;
 
-  if (max_prob < kLonIntentConfidenceThreshold) {
+  if (max_prob < config_.lon_intent_confidence_threshold) {
     result.intent = LongitudinalIntent::UNKNOWN;
     result.unknown_prob = 1.0 - max_prob;
   } else if (max_prob == p_decel) {

@@ -7,13 +7,14 @@
 #include <set>
 #include <vector>
 
+#include "agent/agent.h"
+#include "agent/agent_manager.h"
+#include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "session.h"
 #include "tasks/task.h"
 #include "utils/kd_path.h"
 #include "virtual_lane_manager.h"
-#include "agent/agent_manager.h"
-#include "agent/agent.h"
 namespace planning {
 namespace longitudinal_intention {
 
@@ -92,6 +93,9 @@ class IntentionDecider : public Task {
   // Session and managers
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
   std::shared_ptr<EgoStateManager> ego_state_manager_;
+
+  // Configuration
+  LongitudinalIntentionConfig config_;
 
   // Agent history tracking
   std::map<int32_t, std::deque<AgentHistoryState>> agent_history_map_;

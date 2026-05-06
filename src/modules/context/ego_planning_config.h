@@ -6893,4 +6893,75 @@ struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
 
 };
 
+struct LongitudinalIntentionConfig : public Config {
+  // Bayesian prior probabilities
+  double lon_bayes_decel_prior = 0.10;
+  double lon_bayes_cruise_prior = 0.60;
+  double lon_bayes_accel_prior = 0.30;
+  double lon_bayes_smooth_alpha = 0.7;
+  double lon_intent_confidence_threshold = 0.35;
+
+  // Acceleration source weights
+  double accel_fusion_weight = 0.4;
+  double accel_vel_weight = 0.3;
+  double accel_pred_weight = 0.3;
+
+  // Gaussian parameters for accel_fusion
+  double accel_fusion_decel_mu = -0.35;
+  double accel_fusion_decel_sigma = 0.5;
+  double accel_fusion_cruise_mu = 0.0;
+  double accel_fusion_cruise_sigma = 0.3;
+  double accel_fusion_accel_mu = 0.3;
+  double accel_fusion_accel_sigma = 0.5;
+
+  // Gaussian parameters for accel_vel
+  double accel_vel_decel_mu = -0.35;
+  double accel_vel_decel_sigma = 0.5;
+  double accel_vel_cruise_mu = 0.0;
+  double accel_vel_cruise_sigma = 0.3;
+  double accel_vel_accel_mu = 0.3;
+  double accel_vel_accel_sigma = 0.5;
+
+  // Gaussian parameters for accel_pred
+  double accel_pred_decel_mu = -0.35;
+  double accel_pred_decel_sigma = 0.5;
+  double accel_pred_cruise_mu = 0.0;
+  double accel_pred_cruise_sigma = 0.3;
+  double accel_pred_accel_mu = 0.3;
+  double accel_pred_accel_sigma = 0.5;
+
+  void init(const Json& json) override {
+    ReadItem(json, lon_bayes_decel_prior, "intention_decider", "longitudinal_intention", "lon_bayes_decel_prior");
+    ReadItem(json, lon_bayes_cruise_prior, "intention_decider", "longitudinal_intention", "lon_bayes_cruise_prior");
+    ReadItem(json, lon_bayes_accel_prior, "intention_decider", "longitudinal_intention", "lon_bayes_accel_prior");
+    ReadItem(json, lon_bayes_smooth_alpha, "intention_decider", "longitudinal_intention", "lon_bayes_smooth_alpha");
+    ReadItem(json, lon_intent_confidence_threshold, "intention_decider", "longitudinal_intention", "lon_intent_confidence_threshold");
+
+    ReadItem(json, accel_fusion_weight, "intention_decider", "longitudinal_intention", "accel_fusion_weight");
+    ReadItem(json, accel_vel_weight, "intention_decider", "longitudinal_intention", "accel_vel_weight");
+    ReadItem(json, accel_pred_weight, "intention_decider", "longitudinal_intention", "accel_pred_weight");
+
+    ReadItem(json, accel_fusion_decel_mu, "intention_decider", "longitudinal_intention", "accel_fusion_decel_mu");
+    ReadItem(json, accel_fusion_decel_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_decel_sigma");
+    ReadItem(json, accel_fusion_cruise_mu, "intention_decider", "longitudinal_intention", "accel_fusion_cruise_mu");
+    ReadItem(json, accel_fusion_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_cruise_sigma");
+    ReadItem(json, accel_fusion_accel_mu, "intention_decider", "longitudinal_intention", "accel_fusion_accel_mu");
+    ReadItem(json, accel_fusion_accel_sigma, "intention_decider", "longitudinal_intention", "accel_fusion_accel_sigma");
+
+    ReadItem(json, accel_vel_decel_mu, "intention_decider", "longitudinal_intention", "accel_vel_decel_mu");
+    ReadItem(json, accel_vel_decel_sigma, "intention_decider", "longitudinal_intention", "accel_vel_decel_sigma");
+    ReadItem(json, accel_vel_cruise_mu, "intention_decider", "longitudinal_intention", "accel_vel_cruise_mu");
+    ReadItem(json, accel_vel_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_vel_cruise_sigma");
+    ReadItem(json, accel_vel_accel_mu, "intention_decider", "longitudinal_intention", "accel_vel_accel_mu");
+    ReadItem(json, accel_vel_accel_sigma, "intention_decider", "longitudinal_intention", "accel_vel_accel_sigma");
+
+    ReadItem(json, accel_pred_decel_mu, "intention_decider", "longitudinal_intention", "accel_pred_decel_mu");
+    ReadItem(json, accel_pred_decel_sigma, "intention_decider", "longitudinal_intention", "accel_pred_decel_sigma");
+    ReadItem(json, accel_pred_cruise_mu, "intention_decider", "longitudinal_intention", "accel_pred_cruise_mu");
+    ReadItem(json, accel_pred_cruise_sigma, "intention_decider", "longitudinal_intention", "accel_pred_cruise_sigma");
+    ReadItem(json, accel_pred_accel_mu, "intention_decider", "longitudinal_intention", "accel_pred_accel_mu");
+    ReadItem(json, accel_pred_accel_sigma, "intention_decider", "longitudinal_intention", "accel_pred_accel_sigma");
+  }
+};
+
 }  // namespace planning
