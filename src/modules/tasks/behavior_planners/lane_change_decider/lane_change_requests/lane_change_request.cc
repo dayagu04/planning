@@ -1764,8 +1764,8 @@ bool LaneChangeRequest::IsMLCIgnoreSolidLaneCheck(
 }
 
 bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
-    int origin_lane_id, int target_lane_id, const TrajectoryPoints& path_points,
-    const RequestType& lc_request_type) {
+    int origin_lane_id, int target_lane_id,
+    const TrajectoryPoints& path_points) {
   const double road_edge_buffer = 0.1;
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
@@ -1793,15 +1793,15 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
   const double half_vehicle_width = vehicle_param.width * 0.5;
   const double vehicle_length = vehicle_param.front_edge_to_rear_axle;
 
-  const double ego_v =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_v = ego_state->ego_v();
   const double max_ttc_distance = 8.0;
-  const double ttc_distance = std::min(ego_v * 1.0, max_ttc_distance);
+  constexpr double kTtcTimeSec = 1.0;
+  const double ttc_distance = std::min(ego_v * kTtcTimeSec, max_ttc_distance);
   const double check_ahead_distance = ttc_distance + vehicle_length;
 
   // 获取自车当前位置
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto& planning_init_point = ego_state->planning_init_point();
   const double ego_x = planning_init_point.lat_init_state.x();
   const double ego_y = planning_init_point.lat_init_state.y();
@@ -1839,17 +1839,6 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
         is_far_point ? far_check_ahead_distance : check_ahead_distance;
 
     if (use_target) {
-      // 如果路径点偏离目标车道中心线超过0.2米，跳过该点不做检查
-      const double lane_center_deviation_threshold = 0.2;
-      bool is_pathpoint_remove =
-          lc_request_type == LEFT_CHANGE &&
-              target_l > lane_center_deviation_threshold ||
-          lc_request_type == RIGHT_CHANGE &&
-              target_l < -lane_center_deviation_threshold;
-      if (is_pathpoint_remove) {
-        continue;
-      }
-
       ReferencePathPoint ref_pt{};
       if (!target_reference_path->get_reference_point_by_lon(target_s,
                                                              ref_pt)) {

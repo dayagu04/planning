@@ -960,6 +960,11 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
 
 size_t LDRouteInfoStrategy::GetTargetRampIndex() {
   const size_t ramp_count = ramp_info_vec_.size();
+  double min_front_search_dis =
+      current_link_->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
+          ? 800.
+          : 500.;
 
   for (size_t ramp_idx = 0; ramp_idx < ramp_count; ++ramp_idx) {
     const auto& [ramp_link, ramp_dis] = ramp_info_vec_[ramp_idx];
@@ -968,12 +973,7 @@ size_t LDRouteInfoStrategy::GetTargetRampIndex() {
     }
 
     // 场景1：匝道距离≥最小搜索距离
-    double kMinFrontSearchDis =
-        current_link_->link_class() ==
-                iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
-            ? 800.
-            : 500.;
-    if (ramp_dis > kMinFrontSearchDis) {
+    if (ramp_dis > min_front_search_dis) {
       if (ramp_idx == 0) {
         return 0;
       }
@@ -2688,7 +2688,7 @@ std::pair<FPPoint, FPPoint> LDRouteInfoStrategy::CalculateSplitExchangeAreaFP(
           bool has_decelerate_successor = false;
           for (const auto& succ_id : lane_info->successor_lane_ids()) {
             const auto* succ_lane = ld_map_.GetLaneInfoByID(succ_id);
-            if (IsDecelerateLane(succ_lane)) {
+            if (succ_lane != nullptr && IsDecelerateLane(succ_lane)) {
               has_decelerate_successor = true;
               break;
             }
@@ -3582,8 +3582,9 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       // 判断车道前方是否消亡
       double accumulated_dis = 0.0;
       const auto* itera_lane = merge_link_lane;
-      const double max_search_dis = std::min(
-          300.0, route_info_output_.distance_to_exit_noa - dist_to_merge);
+      const double max_search_dis = std::max(
+          0.0, std::min(300.0, route_info_output_.distance_to_exit_noa -
+                                   dist_to_merge));
       while (itera_lane != nullptr && accumulated_dis < max_search_dis) {
         if (IsMergeLane(itera_lane)) {
           const auto merge_lane_type = CalculateMergeLaneType(itera_lane);

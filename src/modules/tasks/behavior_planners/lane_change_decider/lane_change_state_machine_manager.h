@@ -316,8 +316,7 @@ class LaneChangeStateMachineManager {
   bool IsWarningCollisionRisk();
   bool IsLCPathCollisionWithRoadEdge(
       int origin_lane_id, int target_lane_id,
-      const StateMachineLaneChangeStatus& lc_status,
-      const RequestType& lc_request_type);
+      const StateMachineLaneChangeStatus& lc_status);
   bool IsLCPathCollisionWithSolidLine(
       int origin_lane_id, const StateMachineLaneChangeStatus& lc_status,
       const RequestSource& lc_request_source,
