@@ -62,7 +62,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
-  std::unique_ptr<behavior_planners::IntentionDecider> intention_decider_;
+  std::unique_ptr<longitudinal_intention::IntentionDecider> intention_decider_;
   // 施工场景
   //   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
   std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;

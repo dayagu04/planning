@@ -14,59 +14,7 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
-namespace behavior_planners {
-
-IntentionDecider::IntentionDecider(
-    const EgoPlanningConfigBuilder* config_builder,
-    framework::Session* session)
-    : Task(config_builder, session) {
-  name_ = "IntentionDecider";
-}
-
-bool IntentionDecider::Execute() {
-  ILOG_DEBUG << "=======IntentionDecider=======";
-
-  // if (!PreCheck()) {
-  //   ILOG_DEBUG << "PreCheck failed";
-  //   return false;
-  // }
-
-  // Get managers from session
-  const auto& environmental_model = session_->environmental_model();
-  virtual_lane_manager_ = environmental_model.get_virtual_lane_manager();
-  ego_state_manager_ = environmental_model.get_ego_state_manager();
-  const auto& agent_manager = environmental_model.get_agent_manager();
-
-  if (agent_manager == nullptr || virtual_lane_manager_ == nullptr ||
-      ego_state_manager_ == nullptr) {
-    ILOG_DEBUG << "Required managers not available";
-    return false;
-  }
-
-  const auto& current_lane = virtual_lane_manager_->get_current_lane();
-  if (current_lane == nullptr) {
-    return false;
-  }
-
-  const auto& ego_lane_coord = current_lane->get_lane_frenet_coord();
-  if (ego_lane_coord == nullptr) {
-    return false;
-  }
-
-  const auto& init_point = ego_state_manager_->planning_init_point();
-
-  double ego_s = 0.0, ego_l = 0.0;
-  ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l);
-
-  DeciderLongitudinalIntent(*agent_manager, init_point, ego_lane_coord,
-                            agent_manager.get());
-  UpdateAgentTable(*agent_manager, ego_s);
-
-  return true;
-}
-
 namespace {
-
 constexpr double kEpsilon = 1.0e-4;
 constexpr double kLonIntentMaxDistance = 100.0;
 constexpr double kLonIntentMinDistance = -80.0;
@@ -113,9 +61,59 @@ constexpr double kAccelPredAccelSigma = 0.5;
 constexpr int kPredFrames = 6;
 constexpr double kPredFrameInterval = 0.2;
 
-}  // namespace
+}
+namespace longitudinal_intention {
 
-void IntentionDecider::DeciderLongitudinalIntent(
+IntentionDecider::IntentionDecider(
+    const EgoPlanningConfigBuilder* config_builder,
+    framework::Session* session)
+    : Task(config_builder, session) {
+  name_ = "IntentionDecider";
+}
+
+bool IntentionDecider::Execute() {
+  ILOG_DEBUG << "=======IntentionDecider=======";
+
+  // if (!PreCheck()) {
+  //   ILOG_DEBUG << "PreCheck failed";
+  //   return false;
+  // }
+
+  // Get managers from session
+  const auto& environmental_model = session_->environmental_model();
+  virtual_lane_manager_ = environmental_model.get_virtual_lane_manager();
+  ego_state_manager_ = environmental_model.get_ego_state_manager();
+  const auto& agent_manager = environmental_model.get_agent_manager();
+
+  if (agent_manager == nullptr || virtual_lane_manager_ == nullptr ||
+      ego_state_manager_ == nullptr) {
+    ILOG_DEBUG << "Required managers not available";
+    return false;
+  }
+
+  const auto& current_lane = virtual_lane_manager_->get_current_lane();
+  if (current_lane == nullptr) {
+    return false;
+  }
+
+  const auto& ego_lane_coord = current_lane->get_lane_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return false;
+  }
+
+  const auto& init_point = ego_state_manager_->planning_init_point();
+
+  double ego_s = 0.0, ego_l = 0.0;
+  ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l);
+
+  DecideLongitudinalIntent(*agent_manager, init_point, ego_lane_coord,
+                            agent_manager.get());
+  UpdateAgentTable(*agent_manager, ego_s);
+
+  return true;
+}
+
+void IntentionDecider::DecideLongitudinalIntent(
     const agent::AgentManager& agent_manager,
     const PlanningInitPoint& init_point,
     const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
@@ -573,6 +571,6 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
   return result;
 }
 
-}  // namespace behavior_planners
+}  // namespace longitudinal_intention
 }  // namespace planning
 

@@ -14,7 +14,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
   intention_decider_ =
-      std::make_unique<behavior_planners::IntentionDecider>(config_builder, session);
+      std::make_unique<longitudinal_intention::IntentionDecider>(config_builder, session);
   // construction_scene_decider_ =
   //     std::make_unique<ConstructionSceneDecider>(config_builder, session);
   spatio_temporal_planner_ =

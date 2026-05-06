@@ -15,7 +15,7 @@
 #include "agent/agent_manager.h"
 #include "agent/agent.h"
 namespace planning {
-namespace behavior_planners {
+namespace longitudinal_intention {
 
 struct AgentHistoryState {
   double s = 0.0;
@@ -64,7 +64,7 @@ class IntentionDecider : public Task {
 
   bool Execute() override;
 
-  void DeciderLongitudinalIntent(
+  void DecideLongitudinalIntent(
       const agent::AgentManager& agent_manager,
       const PlanningInitPoint& init_point,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
@@ -105,5 +105,5 @@ class IntentionDecider : public Task {
   std::map<int32_t, int> lon_intent_map_;
 };
 
-}  // namespace behavior_planners
+}  // namespace longitudinal_intention
 }  // namespace planning
