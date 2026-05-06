@@ -368,7 +368,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       const bool is_traffic_control_obstacle =
           agent->type() == agent::AgentType::TRAFFIC_CONE ||
           agent->type() == agent::AgentType::CTASH_BARREL ||
-          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER ||
+          agent->type() == agent::AgentType::CYLINDER_BARRIER;
       const auto it = lat_obstacle_decision.find(agent_id);
       if (!is_traffic_control_obstacle && it != lat_obstacle_decision.end() &&
           (it->second == LatObstacleDecisionType::LEFT ||

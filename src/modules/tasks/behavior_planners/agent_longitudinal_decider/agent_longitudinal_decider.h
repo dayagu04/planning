@@ -92,6 +92,8 @@ class AgentLongitudinalDecider : public Task {
 
   void FilterRearAgents();
 
+  void FilterLateralAvoidStaticObstacles();
+
   void FilterUltradistantObs();
 
   void FilterReverseAgents();
@@ -154,5 +156,6 @@ class AgentLongitudinalDecider : public Task {
   std::unordered_map<int32_t, std::deque<AgentHistoryState>> agent_history_map_;
   std::unordered_map<int32_t, double> bayes_cutin_posterior_;
   std::unordered_map<int32_t, double> bayes_cutout_posterior_;
+  std::unordered_map<int32_t, int32_t> static_obs_projection_count_;
 };
 }  // namespace planning
