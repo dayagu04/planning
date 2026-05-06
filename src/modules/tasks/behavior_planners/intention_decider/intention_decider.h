@@ -69,7 +69,9 @@ class IntentionDecider : public Task {
       const agent::AgentManager& agent_manager,
       const PlanningInitPoint& init_point,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-      agent::AgentManager* const mutable_agent_manager);
+      agent::AgentManager* const mutable_agent_manager,
+      double ego_s,
+      double ego_l);
 
   void UpdateAgentTable(const agent::AgentManager& agent_manager, double ego_s);
 

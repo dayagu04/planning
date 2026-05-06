@@ -67,10 +67,12 @@ bool IntentionDecider::Execute() {
   const auto& init_point = ego_state_manager_->planning_init_point();
 
   double ego_s = 0.0, ego_l = 0.0;
-  ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l);
+  if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    return false;
+  }
 
   DecideLongitudinalIntent(*agent_manager, init_point, ego_lane_coord,
-                            agent_manager.get());
+                            agent_manager.get(), ego_s, ego_l);
   UpdateAgentTable(*agent_manager, ego_s);
 
   return true;
@@ -80,7 +82,9 @@ void IntentionDecider::DecideLongitudinalIntent(
     const agent::AgentManager& agent_manager,
     const PlanningInitPoint& init_point,
     const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-    agent::AgentManager* const mutable_agent_manager) {
+    agent::AgentManager* const mutable_agent_manager,
+    double ego_s,
+    double ego_l) {
 
   if (ego_lane_coord == nullptr || mutable_agent_manager == nullptr) {
     return;
@@ -88,11 +92,6 @@ void IntentionDecider::DecideLongitudinalIntent(
 
   current_agent_ids_.clear();
   processed_lon_intent_agent_ids_.clear();
-
-  double ego_s = 0.0, ego_l = 0.0;
-  if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
-    return;
-  }
 
   const auto& agents = agent_manager.GetAllCurrentAgents();
   for (const auto& agent_ptr : agents) {
