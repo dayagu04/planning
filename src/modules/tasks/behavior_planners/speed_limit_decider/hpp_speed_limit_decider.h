@@ -62,7 +62,8 @@ class HPPSpeedLimitDecider : public Task {
                                    const CRoadType& road_type,
                                    const CPassageType& passage_type,
                                    const CElemType& elem_type,
-                                   const double approach_distance_threshold);
+                                   const double approach_distance_threshold,
+                                   bool use_half_vehicle_exit = false);
   const double ComputeMaxLatAcceleration();
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
