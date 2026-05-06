@@ -23,7 +23,11 @@ FrenetObstacle::FrenetObstacle(
   compute_frenet_obstacle(reference_path, is_hpp_scene);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path, is_hpp_scene);
-    // compute_frenet_polygon_sequence(reference_path);
+    compute_frenet_polygon_sequence(reference_path);
+    if (is_hpp_scene)
+    {
+      compute_dynamic_obs_frenet_polygon_sequence(reference_path);
+    }
   } else {
     b_frenet_polygon_sequence_invalid_ = true;
   }
@@ -531,6 +535,38 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
   }
 }
 
+void FrenetObstacle::compute_dynamic_obs_frenet_polygon_sequence(
+    const ReferencePath &reference_path) {
+  const auto &obs_traj = obstacle_ptr_->trajectory();
+  const auto &frenet_coord = reference_path.get_frenet_coord();
+  std::vector<planning_math::Vec2d> frenet_vertexes;
+  frenet_dynamic_obs_polygones_.clear();
+  if (!obs_traj.empty()) {
+    for (const auto &traj_point : obs_traj) {
+      const auto &moving_polygon =
+          obstacle_ptr_->get_polygon_at_point(traj_point);
+      frenet_vertexes.clear();
+      for (auto cart_vertex : moving_polygon.points()) {
+        Point2D cart_point, frenet_point;
+        cart_point.x = cart_vertex.x();
+        cart_point.y = cart_vertex.y();
+        if (!frenet_coord->XYToSL(cart_point, frenet_point) ||
+            std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+          frenet_dynamic_obs_polygones_.clear(); 
+          return;
+        }
+        planning_math::Vec2d frenet_vertex(frenet_point.x, frenet_point.y);
+        frenet_vertexes.push_back(frenet_vertex);
+      }
+      planning_math::Polygon2d convex_polygon;
+      if (!planning_math::Polygon2d::ComputeConvexHull(frenet_vertexes,
+                                                       &convex_polygon))
+        return;
+      frenet_dynamic_obs_polygones_.emplace_back(convex_polygon);
+    }
+  }
+}
+
 void FrenetObstacle::generate_precise_frenet_polygon(
     planning_math::Polygon2d &polygon,
     std::shared_ptr<planning_math::KDPath> frenet_coord) {
@@ -544,7 +580,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   auto origin_points = polygon.GetAllVertices();
   assert(origin_points.size() > 2);
   std::vector<double> curvatures;
-  for (auto point : origin_points) {
+  for (const auto& point : origin_points) {
     if (point.x() < 0.0 || point.x() > frenet_coord->Length()) {
       return;
     }
@@ -565,7 +601,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   }
   std::vector<planning_math::Vec2d> new_points;
   std::vector<planning_math::Vec2d> origin_cart_points;
-  for (auto point : origin_points) {
+  for (const auto& point : origin_points) {
     Point2D fren_point, cart_point;
     fren_point.x = point.x();
     fren_point.y = point.y();

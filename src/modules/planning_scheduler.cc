@@ -141,13 +141,23 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
-
   session_.set_scene_type(scene_type);
 
   if (session_.is_scene_changed()) {
     if(session_.is_hpp_scene()) {
       hpp_function_->Reset();
       DebugInfoManager::GetInstance().Clear();
+      if (!is_hpp_sched_set_) {
+        pthread_getschedparam(pthread_self(), &saved_sched_policy_, &saved_sched_param_);
+        struct sched_param rr_param = saved_sched_param_;
+        pthread_setschedparam(pthread_self(), SCHED_RR, &rr_param);
+        is_hpp_sched_set_ = true;
+      }
+    } else {
+      if (is_hpp_sched_set_) {
+        pthread_setschedparam(pthread_self(), saved_sched_policy_, &saved_sched_param_);
+        is_hpp_sched_set_ = false;
+      }
     }
   }
 

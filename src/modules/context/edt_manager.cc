@@ -21,7 +21,7 @@ void EdtManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
 
 void EdtManager::InitEDT() {
   is_edt_valid_ = false;
-  resolution_ = 0.05;  // 5cm
+  resolution_ = config_.edt_resolution;  // 5cm
   ogm_.Clear();
   ogm_.Init();  // is null
   edt_.Init(config_.car_body_lat_safe_buffer, config_.lon_safe_buffer,

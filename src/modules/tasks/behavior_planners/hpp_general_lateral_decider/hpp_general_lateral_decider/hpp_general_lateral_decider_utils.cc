@@ -421,5 +421,226 @@ void MakePolygon(
   }
 }
 
+double RoadTypeExtraBufferAtS(const double s, double ref_s_length,
+                              const ConstStaticAnalysisStoragePtr &storage,
+                              const double ego_v, bool is_hard_bound) {
+  double max_extra_buffer = 0.0;
+  double KLonDisBuffer = 3.0;
+  ResultTypeInfo type_info_pre;
+  ResultTypeInfo type_info;
+  ResultTypeInfo type_info_next;
+  if (storage) {
+    type_info_pre = storage->GetTypeInfo(std::max(s-KLonDisBuffer,0.0));
+    type_info = storage->GetTypeInfo(s);
+    type_info_next = storage->GetTypeInfo(std::min(s+KLonDisBuffer,ref_s_length));
+  }
+  double road_type_gain = 1.0;
+  if (is_hard_bound) {
+    road_type_gain = 0.5;
+  }
+  double road_type_buffer_max = 0.1 * road_type_gain;
+  double road_type_buffer_min = 0.05 * road_type_gain;
+  const auto is_road_type_max = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::UTurn:
+      case CRoadType::CurveTurn:
+      case CRoadType::NormalTurn:
+      case CRoadType::WideTurn:
+      case CRoadType::SCurveStaight:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto is_road_type_min = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::NudgeStraight:
+      case CRoadType::SharpTurn:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto has_elem_type = [](const ResultTypeInfo &info,
+                                const CElemType target_type) {
+    for (const auto elem : info.elem_types) {
+      if (elem == target_type) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // step1: road type extra buffer (any of pre/current/next matches, add once)
+  const bool has_road_type_max =
+      is_road_type_max(type_info_pre.road_type) ||
+      is_road_type_max(type_info.road_type) ||
+      is_road_type_max(type_info_next.road_type);
+  const bool has_road_type_min =
+      is_road_type_min(type_info_pre.road_type) ||
+      is_road_type_min(type_info.road_type) ||
+      is_road_type_min(type_info_next.road_type);
+  if (has_road_type_max) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_road_type_min) {
+    max_extra_buffer += road_type_buffer_min;
+  }
+
+  // step2: element extra buffer (any of pre/current/next matches, add once)
+  const bool has_intersection_elem =
+      has_elem_type(type_info_pre, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info_next, CElemType::IntersectionRoad);
+  const bool has_ramp_elem =
+      has_elem_type(type_info_pre, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info, CElemType::UpRampRoad) ||
+      has_elem_type(type_info, CElemType::DownRampRoad) ||
+      has_elem_type(type_info, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_next, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UnknownRampRoad);
+  if (has_intersection_elem) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_ramp_elem) {
+    max_extra_buffer += road_type_buffer_min;
+  }
+
+  // step3: speed extra buffer (capped)
+  double KMaxSpeedValue = 5.0;
+  double min_extra_buffer = std::fmin(0.1 * ego_v, max_extra_buffer);
+
+  double clip_ego_v = clip(fabs(ego_v), KMaxSpeedValue, 0.0);
+  double lateral_extra_buffer =
+      min_extra_buffer +
+      clip_ego_v * (max_extra_buffer - min_extra_buffer) / KMaxSpeedValue;
+
+  return lateral_extra_buffer;
+}
+
+double RoadTypeExtraBufferAtSForObs(
+    const double s, double ref_s_length, const ConstStaticAnalysisStoragePtr &storage,
+    const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle) {
+  double max_extra_buffer = 0.0;
+
+  double KLonDisBuffer = 3.0;
+  ResultTypeInfo type_info_pre;
+  ResultTypeInfo type_info;
+  ResultTypeInfo type_info_next;
+  if (storage) {
+    type_info_pre = storage->GetTypeInfo(std::max(s - KLonDisBuffer, 0.0));
+    type_info = storage->GetTypeInfo(s);
+    type_info_next =
+        storage->GetTypeInfo(std::min(s + KLonDisBuffer, ref_s_length));
+  } else {
+    return 0.0;
+  }
+
+  double KObsBufferDefault = 0.05;
+  double KLatVThrd = 2.0;
+  double KLonVThrd = 5.0;
+  double buffer_bas_obs_vel = 0.0;
+  // step1:obs vel factor
+  if (obstacle->is_static()) {
+    // buffer_bas_obs_vel += 0.5 * KObsBufferDefault;
+  } else {
+    buffer_bas_obs_vel +=
+        KObsBufferDefault *
+        std::min(std::fabs(obstacle->frenet_velocity_s()) / KLonVThrd, 1.0);
+    if (obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0.1) {
+      // away
+    } else if (obstacle->frenet_l() * obstacle->frenet_velocity_l() < -0.1) {
+      // approach
+      buffer_bas_obs_vel +=
+          KObsBufferDefault *
+          std::min(std::fabs(obstacle->frenet_velocity_l()) / KLatVThrd, 1.0);
+    }
+  }
+  max_extra_buffer += buffer_bas_obs_vel;
+
+  double roadtype_gain_base_obs_vel = 
+      obstacle->is_static() ? 0.5 : std::min(std::fabs(obstacle->velocity()) / KLonVThrd, 1.0);
+  double road_type_buffer_max = 0.1 * roadtype_gain_base_obs_vel;
+  double road_type_buffer_min = 0.05 * roadtype_gain_base_obs_vel;
+  const auto is_road_type_max = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::UTurn:
+      case CRoadType::CurveTurn:
+      case CRoadType::NormalTurn:
+      case CRoadType::WideTurn:
+      case CRoadType::SCurveStaight:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto is_road_type_min = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::NudgeStraight:
+      case CRoadType::SharpTurn:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto has_elem_type = [](const ResultTypeInfo &info,
+                                const CElemType target_type) {
+    for (const auto elem : info.elem_types) {
+      if (elem == target_type) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // step1: road type extra buffer (any of pre/current/next matches, add once)
+  const bool has_road_type_max =
+      is_road_type_max(type_info_pre.road_type) ||
+      is_road_type_max(type_info.road_type) ||
+      is_road_type_max(type_info_next.road_type);
+  const bool has_road_type_min =
+      is_road_type_min(type_info_pre.road_type) ||
+      is_road_type_min(type_info.road_type) ||
+      is_road_type_min(type_info_next.road_type);
+  if (has_road_type_max) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_road_type_min) {
+    max_extra_buffer += road_type_buffer_min;
+  }
+
+  // step2: element extra buffer (any of pre/current/next matches, add once)
+  const bool has_intersection_elem =
+      has_elem_type(type_info_pre, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info_next, CElemType::IntersectionRoad);
+  const bool has_ramp_elem =
+      has_elem_type(type_info_pre, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info, CElemType::UpRampRoad) ||
+      has_elem_type(type_info, CElemType::DownRampRoad) ||
+      has_elem_type(type_info, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_next, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UnknownRampRoad);
+  if (has_intersection_elem) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_ramp_elem) {
+    max_extra_buffer += road_type_buffer_min;
+  }
+
+  // step3: speed extra buffer (capped)
+  double KMaxSpeedValue = 5.0;
+  double min_extra_buffer = std::fmin(0.1 * ego_v, max_extra_buffer);
+
+  double clip_ego_v = clip(fabs(ego_v), KMaxSpeedValue, 0.0);
+  double lateral_extra_buffer =
+      min_extra_buffer +
+      clip_ego_v * (max_extra_buffer - min_extra_buffer) / KMaxSpeedValue;
+
+  return lateral_extra_buffer;
+}
+
 }  // namespace hpp_general_lateral_decider_utils
 }  // namespace planning

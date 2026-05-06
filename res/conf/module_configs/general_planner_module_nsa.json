@@ -36,6 +36,7 @@
   "car_body_lat_safe_buffer": 0.1,
   "lon_safe_buffer": 0.1,
   "mirror_buffer": 0.1,
+  "edt_resolution": 0.05,
   "supper_limit_for_OD_straight": 6,
   "supper_limit_for_OD_bend": 7.5,
   "is_select_split_nearing_ramp": false,
@@ -626,6 +627,7 @@
     "longitudinal_extend": 0.3,
     "lateral_extend": 0.35,
     "search_once": true,
-    "use_occ_s_dist": 7
+    "use_occ_s_dist": 7,
+    "enable_ara_debug_info": true
   }
 }

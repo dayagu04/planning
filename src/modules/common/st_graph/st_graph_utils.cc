@@ -152,6 +152,9 @@ void StGraphUtils::DetermineCautionYieldDecision(
         boundary_id_st_boundaries_map,
     std::vector<int32_t>& caution_yield_agent_ids) {
   caution_yield_agent_ids.clear();
+  if (st_graph_input->is_hpp_scene()) {
+    return;
+  }
   if (st_graph_input->time_aligned_ego_state().vel() >
       kCautionYieldSpeedThreshold / kMpsToKph) {
     return;

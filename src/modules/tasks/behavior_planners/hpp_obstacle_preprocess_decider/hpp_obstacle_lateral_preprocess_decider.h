@@ -25,6 +25,9 @@ class HppObstacleLateralPreprocessDecider : public Task{
   virtual ~HppObstacleLateralPreprocessDecider() = default;
 
   bool Execute() override;
+  static void CalObstacleDistance2RoadBound(
+      FrenetObstacleBoundary& frenet_boundary,
+      ConstReferencePathPtr reference_path_ptr);
 
  private:
   // 1. 障碍物过滤
@@ -40,7 +43,8 @@ class HppObstacleLateralPreprocessDecider : public Task{
   bool ClusterObstacles(
       const ObstacleItemMap& obs_item_map,
       const ObstacleClassificationResult& classification_result,
-      ObstacleClusterContainer& obstacle_cluster_constainer);
+      ObstacleClusterContainer& obstacle_cluster_constainer,
+      ConstReferencePathPtr reference_path_ptr);
 
   bool JudgeTurnstileScene(ConstReferencePathPtr reference_path_ptr,
                            const FrenetEgoState& ego_state,
@@ -73,7 +77,6 @@ class HppObstacleLateralPreprocessDecider : public Task{
 
   bool BuildObstacleClusterConvexHull(
       const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster);
-  void CalObstacleClusterInfo(ObstacleCluster& obstacle_cluster);
 
 private:
   HppObstacleLateralPreprocessDeciderConfig config_;

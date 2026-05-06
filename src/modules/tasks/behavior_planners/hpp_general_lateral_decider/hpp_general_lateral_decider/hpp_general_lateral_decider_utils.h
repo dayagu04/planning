@@ -58,5 +58,12 @@ void MakePolygon(
     const planning_math::Polygon2d &polygon,
     std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
     std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons);
+
+double RoadTypeExtraBufferAtS(const double s, double ref_s_length,
+                              const ConstStaticAnalysisStoragePtr &storage,
+                              const double ego_v, bool is_hard_bound);
+double RoadTypeExtraBufferAtSForObs(
+    const double s, double ref_s_length, const ConstStaticAnalysisStoragePtr &storage,
+    const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle);
 }  // namespace hpp_general_lateral_decider_utils
 }  // namespace planning

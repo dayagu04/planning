@@ -28,6 +28,7 @@
 #include "ifly_localization_c.h"
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
+#include "log_glog.h"
 #include "math/linear_interpolation.h"
 #include "modules/common/config_context.h"
 #include "obstacle_manager.h"
@@ -1017,8 +1018,16 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
 
     PredictionObject cur_predicion_obj;
-    cur_predicion_obj.id =
-        prediction_object.fusion_obstacle.additional_info.track_id;
+    if (session_->is_hpp_scene() &&
+        prediction_object.fusion_obstacle.common_info.type ==
+            iflyauto::ObjectType::OBJECT_TYPE_TURNSTILE) {
+      // hack by taolu10: 闸机抬杆会和其他 OD 的 id 重复，这里临时处理
+      cur_predicion_obj.id =
+          prediction_object.fusion_obstacle.additional_info.track_id + 1000;
+    } else {
+      cur_predicion_obj.id =
+          prediction_object.fusion_obstacle.additional_info.track_id;
+    }
     cur_predicion_obj.is_dangerous =
         prediction_object.fusion_obstacle.common_info.is_dangerous;
     cur_predicion_obj.dangerous_confidence =
@@ -1198,6 +1207,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
     cur_predicion_obj.trajectory_valid = trajectory_point_size >= 1;
+    if(cur_predicion_obj.trajectory_valid == false) {
+      ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
+                << "s trajectory is empty!";
+    }
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto& point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
@@ -1217,8 +1230,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.relative_ego_speed =
             std::hypot(cur_predicion_obj.relative_speed_x,
                        cur_predicion_obj.relative_speed_y);
-        ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
-                  << "s trajectory is empty!";
       } else {
         trajectory_point.relative_time = point_relative_time;
         trajectory_point.x = point.position.x;

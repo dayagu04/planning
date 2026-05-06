@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <pthread.h>
+#include <sched.h>
 
 #include "adas_function.h"
 #include "apa_function/apa_function.h"
@@ -162,6 +164,10 @@ class PlanningScheduler {
   bool last_can_run_{false};
   int hdmap_valid_count_;
   bool is_hpp_slot_searching_ = false;
+
+  bool is_hpp_sched_set_ = false;
+  int saved_sched_policy_ = SCHED_OTHER;
+  struct sched_param saved_sched_param_{};
 
   std::unique_ptr<BaseFunction> hpp_function_ = nullptr;
   std::unique_ptr<BaseFunction> noa_function_ = nullptr;
