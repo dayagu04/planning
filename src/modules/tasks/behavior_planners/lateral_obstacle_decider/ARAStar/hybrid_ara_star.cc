@@ -1054,6 +1054,8 @@ bool HybridARAStar::ProcessStaticAgents() {
   uint32_t obs_num = 0;
   constexpr double kLBuffer = 4.5;
   constexpr double kCareLBuffer = 1.5;
+  const ObstacleManager* obstacle_manager =
+      session_->environmental_model().get_obstacle_manager().get();
   for (const auto& frenet_obstacle : reference_path_ptr_->get_obstacles()) {
     if (frenet_obstacle->b_frenet_valid()) {
       const auto& frenet_obstacle_boundary =
@@ -1065,7 +1067,7 @@ bool HybridARAStar::ProcessStaticAgents() {
       if (min_s < end_s_ + vehicle_param_.front_edge_to_rear_axle &&
           max_s > ego_s_ + rear_obs_s_ &&
           (std::abs(min_l) < kLBuffer || std::abs(max_l) < kLBuffer) &&
-          EdtManager::FilterObstacleForAra(*frenet_obstacle)) {
+          EdtManager::FilterObstacleForHppAra(*frenet_obstacle, obstacle_manager)) {
         if (std::abs(min_l) < kCareLBuffer || std::abs(max_l) < kCareLBuffer) {
           obs_max_s_ = std::max(obs_max_s_, max_s);
           obs_min_s_ = std::min(obs_min_s_, min_s);

@@ -1395,13 +1395,15 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
   pnc::mathlib::spline l_s_spline;
   l_s_spline.set_points(s_vec, l_vec, pnc::mathlib::spline::linear);
 
+  const ObstacleManager* obstacle_manager =
+      session_->environmental_model().get_obstacle_manager().get();
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      if (EdtManager::FilterObstacleForAra(*obstacle)) {
+      if (EdtManager::FilterObstacleForHppAra(*obstacle, obstacle_manager)) {
         double l_ara = 0;
         if (obstacle->frenet_s() < s_vec.front()) {
           l_ara = l_vec.front();

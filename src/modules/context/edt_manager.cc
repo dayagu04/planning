@@ -3,6 +3,7 @@
 #include <cstddef>
 
 #include "obstacle.h"
+#include "obstacle_manager.h"
 #include "planning_context.h"
 #include "pose2d.h"
 
@@ -224,13 +225,35 @@ bool EdtManager::FilterObstacleForAra(
   return false;
 }
 
+bool EdtManager::FilterObstacleForHppAra(
+    const planning::FrenetObstacle &frenet_obstacle,
+    const ObstacleManager *obstacle_manager) {
+  // 先用通用过滤规则
+  if (!FilterObstacleForAra(frenet_obstacle)) {
+    return false;
+  }
+
+  const auto* obs = frenet_obstacle.obstacle();
+  // HPP 额外过滤规则 1：OCC 动态大类（类型 56）
+  if (obs->type() == iflyauto::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+    return false;
+  }
+
+  // HPP 额外过滤规则 2：关联的 object_detection_id 指向的是动态障碍物
+  if (obs->has_object_detection_id() && obstacle_manager != nullptr) {
+    const auto* linked_obs =
+        obstacle_manager->find_obstacle(obs->object_detection_id());
+    if (linked_obs != nullptr && !linked_obs->is_static()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void EdtManager::update() {
-  // if (!(session_->is_hpp_scene() || session_->is_nsa_scene()) ||
-  //     !session_->planning_context().last_planning_success()) {
-  //   return;
-  // }
-  if (!session_->is_hpp_scene() ||
-      !session_->planning_context().last_planning_success()) {
+  const bool is_hpp = session_->is_hpp_scene();
+  if (!is_hpp || !session_->planning_context().last_planning_success()) {
     return;
   }
   is_edt_valid_ = false;
@@ -239,6 +262,10 @@ void EdtManager::update() {
   OccupancyGridBound grid_bound =
       GenerateOGM(Pose2D(ego_state.ego_pose().x, ego_state.ego_pose().y,
                          ego_state.ego_pose().theta));
+
+  const ObstacleManager* obstacle_manager = is_hpp
+      ? session_->environmental_model().get_obstacle_manager().get()
+      : nullptr;
 
   const auto &reference_path_ptr = session_->environmental_model()
                                        .get_reference_path_manager()
@@ -249,11 +276,17 @@ void EdtManager::update() {
         continue;
       }
       if (frenet_obstacle->source_type() == SourceType::OD) {
-        if (FilterObstacleForAra(*frenet_obstacle)) {
+        bool should_add = is_hpp
+            ? FilterObstacleForHppAra(*frenet_obstacle, obstacle_manager)
+            : FilterObstacleForAra(*frenet_obstacle);
+        if (should_add) {
           AddODPoint(*frenet_obstacle->obstacle());
         }
       } else if (frenet_obstacle->source_type() == SourceType::OCC) {
-        if (FilterObstacleForAra(*frenet_obstacle)) {
+        bool should_add = is_hpp
+            ? FilterObstacleForHppAra(*frenet_obstacle, obstacle_manager)
+            : FilterObstacleForAra(*frenet_obstacle);
+        if (should_add) {
           AddPointClouds(frenet_obstacle->obstacle()->perception_points());
         }
       } else if (frenet_obstacle->source_type() == SourceType::GroundLine) {

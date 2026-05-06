@@ -26,9 +26,9 @@ class EdtManager {
   static bool FilterObstacleForAra(
       const planning::FrenetObstacle &frenet_obstacle);
 
-  static bool FilterObstacleByLatDecision(
-      const planning::FrenetObstacle& frenet_obstacle,
-      const LatObstacleDecisionType& lat_decision);
+  static bool FilterObstacleForHppAra(
+      const planning::FrenetObstacle &frenet_obstacle,
+      const ObstacleManager *obstacle_manager);
 
  private:
   void InitEDT();
