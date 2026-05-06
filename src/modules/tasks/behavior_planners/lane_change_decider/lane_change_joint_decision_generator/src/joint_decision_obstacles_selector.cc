@@ -115,9 +115,10 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
           JSON_DEBUG_VALUE("rear_agent_longitudinal_label",
                            static_cast<int>(label));
           JSON_DEBUG_VALUE("rear_agent_confidence", rear_agent_confidence_);
-          JSON_DEBUG_VALUE("rear_agent_decel_prob", agent->lon_decel_prob());
-          JSON_DEBUG_VALUE("rear_agent_cruise_prob", agent->lon_cruise_prob());
-          JSON_DEBUG_VALUE("rear_agent_accel_prob", agent->lon_accel_prob());
+          const auto& rear_info = agent->longitudinal_intent_info();
+          JSON_DEBUG_VALUE("rear_agent_decel_prob", rear_info.decel_prob);
+          JSON_DEBUG_VALUE("rear_agent_cruise_prob", rear_info.cruise_prob);
+          JSON_DEBUG_VALUE("rear_agent_accel_prob", rear_info.accel_prob);
           rear_agent_id_ = lc_info.gap_rear_agent_id;  // 更新后车历史记录
           break;
         }
@@ -653,9 +654,7 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     key_obstacle.init_vel =
         agent->trajectories_used_by_st_graph().front().front().vel();
     key_obstacle.init_acc = agent->accel_fusion();
-    key_obstacle.p_decel = agent->lon_decel_prob();
-    key_obstacle.p_cruise = agent->lon_cruise_prob();
-    key_obstacle.p_accel = agent->lon_accel_prob();
+    key_obstacle.lon_intent_info = agent->longitudinal_intent_info();
   }
 
   key_obstacle.init_s = 0.0;

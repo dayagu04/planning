@@ -2375,9 +2375,8 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     return;
   }
 
-  const int lon_intent = rear_agent->longitudinal_intent();
-  // ACCEL = 2
-  if (lon_intent == 2) {
+  if (rear_agent->longitudinal_intent_info().intent ==
+      longitudinal_intention::LongitudinalIntent::ACCEL) {
     rear_agent_overtaking_ = true;
     return;
   }
@@ -4500,9 +4499,10 @@ bool LaneChangeStateMachineManager::
         const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
         const auto rear_agent = dynamic_world->agent_manager()->GetAgent(agent_node->node_agent_id());
         if (rear_agent != nullptr) {
-          rear_p_decel = rear_agent->lon_decel_prob();
-          rear_p_cruise = rear_agent->lon_cruise_prob();
-          rear_p_accel = rear_agent->lon_accel_prob();
+          const auto& info = rear_agent->longitudinal_intent_info();
+          rear_p_decel = info.decel_prob;
+          rear_p_cruise = info.cruise_prob;
+          rear_p_accel = info.accel_prob;
         }
       }
     }

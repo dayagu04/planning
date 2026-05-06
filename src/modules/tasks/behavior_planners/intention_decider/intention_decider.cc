@@ -165,7 +165,7 @@ void IntentionDecider::DecideLongitudinalIntent(
       continue;
     }
 
-    LongitudinalIntentResult lon_intent_result =
+    const LongitudinalIntentInfo lon_intent_info =
         CalculateLongitudinalIntent(agent_id, agent, lon_features);
 
     processed_lon_intent_agent_ids_.insert(agent_id);
@@ -173,11 +173,7 @@ void IntentionDecider::DecideLongitudinalIntent(
     // Update agent manager
     auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
     if (mutable_agent != nullptr) {
-      mutable_agent->set_longitudinal_intent(
-          static_cast<int>(lon_intent_result.intent));
-      mutable_agent->set_lon_decel_prob(lon_intent_result.decel_prob);
-      mutable_agent->set_lon_cruise_prob(lon_intent_result.cruise_prob);
-      mutable_agent->set_lon_accel_prob(lon_intent_result.accel_prob);
+      mutable_agent->set_longitudinal_intent_info(lon_intent_info);
     }
   }
 }
@@ -366,10 +362,10 @@ LongitudinalBayesFeatures IntentionDecider::ExtractLongitudinalBayesFeatures(
   return features;
 }
 
-LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
+LongitudinalIntentInfo IntentionDecider::CalculateLongitudinalIntent(
     int32_t agent_id, const agent::Agent& agent,
     const LongitudinalBayesFeatures& features) {
-  LongitudinalIntentResult result;
+  LongitudinalIntentInfo result;
 
   if (!features.valid) {
     return result;
@@ -546,11 +542,9 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
   result.decel_prob = p_decel;
   result.cruise_prob = p_cruise;
   result.accel_prob = p_accel;
-  result.confidence = max_prob;
 
   if (max_prob < config_.lon_intent_confidence_threshold) {
     result.intent = LongitudinalIntent::UNKNOWN;
-    result.unknown_prob = 1.0 - max_prob;
   } else if (max_prob == p_decel) {
     result.intent = LongitudinalIntent::DECEL;
   } else if (max_prob == p_cruise) {

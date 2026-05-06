@@ -289,24 +289,13 @@ void Agent::set_prediction_cutin_score(const double prediction_cutin_score) {
   prediction_cutin_score_ = prediction_cutin_score;
 }
 
-const int Agent::longitudinal_intent() const { return longitudinal_intent_; }
-void Agent::set_longitudinal_intent(const int longitudinal_intent) {
-  longitudinal_intent_ = longitudinal_intent;
+const longitudinal_intention::LongitudinalIntentInfo&
+Agent::longitudinal_intent_info() const {
+  return lon_intent_info_;
 }
-
-const double Agent::lon_decel_prob() const { return lon_decel_prob_; }
-void Agent::set_lon_decel_prob(const double lon_decel_prob) {
-  lon_decel_prob_ = lon_decel_prob;
-}
-
-const double Agent::lon_cruise_prob() const { return lon_cruise_prob_; }
-void Agent::set_lon_cruise_prob(const double lon_cruise_prob) {
-  lon_cruise_prob_ = lon_cruise_prob;
-}
-
-const double Agent::lon_accel_prob() const { return lon_accel_prob_; }
-void Agent::set_lon_accel_prob(const double lon_accel_prob) {
-  lon_accel_prob_ = lon_accel_prob;
+void Agent::set_longitudinal_intent_info(
+    const longitudinal_intention::LongitudinalIntentInfo& info) {
+  lon_intent_info_ = info;
 }
 
 const bool Agent::is_crossing() const { return is_crossing_; }

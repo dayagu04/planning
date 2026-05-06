@@ -41,22 +41,6 @@ struct LongitudinalBayesFeatures {
   std::vector<double> accel_pred_vec;
 };
 
-enum class LongitudinalIntent {
-  DECEL = 0,
-  CRUISE = 1,
-  ACCEL = 2,
-  UNKNOWN = 3
-};
-
-struct LongitudinalIntentResult {
-  LongitudinalIntent intent = LongitudinalIntent::UNKNOWN;
-  double decel_prob = 0.0;
-  double cruise_prob = 0.0;
-  double accel_prob = 0.0;
-  double confidence = 0.0;
-  double unknown_prob = 1.0;
-};
-
 class IntentionDecider : public Task {
  public:
   explicit IntentionDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -65,6 +49,7 @@ class IntentionDecider : public Task {
 
   bool Execute() override;
 
+ private:
   void DecideLongitudinalIntent(
       const agent::AgentManager& agent_manager,
       const PlanningInitPoint& init_point,
@@ -75,7 +60,6 @@ class IntentionDecider : public Task {
 
   void UpdateAgentTable(const agent::AgentManager& agent_manager, double ego_s);
 
- private:
   void UpdateAndGetAgentState(
       const agent::Agent& agent,
       const PlanningInitPoint& init_point,
@@ -87,7 +71,7 @@ class IntentionDecider : public Task {
       const agent::Agent& agent,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord);
 
-  LongitudinalIntentResult CalculateLongitudinalIntent(
+  LongitudinalIntentInfo CalculateLongitudinalIntent(
       const int32_t agent_id,
       const agent::Agent& agent,
       const LongitudinalBayesFeatures& features);

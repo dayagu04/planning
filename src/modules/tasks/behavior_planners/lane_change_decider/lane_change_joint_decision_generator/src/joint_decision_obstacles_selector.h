@@ -39,10 +39,8 @@ struct LaneChangeKeyObstacle {
   double init_s;
   double init_l;
 
-  // Longitudinal intent probabilities
-  double p_decel = 0.0;
-  double p_cruise = 0.0;
-  double p_accel = 0.0;
+  // Longitudinal intent from IntentionDecider
+  longitudinal_intention::LongitudinalIntentInfo lon_intent_info;
 };
 
 class JointDecisionObstaclesSelector {
