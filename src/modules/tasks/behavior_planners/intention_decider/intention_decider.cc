@@ -104,9 +104,9 @@ void IntentionDecider::DecideLongitudinalIntent(
     current_agent_ids_.insert(agent_id);
 
     // Filter by fusion source
-    if (!(agent.fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
-      continue;
-    }
+    // if (!(agent.fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
+    //   continue;
+    // }
 
     // Filter static agents
     if (agent.is_static()) {
@@ -315,7 +315,7 @@ void IntentionDecider::UpdateAndGetAgentState(
     auto it = agent_history_map_.find(agent_id);
     if (it != agent_history_map_.end() && !it->second.empty()) {
       const auto& prev_state = it->second.back();
-      double dt = 0.1;
+      const double dt = current_state.timestamp - prev_state.timestamp;
       if (dt > 1e-3) {
         current_state.accel_sp = (current_state.speed - prev_state.speed) / dt;
         current_state.acc_prediction =
@@ -349,7 +349,14 @@ LongitudinalBayesFeatures IntentionDecider::ExtractLongitudinalBayesFeatures(
   }
 
   const auto& history = it->second;
-  for (int i = 0; i < static_cast<int>(history.size()); ++i) {
+  const size_t history_size = history.size();
+
+  // Pre-allocate space to avoid dynamic reallocation
+  features.accel_fusion_vec.reserve(history_size);
+  features.accel_vel_vec.reserve(history_size);
+  features.accel_pred_vec.reserve(history_size);
+
+  for (size_t i = 0; i < history_size; ++i) {
     features.accel_fusion_vec.push_back(history[i].accel_fusion);
     features.accel_vel_vec.push_back(history[i].accel_sp);
     features.accel_pred_vec.push_back(history[i].acc_prediction);
