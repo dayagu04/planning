@@ -807,6 +807,7 @@ class LoadRosbag:
                          "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp","state_shift_lever",]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
+                         "forward_extend_path_x", "forward_extend_path_y", "forward_extend_path_heading",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
                          "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
                          "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",

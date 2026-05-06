@@ -144,7 +144,16 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         'ego_pos_point_y': [cur_pos_yn],
         'ego_pos_point_theta': [cur_yaw],
       })
-
+  try:
+    if bag_loader.plan_debug_msg['enable'] == True:
+      forward_extend_path_xn, forward_extend_path_yn = planning_json['forward_extend_path_x'], planning_json['forward_extend_path_y']
+      forward_extend_path_x, forward_extend_path_y = coord_tf.global_to_local(forward_extend_path_xn, forward_extend_path_yn)
+      lat_plan_data['data_forward_extend_path'].data.update({
+        'forward_extend_path_x': forward_extend_path_x,
+        'forward_extend_path_y': forward_extend_path_y,
+      })
+  except:
+    pass
   planning_succ =False
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_succ = plan_debug_msg.frame_info.planning_succ
@@ -1151,6 +1160,9 @@ def load_lat_plan_figure(fig1, local_view_data):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
                                           'raw_refline_y':[],})
 
+  data_forward_extend_path = ColumnDataSource(data = {'forward_extend_path_x':[],
+                                                      'forward_extend_path_y':[]})
+
   data_center_line_curvature = ColumnDataSource(data = {'center_line_s':[],
                                                         'center_line_curvature':[],
                                                         'center_line_d_poly_curvature':[],
@@ -1316,7 +1328,8 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_center_line_curvature':data_center_line_curvature, \
                    'data_refline_curvature':data_refline_curvature, \
                    'data_construction_refline':data_construction_refline, \
-                   'data_narrow_space_corners':data_narrow_space_corners
+                   'data_narrow_space_corners':data_narrow_space_corners, \
+                   'data_forward_extend_path':data_forward_extend_path,
   }
 
   fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_narrow_space_corners, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 'narrow space')
@@ -1350,6 +1363,7 @@ def load_lat_plan_figure(fig1, local_view_data):
     fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
 
     fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
+    fig1.line('forward_extend_path_y', 'forward_extend_path_x', source = data_forward_extend_path, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.6, legend_label = 'forward extend path', visible=True)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)
@@ -1470,4 +1484,7 @@ def load_lat_plan_figure(fig1, local_view_data):
   fig8.legend.click_policy = 'hide'
   fig9.legend.click_policy = 'hide'
 
-  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data
+  fig_extend_heading.legend.click_policy = 'hide'
+  fig_extend_heading.toolbar.active_scroll = fig_extend_heading.select_one(WheelZoomTool)
+
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, fig_extend_heading, lat_plan_data
