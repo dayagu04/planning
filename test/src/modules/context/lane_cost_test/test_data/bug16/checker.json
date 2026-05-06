@@ -1,0 +1,78 @@
+{
+  "bag_name": "data_collection_BESTUNE_E541_20404_EVENT_KEY_2026-02-26-19-49-41_no_camera.bag",
+  "description": "bug16: 两个时间窗口检查 - (1) 9.0s~12.8s: order=0 off_route, order=1和2 on_route; (2) 15.1s~19.4s: order=0和1 off_route, order=2和3 on_route",
+  "checks": [
+    {
+      "type": "frame_range",
+      "frames": [90, 128],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {
+          "order": 0,
+          "expect": {
+            "is_on_route": false
+          }
+        },
+        {
+          "order": 1,
+          "expect": {
+            "is_on_route": true
+          }
+        },
+        {
+          "order": 2,
+          "expect": {
+            "is_on_route": true
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [90, 128],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "9.0s~12.8s: order=2 的 cost 应该最小"
+    },
+    {
+      "type": "frame_range",
+      "frames": [151, 194],
+      "field": "vl_cost_*_on_route",
+      "conditions": [
+        {
+          "order": 0,
+          "expect": {
+            "is_on_route": false
+          }
+        },
+        {
+          "order": 1,
+          "expect": {
+            "is_on_route": false
+          }
+        },
+        {
+          "order": 2,
+          "expect": {
+            "is_on_route": true
+          }
+        },
+        {
+          "order": 3,
+          "expect": {
+            "is_on_route": true
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame_range",
+      "frames": [151, 194],
+      "field": "vl_cost_*_total",
+      "condition": "min_cost_in_on_route_lanes",
+      "expect": "order == 2",
+      "description": "15.1s~19.4s: order=2 的 cost 应该最小"
+    }
+  ]
+}

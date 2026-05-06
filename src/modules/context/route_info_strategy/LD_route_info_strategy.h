@@ -202,6 +202,13 @@ protected:
      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
      const TopoLinkGraph& feasible_lane_graph);
 
+ void ExportFrameData(
+     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+     const std::vector<TopoPath>& topo_paths,
+     const std::vector<VirtualLaneRouteCost>& lane_costs,
+     const TopoLinkGraph& feasible_lane_graph,
+     int frame_id);
+
  /**
   * @brief Build lane topology graph covering [-50m, +150m] around ego.
   *
