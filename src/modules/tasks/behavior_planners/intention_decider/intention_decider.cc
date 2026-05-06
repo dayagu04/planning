@@ -375,11 +375,64 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
     return result;
   }
 
-  double log_L_decel = 0.0;
-  double log_L_cruise = 0.0;
-  double log_L_accel = 0.0;
-
   const int num_samples = static_cast<int>(features.accel_fusion_vec.size());
+
+  // Pre-compute sample-independent coefficients:
+  //   log L = weight * [-0.5 * d²/σ² - 0.5 * log(2π*σ²)]
+  //         = -coef * d² + const_term
+  // where coef = 0.5 * weight / σ² and const_term = -0.5 * weight * log(2π*σ²).
+  // Total over N samples: log L = -Σ(coef * d_i²) + N * const_term.
+  auto compute_coef = [](double weight, double sigma) {
+    const double sigma_sq = sigma * sigma;
+    return 0.5 * weight / sigma_sq;
+  };
+  auto compute_const_term = [](double weight, double sigma) {
+    const double sigma_sq = sigma * sigma;
+    return -0.5 * weight * std::log(2.0 * M_PI * sigma_sq);
+  };
+
+  // accel_fusion coefficients
+  const double fusion_decel_coef = compute_coef(
+      config_.accel_fusion_weight, config_.accel_fusion_decel_sigma);
+  const double fusion_cruise_coef = compute_coef(
+      config_.accel_fusion_weight, config_.accel_fusion_cruise_sigma);
+  const double fusion_accel_coef = compute_coef(
+      config_.accel_fusion_weight, config_.accel_fusion_accel_sigma);
+
+  // accel_vel coefficients
+  const double vel_decel_coef = compute_coef(
+      config_.accel_vel_weight, config_.accel_vel_decel_sigma);
+  const double vel_cruise_coef = compute_coef(
+      config_.accel_vel_weight, config_.accel_vel_cruise_sigma);
+  const double vel_accel_coef = compute_coef(
+      config_.accel_vel_weight, config_.accel_vel_accel_sigma);
+
+  // accel_pred coefficients
+  const double pred_decel_coef = compute_coef(
+      config_.accel_pred_weight, config_.accel_pred_decel_sigma);
+  const double pred_cruise_coef = compute_coef(
+      config_.accel_pred_weight, config_.accel_pred_cruise_sigma);
+  const double pred_accel_coef = compute_coef(
+      config_.accel_pred_weight, config_.accel_pred_accel_sigma);
+
+  // Accumulate constant terms (scale by num_samples)
+  double log_L_decel =
+      num_samples *
+      (compute_const_term(config_.accel_fusion_weight, config_.accel_fusion_decel_sigma) +
+       compute_const_term(config_.accel_vel_weight, config_.accel_vel_decel_sigma) +
+       compute_const_term(config_.accel_pred_weight, config_.accel_pred_decel_sigma));
+  double log_L_cruise =
+      num_samples *
+      (compute_const_term(config_.accel_fusion_weight, config_.accel_fusion_cruise_sigma) +
+       compute_const_term(config_.accel_vel_weight, config_.accel_vel_cruise_sigma) +
+       compute_const_term(config_.accel_pred_weight, config_.accel_pred_cruise_sigma));
+  double log_L_accel =
+      num_samples *
+      (compute_const_term(config_.accel_fusion_weight, config_.accel_fusion_accel_sigma) +
+       compute_const_term(config_.accel_vel_weight, config_.accel_vel_accel_sigma) +
+       compute_const_term(config_.accel_pred_weight, config_.accel_pred_accel_sigma));
+
+  // Accumulate sample-dependent quadratic terms
   for (int i = 0; i < num_samples; ++i) {
     const double accel_fusion = features.accel_fusion_vec[i];
     const double accel_vel = features.accel_vel_vec[i];
@@ -388,50 +441,23 @@ LongitudinalIntentResult IntentionDecider::CalculateLongitudinalIntent(
     const double d_fusion_decel = accel_fusion - config_.accel_fusion_decel_mu;
     const double d_fusion_cruise = accel_fusion - config_.accel_fusion_cruise_mu;
     const double d_fusion_accel = accel_fusion - config_.accel_fusion_accel_mu;
-    log_L_decel += config_.accel_fusion_weight *
-                   (-0.5 * d_fusion_decel * d_fusion_decel /
-                        (config_.accel_fusion_decel_sigma * config_.accel_fusion_decel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_fusion_decel_sigma * config_.accel_fusion_decel_sigma));
-    log_L_cruise += config_.accel_fusion_weight *
-                    (-0.5 * d_fusion_cruise * d_fusion_cruise /
-                         (config_.accel_fusion_cruise_sigma * config_.accel_fusion_cruise_sigma) -
-                     0.5 * std::log(2.0 * M_PI * config_.accel_fusion_cruise_sigma * config_.accel_fusion_cruise_sigma));
-    log_L_accel += config_.accel_fusion_weight *
-                   (-0.5 * d_fusion_accel * d_fusion_accel /
-                        (config_.accel_fusion_accel_sigma * config_.accel_fusion_accel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_fusion_accel_sigma * config_.accel_fusion_accel_sigma));
+    log_L_decel -= fusion_decel_coef * d_fusion_decel * d_fusion_decel;
+    log_L_cruise -= fusion_cruise_coef * d_fusion_cruise * d_fusion_cruise;
+    log_L_accel -= fusion_accel_coef * d_fusion_accel * d_fusion_accel;
 
     const double d_vel_decel = accel_vel - config_.accel_vel_decel_mu;
     const double d_vel_cruise = accel_vel - config_.accel_vel_cruise_mu;
     const double d_vel_accel = accel_vel - config_.accel_vel_accel_mu;
-    log_L_decel += config_.accel_vel_weight *
-                   (-0.5 * d_vel_decel * d_vel_decel /
-                        (config_.accel_vel_decel_sigma * config_.accel_vel_decel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_vel_decel_sigma * config_.accel_vel_decel_sigma));
-    log_L_cruise += config_.accel_vel_weight *
-                    (-0.5 * d_vel_cruise * d_vel_cruise /
-                         (config_.accel_vel_cruise_sigma * config_.accel_vel_cruise_sigma) -
-                     0.5 * std::log(2.0 * M_PI * config_.accel_vel_cruise_sigma * config_.accel_vel_cruise_sigma));
-    log_L_accel += config_.accel_vel_weight *
-                   (-0.5 * d_vel_accel * d_vel_accel /
-                        (config_.accel_vel_accel_sigma * config_.accel_vel_accel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_vel_accel_sigma * config_.accel_vel_accel_sigma));
+    log_L_decel -= vel_decel_coef * d_vel_decel * d_vel_decel;
+    log_L_cruise -= vel_cruise_coef * d_vel_cruise * d_vel_cruise;
+    log_L_accel -= vel_accel_coef * d_vel_accel * d_vel_accel;
 
     const double d_pred_decel = accel_pred - config_.accel_pred_decel_mu;
     const double d_pred_cruise = accel_pred - config_.accel_pred_cruise_mu;
     const double d_pred_accel = accel_pred - config_.accel_pred_accel_mu;
-    log_L_decel += config_.accel_pred_weight *
-                   (-0.5 * d_pred_decel * d_pred_decel /
-                        (config_.accel_pred_decel_sigma * config_.accel_pred_decel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_pred_decel_sigma * config_.accel_pred_decel_sigma));
-    log_L_cruise += config_.accel_pred_weight *
-                    (-0.5 * d_pred_cruise * d_pred_cruise /
-                         (config_.accel_pred_cruise_sigma * config_.accel_pred_cruise_sigma) -
-                     0.5 * std::log(2.0 * M_PI * config_.accel_pred_cruise_sigma * config_.accel_pred_cruise_sigma));
-    log_L_accel += config_.accel_pred_weight *
-                   (-0.5 * d_pred_accel * d_pred_accel /
-                        (config_.accel_pred_accel_sigma * config_.accel_pred_accel_sigma) -
-                    0.5 * std::log(2.0 * M_PI * config_.accel_pred_accel_sigma * config_.accel_pred_accel_sigma));
+    log_L_decel -= pred_decel_coef * d_pred_decel * d_pred_decel;
+    log_L_cruise -= pred_cruise_coef * d_pred_cruise * d_pred_cruise;
+    log_L_accel -= pred_accel_coef * d_pred_accel * d_pred_accel;
   }
 
   // 归一化 log-likelihood：除以数据点数量，防止似然比过于极端
