@@ -127,14 +127,18 @@ bool HppLateralObstacleDecider::Execute() {
 }
 
 void HppLateralObstacleDecider::UpdateLatDecision(
-    const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    const ObstacleConsistencyMap &obstacle_consistency_map,
-    const ObstacleClusterContainer &obs_cluster_container,
-    const ObstacleClassificationResult &obs_classification_result) {
-  auto &lat_obstacle_decision = session_->mutable_planning_context()
+    const std::shared_ptr<ReferencePath>& reference_path_ptr,
+    const ObstacleConsistencyMap& obstacle_consistency_map,
+    const ObstacleClusterContainer& obs_cluster_container,
+    const ObstacleClassificationResult& obs_classification_result) {
+  auto& lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
+  auto& cross_obstacle_info = session_->mutable_planning_context()
+                                  ->mutable_lateral_obstacle_decider_output()
+                                  .Cross_obstacle_info;
   lat_obstacle_decision.clear();
+  cross_obstacle_info.clear();
   for (const auto& cluster : obs_cluster_container.obstacle_clusters) {
     LatObstacleDecisionType decision;
     if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
@@ -806,9 +810,14 @@ void HppLateralObstacleDecider::DecideCrossingDynamicObs(
     DecideNonCrossingDynamicObs(obstacle, decision);
     return;
   }
-  // Step 3: 有重叠，计算时间差并决策
+  // Step 3: 有重叠，计算时间差并决策；输出碰撞位置
+  auto& cross_obstacle_info = session_->mutable_planning_context()
+                                  ->mutable_lateral_obstacle_decider_output()
+                                  .Cross_obstacle_info;
+  cross_obstacle_info[obstacle->id()] = {has_overlap,
+                                         ego_overlap_s_range.first};
   const auto& ego_state = reference_path_ptr->get_frenet_ego_state();
-  if (ego_state.is_vehivle_stationary()) {
+  if (ego_state.is_vehicle_stationary()) {
     decision = LatObstacleDecisionType::IGNORE;
   } else {
     constexpr double kOverlapBuffer = 6.0;
@@ -1049,11 +1058,33 @@ void HppLateralObstacleDecider::DecideBasedPassageWidth(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
-      if (frenet_boundary.obs_2left_road_boundary_mindis >
-          frenet_boundary.obs_2right_road_boundary_mindis) {
-        decision_info.decision = LatObstacleDecisionType::LEFT;
+      const auto& ego_state = reference_path_ptr_->get_frenet_ego_state();
+      const double ego_s_rear =
+          ego_state.s() - vehicle_param.rear_edge_to_rear_axle;
+      const double ego_s_front =
+          ego_state.s() + vehicle_param.front_edge_to_rear_axle;
+      const double obs_l_center =
+          (frenet_boundary.l_start + frenet_boundary.l_end) * 0.5;
+
+      // 判断障碍物是否与自车在纵向上有重叠（包括互相包含的情况）
+      const bool has_s_overlap = !(frenet_boundary.s_end < ego_s_rear ||
+                                   frenet_boundary.s_start > ego_s_front);
+      if (has_s_overlap) {
+        // 障碍物与自车纵向重叠，根据障碍物横向位置决策
+        // 障碍物在左侧，给右侧决策；障碍物在右侧，给左侧决策
+        if (obs_l_center > ego_state.l()) {
+          decision_info.decision = LatObstacleDecisionType::RIGHT;
+        } else {
+          decision_info.decision = LatObstacleDecisionType::LEFT;
+        }
       } else {
-        decision_info.decision = LatObstacleDecisionType::RIGHT;
+        // 常规逻辑：哪侧距离大就往哪侧绕
+        if (frenet_boundary.obs_2left_road_boundary_mindis >
+            frenet_boundary.obs_2right_road_boundary_mindis) {
+          decision_info.decision = LatObstacleDecisionType::LEFT;
+        } else {
+          decision_info.decision = LatObstacleDecisionType::RIGHT;
+        }
       }
     } else {
       decision_info.decision = LatObstacleDecisionType::RIGHT;
