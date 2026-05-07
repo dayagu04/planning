@@ -165,43 +165,61 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
       continue;
     }
+    if (obstacle->type() ==
+        iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      continue;
+    }
+    if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end() &&
+        !obstacle->is_static()) {
+      MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle,
+                                      obs_classification_result, decision);
+      lat_obstacle_decision[obs_id] = decision;
+    }
+  }
+  // 处理OBJECT_TYPE_OCC_GENERAL_DYNAMIC类型障碍物
+  for (const auto& obstacle : reference_path_ptr->get_obstacles()) {
+    int64_t obs_id = obstacle->id();
+    LatObstacleDecisionType decision;
+    if (!obstacle->b_frenet_valid()) {
+      lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
+      continue;
+    }
+    if (obs_classification_result.id_to_rel_pos_type.find(obs_id)->second ==
+        ObstacleRelPosType::FAR_AWAY) {
+      lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
+      continue;
+    }
     if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end()) {
-      if (!obstacle->is_static()) {
-        MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle,
-                                        obs_classification_result, decision);
-        lat_obstacle_decision[obs_id] = decision;
-      } else if (obstacle->type() ==
-                 iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      if (obstacle->obstacle()->has_object_detection_id() &&
+          lat_obstacle_decision.find(
+              obstacle->obstacle()->object_detection_id()) !=
+              lat_obstacle_decision.end()) {
         // 绑定的occ动态障碍物与od障碍物，决策结果一样
-        if (obstacle->obstacle()->has_object_detection_id() &&
-            lat_obstacle_decision.find(
-                obstacle->obstacle()->object_detection_id()) !=
-                lat_obstacle_decision.end()) {
-          const uint32 occ2od_id = obstacle->obstacle()->object_detection_id();
-          lat_obstacle_decision[obs_id] = lat_obstacle_decision[occ2od_id];
-        } else {
-          lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
-        }
+        const uint32 occ2od_id = obstacle->obstacle()->object_detection_id();
+        lat_obstacle_decision[obs_id] = lat_obstacle_decision[occ2od_id];
       } else {
-        lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
+        DecideNonCrossingDynamicObs(obstacle, decision);
+        lat_obstacle_decision[obs_id] = decision;
       }
     }
   }
 
   // 新增：HPP闸机横向决策逻辑
-  const auto& turnstile_scene_info = reference_path_ptr->get_turnstile_scene_info();
+  const auto& turnstile_scene_info =
+      reference_path_ptr->get_turnstile_scene_info();
   if (session_->is_hpp_scene() && reference_path_ptr != nullptr &&
       turnstile_scene_info.type != TurnstileSceneType::TURNSTILE_SCENE_NONE) {
     std::unordered_map<int, TurnstileInfo> id_2_turnstile_info;
-    for (const auto &turnstile_info : turnstile_scene_info.turnstile_infos) {
+    for (const auto& turnstile_info : turnstile_scene_info.turnstile_infos) {
       id_2_turnstile_info[turnstile_info.turnstile_id] = turnstile_info;
     }
 
-    const auto &turnstile_obstacles =
+    const auto& turnstile_obstacles =
         reference_path_ptr->get_turnstile_obstacles();
-    for (const auto &obstacle : turnstile_obstacles) {
+    for (const auto& obstacle : turnstile_obstacles) {
       LatObstacleDecisionType decision;
-      MakeDecisionForTurnstile(reference_path_ptr, obstacle, id_2_turnstile_info, decision);
+      MakeDecisionForTurnstile(reference_path_ptr, obstacle,
+                               id_2_turnstile_info, decision);
       lat_obstacle_decision[obstacle->id()] = decision;
       lat_obstacle_decision[obstacle->id() + 100000] = decision;
     }

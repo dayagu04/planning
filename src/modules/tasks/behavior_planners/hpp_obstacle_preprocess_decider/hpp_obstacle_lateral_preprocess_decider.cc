@@ -332,38 +332,18 @@ void HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
         std::min(obs_start2left_dis, obs_end2left_dis);
     frenet_boundary.obs_2right_road_boundary_mindis =
         std::min(obs_start2right_dis, obs_end2right_dis);
-  } else if (l_end >= left_boundary && l_start < left_boundary &&
+  } else if (l_end >= left_boundary &&
              l_start >= right_boundary) {
-    // 障碍物跨左边界
+    // 障碍物跨左边界或完全在左侧
     frenet_boundary.obs_2left_road_boundary_mindis = 0.0;
     frenet_boundary.obs_2right_road_boundary_mindis =
         std::min(obs_start2right_dis, obs_end2right_dis);
-  } else if (l_start <= right_boundary && l_end > right_boundary &&
+  } else if (l_start <= right_boundary &&
              l_end <= left_boundary) {
-    // 障碍物跨右边界
+    // 障碍物跨右边界或完全在右侧
     frenet_boundary.obs_2right_road_boundary_mindis = 0.0;
     frenet_boundary.obs_2left_road_boundary_mindis =
         std::min(obs_start2left_dis, obs_end2left_dis);
-  } else if (l_start < right_boundary && l_end < right_boundary) {
-    // 障碍物完全在右边界外侧
-    const double obs_start2right_outer =
-        std::fabs(l_start + refpath_pt_start.right_drivable_width);
-    const double obs_end2right_outer =
-        std::fabs(l_end + refpath_pt_end.right_drivable_width);
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        std::min(obs_start2left_dis, obs_end2left_dis);
-    frenet_boundary.obs_2right_road_boundary_mindis =
-        std::min(obs_start2right_outer, obs_end2right_outer);
-  } else if (l_start > left_boundary && l_end > left_boundary) {
-    // 障碍物完全在左边界外侧
-    const double obs_start2left_outer =
-        l_start - refpath_pt_start.left_drivable_width;
-    const double obs_end2left_outer =
-        l_end - refpath_pt_end.left_drivable_width;
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        std::min(obs_start2left_outer, obs_end2left_outer);
-    frenet_boundary.obs_2right_road_boundary_mindis =
-        std::min(obs_start2right_dis, obs_end2right_dis);
   } else {
     // 其他情况（障碍物跨越整个道路）
     frenet_boundary.obs_2left_road_boundary_mindis = 0.0;
