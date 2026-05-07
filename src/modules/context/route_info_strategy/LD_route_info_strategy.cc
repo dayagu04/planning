@@ -2991,6 +2991,9 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     }
     // 确定合流方向
     const auto merge_direction = CalculateMergeDirection(*merge_ptr, ld_map_);
+    if (merge_direction == RAMP_NONE) {
+      continue;
+    }
 
     // 3. 判断是否需要处理该合流点
     // 3.1 仅处理拓扑变化点之前的合流点
@@ -3053,22 +3056,21 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       if (ld_map_.isOnRouteLinks(pre_merge_link_lane->link_id())) {
         continue;
       }
-      // 判断是否是feasible lane旁边车道
+      // 根据 search_orderid 直接获取 avoid_feasible_lane
       uint32 search_orderid = merge_direction == RAMP_ON_LEFT
                                   ? merge_link_lane->sequence() + 1
                                   : merge_link_lane->sequence() - 1;
-      auto it = std::find_if(
-          feasible_lane_graph.lane_topo_groups[merge_link_idx]
-              .topo_lanes.begin(),
-          feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end(),
-          [search_orderid](const TopoLane& lane) {
-            return lane.order_id == search_orderid;
-          });
-      if (it == feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end()) {
-        continue;
+      for (const auto& lane_id : merge_ptr->lane_ids()) {
+        const auto* tmp_lane = ld_map_.GetLaneInfoByID(lane_id);
+        if (tmp_lane == nullptr) {
+          continue;
+        }
+        if (tmp_lane->sequence() == search_orderid) {
+          avoid_feasible_lane = tmp_lane;
+          break;
+        }
       }
       // 判断需要躲避的feasible_lane前继link是否在route上
-      avoid_feasible_lane = ld_map_.GetLaneInfoByID(it->id);
       if (avoid_feasible_lane == nullptr) {
         continue;
       }
@@ -3135,8 +3137,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           continue;
         }
 
-        if (!IsSuccussorConnectLane(lane_info, avoid_feasible_lane,
-                                    feasible_lane_graph)) {
+        if (!IsSuccussorConnectLane(lane_info, avoid_feasible_lane)) {
           continue;
         }
 
@@ -5553,55 +5554,35 @@ void LDRouteInfoStrategy::ExportFrameData(
 
 bool LDRouteInfoStrategy::IsSuccussorConnectLane(
     const iflymapdata::sdpro::Lane* cur_lane,
-    const iflymapdata::sdpro::Lane* suc_lane,
-    const TopoLinkGraph& feasible_lane_graph) const {
+    const iflymapdata::sdpro::Lane* suc_lane) const {
   if (cur_lane == nullptr || suc_lane == nullptr) {
     return false;
   }
 
-  // 构建 lane_id 到 TopoLane 的映射
-  std::unordered_map<uint64, const TopoLane*> lane_map;
-  for (const auto& lane_topo_group : feasible_lane_graph.lane_topo_groups) {
-    for (const auto& topo_lane : lane_topo_group.topo_lanes) {
-      lane_map[topo_lane.id] = &topo_lane;
-    }
-  }
-
-  // 查找 cur_lane 对应的 TopoLane
-  auto cur_it = lane_map.find(cur_lane->id());
-  if (cur_it == lane_map.end()) {
-    return false;
-  }
-
-  // 使用 BFS 搜索从 cur_lane 到 suc_lane 的可达性
-  std::queue<uint64> queue;
   std::unordered_set<uint64> visited;
+  const auto* current_lane = cur_lane;
+  visited.insert(current_lane->id());
 
-  queue.push(cur_lane->id());
-  visited.insert(cur_lane->id());
-
-  while (!queue.empty()) {
-    uint64 current_id = queue.front();
-    queue.pop();
-
-    auto it = lane_map.find(current_id);
-    if (it == lane_map.end()) {
-      continue;
+  while (current_lane != nullptr) {
+    if (current_lane->successor_lane_ids_size() >= 2) {
+      return false;
     }
 
-    const TopoLane* current_topo = it->second;
-
-    // 遍历当前 lane 的所有 successor
-    for (uint64 successor_id : current_topo->successor_lane_ids) {
-      if (successor_id == suc_lane->id()) {
-        return true;
-      }
-
-      if (visited.find(successor_id) == visited.end()) {
-        visited.insert(successor_id);
-        queue.push(successor_id);
-      }
+    if (current_lane->successor_lane_ids_size() == 0) {
+      return false;
     }
+
+    uint64 successor_id = current_lane->successor_lane_ids()[0];
+    if (successor_id == suc_lane->id()) {
+      return true;
+    }
+
+    if (visited.find(successor_id) != visited.end()) {
+      return false;
+    }
+    visited.insert(successor_id);
+
+    current_lane = ld_map_.GetLaneInfoByID(successor_id);
   }
 
   return false;
