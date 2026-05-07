@@ -363,7 +363,7 @@ bool KDPath::SLToXY(const Point2D& frenet_point, Point2D& cart_point) {
     return false;
   }
 
-  if (frenet_point.x < 0 || frenet_point.x > length_) {
+  if (frenet_point.x < 0 || frenet_point.x > length_ + 1e-4) {
     ILOG_DEBUG << "s is not within the valid range";
     return false;
   }

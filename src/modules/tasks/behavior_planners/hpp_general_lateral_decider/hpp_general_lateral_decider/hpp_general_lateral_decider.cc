@@ -2446,13 +2446,6 @@ bool HppGeneralLateralDecider::SmoothPointsIteratively(
   for (size_t i = 0; i < n; ++i) {
     output[i].s = s_ref[i];
     output[i].l = l_curr[i];
-    Point2D xy;
-    if (!frenet_coord->SLToXY(Point2D(s_ref[i], l_curr[i]), xy)) {
-      return false;
-    } else {
-      output[i].x = xy.x;
-      output[i].y = xy.y;
-    }
   }
 
   return true;
@@ -2522,12 +2515,14 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   const size_t n = ref_traj_points_.size();
   if (n == 0 || bound_center_line_.size() != n || hard_bounds.size() != n ||
       soft_bounds.size() != n) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
 
   constexpr size_t kBlendRadius = 5;
   const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
   if (frenet_coord == nullptr) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
 
@@ -2544,7 +2539,49 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     }
   }
 
-  if (!has_any_break) {
+  constexpr int kMergeTriggerFrames = 3;
+  constexpr int kMergeRecoverFrames = 2;
+
+  if (has_any_break) {
+    merge_trigger_count_++;
+    merge_recover_count_ = 0;
+  } else {
+    merge_trigger_count_ = 0;
+    if (is_ref_merge_active_) {
+      merge_recover_count_++;
+    }
+  }
+
+  if (!is_ref_merge_active_) {
+    // 未激活状态：需要连续 kMergeTriggerFrames 帧触发才激活
+    if (merge_trigger_count_ >= kMergeTriggerFrames) {
+      is_ref_merge_active_ = true;
+      ILOG_INFO << "Reference merge activated after " << merge_trigger_count_ << " frames";
+    }
+  } else {
+    // 已激活状态：需要连续 kMergeRecoverFrames 帧恢复才退出
+    if (merge_recover_count_ >= kMergeRecoverFrames) {
+      is_ref_merge_active_ = false;
+      merge_trigger_count_ = 0;
+      merge_recover_count_ = 0;
+      ref_break_blend_frame_count_ = 0;
+      ILOG_INFO << "Reference merge deactivated after recovery";
+      return;
+    } else {
+      // 未达到条件，使用上一帧规划结果
+      ref_break_blend_frame_count_ = 0;
+      if (!plan_history_traj_.empty() && plan_history_traj_.size() == n) {
+        const double s_ref = ref_traj_points_.front().s;
+        for (size_t i = 0; i < n; ++i) {
+          ref_traj_points_[i] = plan_history_traj_[i];
+          }
+      }
+      return;
+    }
+  }
+
+  if (!is_ref_merge_active_) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
   // 连续 break 0.5m 以上，则认为 break
@@ -2603,8 +2640,19 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   if (break_recover_ranges.empty()) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
+
+  ++ref_break_blend_frame_count_;
+  constexpr int kBreakBlendRampFrames = 5;
+  const int c = ref_break_blend_frame_count_;
+  const double alpha_l =
+      std::min(1.0,
+               0.2 + 0.8 * static_cast<double>(std::min(
+                                  std::max(c - 1, 0),
+                                  kBreakBlendRampFrames - 1)) /
+                         static_cast<double>(kBreakBlendRampFrames - 1));
 
   TrajectoryPoints merged = ref_traj_points_;
   const size_t first_break_start = break_recover_ranges.front().first;
@@ -2637,6 +2685,10 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   merged = iterativeSmoothWithBounds(merged);
+  for (size_t i = 0; i < n; ++i) {
+    merged[i].l = alpha_l * merged[i].l +
+        (1.0 - alpha_l) * ref_traj_points_[i].l;
+  }
   Point2D ref_point;
   for (size_t i = 0; i < merged.size(); i++) {
     if (frenet_coord->SLToXY(
