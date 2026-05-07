@@ -2752,10 +2752,20 @@ void HppGeneralLateralDecider::LimitFrenetLateralSlope(
               frenet_bounds[i - 1].first - dl_ds_ratio * ds;
         }
       }
+      // 防止斜率限制导致 upper < lower
+      if (frenet_bounds[i].first > frenet_bounds[i].second) {
+        const double mid = 0.5 * (frenet_bounds[i].first + frenet_bounds[i].second);
+        frenet_bounds[i].first = mid;
+        frenet_bounds[i].second = mid;
+      }
+      if (frenet_bounds[i - 1].first > frenet_bounds[i - 1].second) {
+        const double mid = 0.5 * (frenet_bounds[i - 1].first + frenet_bounds[i - 1].second);
+        frenet_bounds[i - 1].first = mid;
+        frenet_bounds[i - 1].second = mid;
+      }
     }
   }
 }
-
 
 void HppGeneralLateralDecider::ProtectBoundByInitPoint(
     std::pair<double, double> &bound,
