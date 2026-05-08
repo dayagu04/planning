@@ -89,6 +89,7 @@ enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
 struct LateralObstacleDeciderOutput {
   ara_star::HybridARAStarResult hybrid_ara_result;
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
+  std::unordered_set<uint32_t> ignored_by_narrow_passage;
   std::unordered_map<uint32_t, bool> is_emergency_avoid_release;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
@@ -110,6 +111,7 @@ struct LateralObstacleDeciderOutput {
   void Clear() {
     hybrid_ara_result.Clear();
     lat_obstacle_decision.clear();
+    ignored_by_narrow_passage.clear();
     search_result = SearchResult::NO_SEARCH;
   }
 };
