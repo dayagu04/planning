@@ -2526,9 +2526,27 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     return;
   }
 
+  const auto SLToXYPhi_traj = [frenet_coord](TrajectoryPoints &traj) {
+    Point2D ref_point;
+    for (size_t i = 0; i < traj.size(); ++i) {
+      if (frenet_coord->SLToXY(Point2D(traj[i].s, traj[i].l), ref_point)) {
+        traj[i].x = ref_point.x;
+        traj[i].y = ref_point.y;
+      }
+      if (i > 0) {
+        const double dx = traj[i].x - traj[i - 1].x;
+        const double dy = traj[i].y - traj[i - 1].y;
+        traj[i - 1].heading_angle = std::atan2(dy, dx);
+      }
+    }
+    if (traj.size() >= 2) {
+      traj.back().heading_angle = traj[traj.size() - 2].heading_angle;
+    }
+  };
+
   auto is_break_hard_bound = [&](size_t idx) {
-    return ref_traj_points_[idx].l < hard_bounds[idx].first ||
-           ref_traj_points_[idx].l > hard_bounds[idx].second;
+    return ref_traj_points_[idx].l < hard_bounds[idx].first - 0.1 ||
+           ref_traj_points_[idx].l > hard_bounds[idx].second + 0.1;
   };
 
   bool has_any_break = false;
@@ -2556,7 +2574,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     // 未激活状态：需要连续 kMergeTriggerFrames 帧触发才激活
     if (merge_trigger_count_ >= kMergeTriggerFrames) {
       is_ref_merge_active_ = true;
-      ILOG_INFO << "Reference merge activated after " << merge_trigger_count_ << " frames";
+    } else {
+      return;
     }
   } else {
     // 已激活状态：需要连续 kMergeRecoverFrames 帧恢复才退出
@@ -2565,16 +2584,15 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
       merge_trigger_count_ = 0;
       merge_recover_count_ = 0;
       ref_break_blend_frame_count_ = 0;
-      ILOG_INFO << "Reference merge deactivated after recovery";
       return;
+    } else if (merge_recover_count_ == 0) {
+      // nothing to do
     } else {
-      // 未达到条件，使用上一帧规划结果
-      ref_break_blend_frame_count_ = 0;
       if (!plan_history_traj_.empty() && plan_history_traj_.size() == n) {
-        const double s_ref = ref_traj_points_.front().s;
         for (size_t i = 0; i < n; ++i) {
-          ref_traj_points_[i] = plan_history_traj_[i];
-          }
+          ref_traj_points_[i].l = 0.5 * plan_history_traj_[i].l;
+        }
+        SLToXYPhi_traj(ref_traj_points_);
       }
       return;
     }
@@ -2689,22 +2707,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     merged[i].l = alpha_l * merged[i].l +
         (1.0 - alpha_l) * ref_traj_points_[i].l;
   }
-  Point2D ref_point;
-  for (size_t i = 0; i < merged.size(); i++) {
-    if (frenet_coord->SLToXY(
-            Point2D(merged[i].s, merged[i].l),
-            ref_point)) {
-      merged[i].x = ref_point.x;
-      merged[i].y = ref_point.y;
-    }
-    if (i > 0) {
-      const double dx = merged[i].x - merged[i - 1].x;
-      const double dy = merged[i].y - merged[i - 1].y;
-      merged[i - 1].heading_angle = std::atan2(dy, dx);
-    }
-  }
-  merged.back().heading_angle =
-      merged[merged.size() - 2].heading_angle;
+
+  SLToXYPhi_traj(merged);
 
   ref_traj_points_ = merged;
 }

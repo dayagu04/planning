@@ -245,9 +245,9 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;
 
   // 参考线合并状态跟踪
-  bool is_ref_merge_active_ = false;  // 当前是否处于合并状态
-  int merge_trigger_count_ = 0;       // 连续触发合并条件的帧数
-  int merge_recover_count_ = 0;       // 连续恢复条件的帧数
+  bool is_ref_merge_active_ = false;
+  int merge_trigger_count_ = 0;
+  int merge_recover_count_ = 0;
   int ref_break_blend_frame_count_ = 0;
 };
 
