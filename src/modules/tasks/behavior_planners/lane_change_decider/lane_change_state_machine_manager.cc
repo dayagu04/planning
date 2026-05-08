@@ -5562,7 +5562,9 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() {
     is_rear_lc_back = rear_agent_overtaking_ &&
                               target_lane_rear_node_->node_agent_id() == back_agent_id;
   }
-  if(is_rear_lc_back || is_side_obs_back) {
+  bool is_front_lc_back =
+      lane_change_stage_info_.lc_back_reason == "front view back"; //前方车引起的变道返回
+  if(is_rear_lc_back || is_side_obs_back || is_front_lc_back) {
     small_offset_latched_ = true;  // 一旦触发，Hold 期间永久锁存到小偏移
   }
   return small_offset_latched_ ? small_lateral_offset : large_lateral_offset;
