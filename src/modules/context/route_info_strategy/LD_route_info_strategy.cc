@@ -80,7 +80,9 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
     return;
   }
 
-  if (!UpdateFeasibleLaneGraph()){
+  if (!UpdateFeasibleLaneGraph()) {
+    feasible_lane_graph_.lane_topo_groups.clear();
+    route_info_output = route_info_output_;
     return;
   }
 
