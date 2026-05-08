@@ -1077,19 +1077,11 @@ void HppLateralObstacleDecider::DecideBasedPassageWidth(
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
       const auto& ego_state = reference_path_ptr_->get_frenet_ego_state();
-      const double ego_s_rear =
-          ego_state.s() - vehicle_param.rear_edge_to_rear_axle;
-      const double ego_s_front =
-          ego_state.s() + vehicle_param.front_edge_to_rear_axle;
       const double obs_l_center =
           (frenet_boundary.l_start + frenet_boundary.l_end) * 0.5;
-
-      // 判断障碍物是否与自车在纵向上有重叠（包括互相包含的情况）
-      const bool has_s_overlap = !(frenet_boundary.s_end < ego_s_rear ||
-                                   frenet_boundary.s_start > ego_s_front);
-      if (has_s_overlap) {
-        // 障碍物与自车纵向重叠，根据障碍物横向位置决策
-        // 障碍物在左侧，给右侧决策；障碍物在右侧，给左侧决策
+      if (frenet_boundary.l_end < ego_state.l() ||
+          frenet_boundary.l_start > ego_state.l()) {
+        // 障碍物与自车横向重叠，根据障碍物横向位置决策。障碍物在左侧，给右侧决策；障碍物在右侧，给左侧决策
         if (obs_l_center > ego_state.l()) {
           decision_info.decision = LatObstacleDecisionType::RIGHT;
         } else {

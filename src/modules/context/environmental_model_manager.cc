@@ -1649,6 +1649,13 @@ bool EnvironmentalModelManager::IsStatic(
   auto& ego_state = session_->environmental_model().get_ego_state_manager();
   double prediction_trajectory_length = -10.0;
   double prediction_duration = 0.0;
+  double max_speed_static_obstacle = 0.0;
+  double max_static_prediction_length = 0.0;
+  double static_speed = 0.0;
+  std::array<double, 3> xp;
+  std::array<double, 3> fp;
+  double kSpeedHysteresisParameter = 0.0;
+  double kTrajLengthHysteresisParameter = 0.0;
   if (prediction_object.trajectory_valid) {
     const auto& trajectory_array = prediction_object.trajectory_array.at(0);
     if (trajectory_array.trajectory.size() > 0) {
@@ -1661,21 +1668,29 @@ bool EnvironmentalModelManager::IsStatic(
       prediction_duration = end_point.relative_time;
     }
   }
-
-  double max_speed_static_obstacle = 0.25;
-  double max_static_prediction_length =
+  if (session_->is_hpp_scene()) {
+    max_speed_static_obstacle = 0.1;
+    kSpeedHysteresisParameter = 1.15;
+    kTrajLengthHysteresisParameter = 1.15;
+    xp = {1, 3, 5};
+    fp = {0.1, 0.15, 0.2};
+  } else {
+    max_speed_static_obstacle = 0.25;
+    kSpeedHysteresisParameter = 1.5;
+    kTrajLengthHysteresisParameter = 2.0;
+    xp = {10, 20, 30};
+    fp = {0.25, 2, 3};
+  }
+  static_speed = interp(ego_state->ego_v(), xp, fp);
+  max_static_prediction_length =
       max_speed_static_obstacle * prediction_duration;
-  std::array<double, 3> xp{10, 20, 30};
-  std::array<double, 3> fp{0.25, 2, 3};
-  double static_speed = interp(ego_state->ego_v(), xp, fp);
-
   // 滞回
   const auto obstacle_manager =
       session_->environmental_model().get_obstacle_manager();
   const auto obstacle = obstacle_manager->find_obstacle(prediction_object.id);
   if (obstacle != nullptr && obstacle->is_static()) {
-    static_speed = static_speed * 1.5;
-    max_static_prediction_length = max_static_prediction_length * 2;
+    static_speed = static_speed * kSpeedHysteresisParameter;
+    max_static_prediction_length = max_static_prediction_length * kTrajLengthHysteresisParameter;
   }
 
   bool is_static =
