@@ -67,8 +67,6 @@ class HPPSpeedLimitDecider : public Task {
   const double ComputeMaxLatAcceleration();
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
-  double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info,
-                                      const double target_v);
   void BuildSmoothedSpeedProfile(double ego_s, double ego_v, double v_cruise);
 
   void CalculateNarrowAreaSpeedLimitFromBounds();
