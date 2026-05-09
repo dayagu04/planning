@@ -2126,7 +2126,7 @@ void LdpCore::SetLdpOutputInfo() {
         ->ldp_output_info_.ldp_right_intervention_flag_ = false;
   }
 
-  uint32 mask_enable_E541 = 33574927;
+  uint32 mask_enable_E541 = GetContext.get_param()->ldp_enable_code_maskcode;
   mask_enable_code_e541 = ldp_enable_code_ & mask_enable_E541;
   if (GetContext.get_param()->car_type == "bestune_e541") {
     if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::

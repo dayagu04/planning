@@ -37,7 +37,7 @@ class ElkCore {
   bool elk_main_switch_ = false;  // elk功能开关状态 0:Off  1:On
   bool UpdateElkMainSwitch(void);
 
-  uint16 elk_enable_code_ = 255;
+  uint32 elk_enable_code_ = 255;
   // 车身YawRate满足取消抑制阈值持续时间 单位:s
   double yaw_rate_supp_recover_duration_ = 0.0;
   // 制动踏板表现满足取消抑制阈值持续时间 单位:s
@@ -50,16 +50,16 @@ class ElkCore {
   double elk_roadedge_curve_supp_duration_ = 0.0;
   // 当前方向盘转速条件满足取消抑制阈值持续时间 单位:s
   double str_wheel_ang_speed_recover_duration_ = 0.0;
-  uint16 UpdateElkEnableCode(void);
+  uint32 UpdateElkEnableCode(void);
 
-  uint16 elk_disable_code_ = 255;
+  uint32 elk_disable_code_ = 255;
   // 车身YawRate满足抑制阈值持续时间 单位:s
   double yaw_rate_supp_duration_ = 0.0;
   // 刹车踏板主缸压力满足抑制阈值持续时间 单位:s
   double brake_pedal_pressed_supp_duration_ = 0.0;
   // 雨刮持续时间满足抑制阈值持续时间 单位:s
   double wiper_state_supp_duration_ = 0.0;
-  uint16 UpdateElkDisableCode(void);
+  uint32 UpdateElkDisableCode(void);
 
   uint16 elk_fault_code_ = 255;
   uint16 UpdateElkFaultCode(void);
