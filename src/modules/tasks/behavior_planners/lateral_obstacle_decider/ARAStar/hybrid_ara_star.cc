@@ -1054,8 +1054,8 @@ bool HybridARAStar::ProcessStaticAgents() {
   uint32_t obs_num = 0;
   constexpr double kLBuffer = 4.5;
   constexpr double kCareLBuffer = 1.5;
-  const ObstacleManager* obstacle_manager =
-      session_->environmental_model().get_obstacle_manager().get();
+  const auto& obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
   for (const auto& frenet_obstacle : reference_path_ptr_->get_obstacles()) {
     if (frenet_obstacle->b_frenet_valid()) {
       const auto& frenet_obstacle_boundary =

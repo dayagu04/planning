@@ -1395,8 +1395,8 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
   pnc::mathlib::spline l_s_spline;
   l_s_spline.set_points(s_vec, l_vec, pnc::mathlib::spline::linear);
 
-  const ObstacleManager* obstacle_manager =
-      session_->environmental_model().get_obstacle_manager().get();
+  const auto& obstacle_manager = 
+        session_->environmental_model().get_obstacle_manager();
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
