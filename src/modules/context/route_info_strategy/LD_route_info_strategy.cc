@@ -93,6 +93,7 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
 bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
   mlc_decider_scene_type_info_.reset();
   feasible_lane_graph_.lane_topo_groups.clear();
+  feasible_lane_graph_for_merge_after_split_.lane_topo_groups.clear();
 
   MLCSceneTypeDecider();
 
@@ -3126,7 +3127,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
   // 检查是否需要考虑split后的merge约束
   feasible_lane_graph_for_merge_after_split_.lane_topo_groups.clear();
   bool has_merge_after_split = false;
-  if (!split_info_vec_.empty() && !merge_info_vec_.empty()) {
+  if (!ramp_info_vec_.empty() && !merge_info_vec_.empty()) {
     // 确定merge的距离上限：如果有下一个ramp，则merge必须在下一个ramp之前
     double merge_distance_upper_limit = std::numeric_limits<double>::max();
     if (ramp_info_vec_.size() > 1) {
@@ -3135,7 +3136,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
 
     for (const auto& merge_info : merge_info_vec_) {
       // merge必须在当前split之后，且在下一个ramp之前（如果有的话）
-      if (merge_info.second > split_info_vec_[0].second &&
+      if (merge_info.second > ramp_info_vec_[0].second &&
           merge_info.second < merge_distance_upper_limit &&
           !IsIgnoreMerge(merge_info)) {
         has_merge_after_split =
@@ -3276,7 +3277,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneForMergeAfterSplit(
     TopoLinkGraph& feasible_lane_graph) {
   // 1、获取split link和split_next_link
   const iflymapdata::sdpro::LinkInfo_Link* split_link =
-      ld_map_.GetLinkOnRoute(mlc_decider_scene_type_info_.topo_change_link_id);
+      ld_map_.GetLinkOnRoute(mlc_decider_scene_type_info_.target_link_id);
   if (split_link == nullptr) {
     return false;
   }
@@ -3288,18 +3289,18 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneForMergeAfterSplit(
   }
 
   // 2、找到当前split之后、下一个split之前的第一个非可忽略的merge
-  if (merge_info_vec_.empty() || split_info_vec_.empty()) {
+  if (merge_info_vec_.empty() || ramp_info_vec_.empty()) {
     return false;
   }
 
   double merge_distance_upper_limit = std::numeric_limits<double>::max();
-  if (split_info_vec_.size() > 1) {
-    merge_distance_upper_limit = split_info_vec_[1].second;
+  if (ramp_info_vec_.size() > 1) {
+    merge_distance_upper_limit = ramp_info_vec_[1].second;
   }
 
   const iflymapdata::sdpro::LinkInfo_Link* first_merge_link_info = nullptr;
   for (const auto& merge_info : merge_info_vec_) {
-    if (merge_info.second > split_info_vec_[0].second &&
+    if (merge_info.second > ramp_info_vec_[0].second &&
         merge_info.second < merge_distance_upper_limit &&
         !IsIgnoreMerge(merge_info)) {
       first_merge_link_info = merge_info.first;
