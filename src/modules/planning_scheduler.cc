@@ -1605,6 +1605,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("TaskFunctionCost", end_time - start_time);
 #endif
+  // fill adas
+  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
   session_.mutable_planning_context()->mutable_last_planning_success() =
@@ -1639,7 +1641,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
   FillHPPPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  // FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {
     planning_hmi_info->ad_info.is_avaliable = false;
