@@ -227,7 +227,7 @@ bool EdtManager::FilterObstacleForAra(
 
 bool EdtManager::FilterObstacleForHppAra(
     const planning::FrenetObstacle &frenet_obstacle,
-    const ObstacleManager *obstacle_manager) {
+    const std::shared_ptr<ObstacleManager>& obstacle_manager) {
   // 先用通用过滤规则
   if (!FilterObstacleForAra(frenet_obstacle)) {
     return false;
@@ -263,8 +263,8 @@ void EdtManager::update() {
       GenerateOGM(Pose2D(ego_state.ego_pose().x, ego_state.ego_pose().y,
                          ego_state.ego_pose().theta));
 
-  const ObstacleManager* obstacle_manager = is_hpp
-      ? session_->environmental_model().get_obstacle_manager().get()
+  const auto& obstacle_manager = is_hpp
+      ? session_->environmental_model().get_obstacle_manager()
       : nullptr;
 
   const auto &reference_path_ptr = session_->environmental_model()
