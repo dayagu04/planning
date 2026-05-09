@@ -346,8 +346,8 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     enable_code += uint32_bit[25];
   } else {
     /*do nothing*/
@@ -699,8 +699,8 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     disable_code += uint32_bit[25];
   } else {
     /*do nothing*/
