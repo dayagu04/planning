@@ -3037,6 +3037,8 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     bool is_need_avoid = false;
     const iflymapdata::sdpro::Lane* avoid_feasible_lane = nullptr;
     for (const auto merge_link_lane_id : merge_ptr->lane_ids()) {
+      // 每轮重置，避免沿用上一轮 merge_link_lane 对应的结果
+      avoid_feasible_lane = nullptr;
       const auto* merge_link_lane = ld_map_.GetLaneInfoByID(merge_link_lane_id);
       if (merge_link_lane == nullptr) {
         continue;
@@ -3137,7 +3139,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           continue;
         }
 
-        if (!IsSuccussorConnectLane(lane_info, avoid_feasible_lane)) {
+        if (!IsSuccessorConnectLane(lane_info, avoid_feasible_lane)) {
           continue;
         }
 
@@ -5552,7 +5554,7 @@ void LDRouteInfoStrategy::ExportFrameData(
   ofs.close();
 }
 
-bool LDRouteInfoStrategy::IsSuccussorConnectLane(
+bool LDRouteInfoStrategy::IsSuccessorConnectLane(
     const iflymapdata::sdpro::Lane* cur_lane,
     const iflymapdata::sdpro::Lane* suc_lane) const {
   if (cur_lane == nullptr || suc_lane == nullptr) {

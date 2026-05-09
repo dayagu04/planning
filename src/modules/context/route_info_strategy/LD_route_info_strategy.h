@@ -376,7 +376,7 @@ void ProcessLaneMapMergePoint(
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
                             int& lane_num);
 
-  bool IsSuccussorConnectLane(const iflymapdata::sdpro::Lane* cur_lane,
+  bool IsSuccessorConnectLane(const iflymapdata::sdpro::Lane* cur_lane,
                               const iflymapdata::sdpro::Lane* suc_lane) const;
 
   bool IsCurrentLaneOnRouteLink(const TopoLinkGraph& feasible_lane_graph) const;
