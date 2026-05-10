@@ -779,8 +779,14 @@ void PlanningScheduler::FillPlanningTrajectory(
         planning_context.target_slot_allowed_to_park();
     const bool timeout_for_target_slot_allowed_to_park =
         planning_context.timeout_for_target_slot_allowed_to_park();
+    const bool is_obs_blocked_timeout =
+        planning_context.parking_switch_decider_output()
+            .parking_switch_info.is_obs_blocked_timeout;
     // TODO(taolu10): define HPP_PARKING_COMPLETED status
-    if (hpp_cruise_routing_completed && (target_slot_allowed_to_park || timeout_for_target_slot_allowed_to_park)) {
+    if (is_obs_blocked_timeout) {
+      planning_status->hpp_planning_status =
+          iflyauto::HPP_ROUTING_PLANNING_FAILED;
+    } else if (hpp_cruise_routing_completed && (target_slot_allowed_to_park || timeout_for_target_slot_allowed_to_park)) {
       if (target_slot_allowed_to_park) {
         planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_COMPLETED;
       } else if (timeout_for_target_slot_allowed_to_park) {
@@ -1162,7 +1168,13 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
       planning_context.timeout_for_target_slot_allowed_to_park();
   const bool hpp_cruise_routing_completed =
       planning_context.hpp_cruise_routing_completed();
-  if (hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
+  const bool is_obs_blocked_timeout =
+      planning_context.parking_switch_decider_output()
+          .parking_switch_info.is_obs_blocked_timeout;
+  if (is_obs_blocked_timeout) {
+    hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
+        HPP_PLANNING_FAILED_REASON_OBS_BLOCKED_TIMEOUT;
+  } else if (hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
     hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
         HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
   } else {

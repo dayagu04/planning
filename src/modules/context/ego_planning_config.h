@@ -3527,9 +3527,39 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
     keeping_still_time_thr_for_switch_parking =
         read_json_key<double>(json, "keeping_still_time_thr_for_switch_parking",
                               keeping_still_time_thr_for_switch_parking);
+    enable_hpp_obs_blocked_timeout = read_json_key<bool>(
+        json, "enable_hpp_obs_blocked_timeout",
+        enable_hpp_obs_blocked_timeout);
+    hpp_obs_blocked_enter_ego_v_thr = read_json_key<double>(
+        json, "hpp_obs_blocked_enter_ego_v_thr",
+        hpp_obs_blocked_enter_ego_v_thr);
+    hpp_obs_blocked_exit_ego_v_thr = read_json_key<double>(
+        json, "hpp_obs_blocked_exit_ego_v_thr",
+        hpp_obs_blocked_exit_ego_v_thr);
+    hpp_obs_blocked_stop_traj_v_thr = read_json_key<double>(
+        json, "hpp_obs_blocked_stop_traj_v_thr",
+        hpp_obs_blocked_stop_traj_v_thr);
+    hpp_obs_blocked_stop_traj_s_thr = read_json_key<double>(
+        json, "hpp_obs_blocked_stop_traj_s_thr",
+        hpp_obs_blocked_stop_traj_s_thr);
+    hpp_obs_blocked_exit_non_stop_frames = read_json_key<int>(
+        json, "hpp_obs_blocked_exit_non_stop_frames",
+        hpp_obs_blocked_exit_non_stop_frames);
+    hpp_obs_blocked_timeout_frames = read_json_key<int>(
+        json, "hpp_obs_blocked_timeout_frames",
+        hpp_obs_blocked_timeout_frames);
   }
   double timeout_still_time_thr_for_giving_up_parking = 5.0;
   double keeping_still_time_thr_for_switch_parking = 1.0;
+
+  // HPP 巡航前方非虚拟障碍物刹停超时检测
+  bool   enable_hpp_obs_blocked_timeout      = true;
+  double hpp_obs_blocked_enter_ego_v_thr     = 0.1;    // m/s
+  double hpp_obs_blocked_exit_ego_v_thr      = 0.5;    // m/s
+  double hpp_obs_blocked_stop_traj_v_thr     = 0.1;    // m/s
+  double hpp_obs_blocked_stop_traj_s_thr     = 0.3;    // m
+  int    hpp_obs_blocked_exit_non_stop_frames = 5;
+  int    hpp_obs_blocked_timeout_frames       = 300;   // 30s @ 10Hz
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {

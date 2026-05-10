@@ -410,7 +410,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "is_target_slot_allowed_to_park", "is_standstill_near_target_slot",
       "is_timeout_for_target_slot_allowed_to_park", "current planning_success",
       "pass_interval_first", "pass_interval_second", "edt_manager_cost",
-      "GeneralLateralDeciderCostTime"]
+      "GeneralLateralDeciderCostTime",
+      "hpp_obs_blocked_frame_count", "hpp_non_stop_traj_count",
+      "is_hpp_obs_blocked_timeout", "hpp_obs_blocked_is_stop_traj",
+      "hpp_obs_blocked_is_cipv_real", "hpp_obs_blocked_cipv_id",
+      "hpp_obs_blocked_enter_cond"]
 
   # Turnstile debug fields from structured proto
   turnstile_debug_value_list = [
@@ -1084,6 +1088,21 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       _append_zone('hpp_ramp', hpp.ramp)
     if hpp.HasField('intersection'):
       _append_zone('hpp_intersection', hpp.intersection)
+
+  # 从 proto key_values 构建 dict，回填到 plan_debug_json_info
+  if hasattr(plan_debug_info, 'key_values'):
+    for kv in plan_debug_info.key_values:
+      key = kv.key
+      if kv.HasField('int_value'):
+        val = kv.int_value
+      elif kv.HasField('float_value'):
+        val = kv.float_value
+      elif kv.HasField('str_value'):
+        val = kv.str_value
+      else:
+        continue
+      if plan_debug_json_info.get(key) is None:
+        plan_debug_json_info[key] = val
 
   # 再把原来 JSON 的 HPP 字段追加在后面
   for ind in range(len(hpp_debug_value_list)):
