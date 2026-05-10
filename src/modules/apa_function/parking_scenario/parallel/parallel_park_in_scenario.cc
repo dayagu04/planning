@@ -2083,8 +2083,8 @@ const bool ParallelParkInScenario::GenTlane() {
         }
       }
       const bool curb_condition =
-          pnc::mathlib::IsInBound(obs_pt_local.x(), 0.0,
-                                  slot_length ) &&
+          pnc::mathlib::IsInBound(obs_pt_local.x(), 0.3,
+                                  slot_length - 0.3) &&
           (obs_pt_local.y() * side_sgn <=
            -kCurbYMagIdentification);  // kCurbInitialOffset
 
@@ -2336,7 +2336,7 @@ const bool ParallelParkInScenario::GenTlane() {
       }
       double curb_lower = 0.3;
       double curb_upper = slot_length - 0.3;
-      if(t_lane_.is_inside_rigid == true){
+      if (t_lane_.is_inside_rigid == true) {
         curb_lower = 0.0;
         curb_upper = slot_length;
       }
@@ -2373,16 +2373,19 @@ const bool ParallelParkInScenario::GenTlane() {
            - half_slot_width + 0.3);  // kCurbInitialOffset
         }
 
-        if (curb_condition) {
-            curb_count++;
-            if (side_sgn > 0.0) {
-              curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-            } else {
-              curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
-            }
-
-            // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+        if (curb_condition &&
+            !(cat_to_curb_condition &&
+              obstacle_point_set.first ==
+                  static_cast<size_t>(ApaObsScemanticType::CAR))) {
+          curb_count++;
+          if (side_sgn > 0.0) {
+            curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+          } else {
+            curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
           }
+
+          // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+        }
       }
 
       const bool front_parallel_line_condition =
