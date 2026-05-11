@@ -80,7 +80,9 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
     return;
   }
 
-  if (!UpdateFeasibleLaneGraph()){
+  if (!UpdateFeasibleLaneGraph()) {
+    feasible_lane_graph_.lane_topo_groups.clear();
+    route_info_output = route_info_output_;
     return;
   }
 
@@ -129,7 +131,8 @@ bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
   CalculateAvoidMergeFeasibleLane(feasible_lane_graph_);
 
   // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
-  if (mlc_scene_type == SPLIT_SCENE) {
+  if (mlc_scene_type == SPLIT_SCENE &&
+      mlc_decider_scene_type_info_.dis_to_link_topo_change_point < 300) {
     ProcessEraseFeasibleLaneForSplitScene(feasible_lane_graph_);
   }
   // 计算车道减少信息
@@ -2452,6 +2455,8 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
 
       std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
       if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
+        // 没有找到出口车道，则不满足被过滤的条件。应该先置fasle，再break
+        is_filter_split = false;
         break;
       }
 
@@ -3172,12 +3177,6 @@ void LDRouteInfoStrategy::Erase1Split2FeasibleLane(
     return;
   }
 
-  std::sort(max_distance_lanes.begin(), max_distance_lanes.end(),
-            [](const TopoLane& a, const TopoLane& b) {
-              return a.order_id < b.order_id;  // 按 order_id 升序排列
-            });
-
-  // 判断ramp方向的次车道上是否有1分2的lane，如果有从feasible lane中拿掉
   if (ramp_info_vec_.empty()) {
     return;
   }
@@ -3187,83 +3186,106 @@ void LDRouteInfoStrategy::Erase1Split2FeasibleLane(
     return;
   }
 
-  const auto& front_first_ramp_dir =
-      CalculateSplitDirection(*front_first_ramp_info, ld_map_);
   const auto& split_next_link =
       ld_map_.GetNextLinkOnRoute(front_first_ramp_info->id());
   if (split_next_link == nullptr) {
     return;
   }
 
-  if (front_first_ramp_dir == RAMP_ON_RIGHT) {
-    for (size_t idx = 1; idx < max_distance_lanes.size(); ++idx) {
-      EraseFeasibleLaneIfNeeded(max_distance_lanes[idx].id, split_next_link,
-                                feasible_lane_graph);
-    }
-  } else if (front_first_ramp_dir == RAMP_ON_LEFT) {
-    for (int idx = static_cast<int>(max_distance_lanes.size()) - 2; idx >= 0; --idx) {
-      EraseFeasibleLaneIfNeeded(max_distance_lanes[idx].id, split_next_link,
-                                feasible_lane_graph);
+  // 收集所有不在导航路线上的后继 link ID (out_links)
+  std::unordered_set<uint64_t> out_link_ids;
+  for (int i = 0; i < front_first_ramp_info->successor_link_ids_size(); ++i) {
+    uint64_t successor_id = front_first_ramp_info->successor_link_ids()[i];
+    if (successor_id != split_next_link->id()) {
+      out_link_ids.insert(successor_id);
     }
   }
-  return;
-}
 
-void LDRouteInfoStrategy::EraseFeasibleLaneIfNeeded(
-    uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
-    TopoLinkGraph& feasible_lane_graph) {
-  // 从lane开始遍历，一直到split next
-  // link之前，是否有1分2的车道，如有的话，则把这条lane从feasible lane中erase
-  auto& topo_lanes = feasible_lane_graph.lane_topo_groups.back().topo_lanes;
-  bool is_exist_lane_id = false;
-  for (const auto& topo_lane : topo_lanes) {
-    if (topo_lane.id == lane_id) {
-      is_exist_lane_id = true;
+  // 遍历 max_distance_lanes，区分"直连车道"和"非直连车道"
+  // 直连车道：从该车道开始，所有后继分支都能到达 split_next_link
+  // 非直连车道：从该车道开始，至少有一个后继分支不能到达 split_next_link
+  std::vector<uint64_t> non_directly_connected_lane_ids;
+  bool has_directly_connected_lane = false;
+  for (const auto& lane : max_distance_lanes) {
+    const auto* start_lane = ld_map_.GetLaneInfoByID(lane.id);
+    if (start_lane == nullptr) {
+      continue;
+    }
+    std::unordered_set<uint64_t> visited;
+    if (IsSuccessorReachingSplitNextLink(start_lane, split_next_link,
+                                         out_link_ids, visited)) {
+      has_directly_connected_lane = true;
+    } else {
+      non_directly_connected_lane_ids.push_back(lane.id);
     }
   }
-  if (!is_exist_lane_id) {
+
+  // 如果没有直连车道，保持原状（避免 feasible lane 为空）
+  if (!has_directly_connected_lane) {
     return;
   }
 
-  const iflymapdata::sdpro::Lane* itera_lane = ld_map_.GetLaneInfoByID(lane_id);
-  while (itera_lane) {
-    if (itera_lane->link_id() == split_next_link->id() ||
-        itera_lane->successor_lane_ids().empty() ||
-        !ld_map_.isOnRouteLinks(itera_lane->link_id())) {
-      return;
-    }
-
-    if (itera_lane->successor_lane_ids_size() > 1) {
-      // 如果suc_lane不在route_link上，则从feasible lane中移除这个lane
-      bool is_exist_suc_lane_not_in_route_link = false;
-      for (const auto& temp_lane_id : itera_lane->successor_lane_ids()) {
-        const auto& temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
-        if (temp_lane == nullptr) {
-          continue;
-        }
-
-        // suc_lane都不在split_next_link上认为存在后继车道不在route_link上
-        if (split_next_link->id() != temp_lane->link_id()) {
-          is_exist_suc_lane_not_in_route_link = true;
-          break;
-        }
-      }
-
-      if (is_exist_suc_lane_not_in_route_link) {
-        for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
-          if (it->id == lane_id) {
-            topo_lanes.erase(it);  // erase returns the next iterator
-            return;
-          } else {
-            ++it;
-          }
-        }
-      }
-    }
-
-    itera_lane = ld_map_.GetLaneInfoByID(itera_lane->successor_lane_ids()[0]);
-  }
+  // 有直连车道，从 feasible_lane_graph 的当前 link 中移除所有非直连车道
+  auto& topo_lanes = feasible_lane_graph.lane_topo_groups.back().topo_lanes;
+  topo_lanes.erase(
+      std::remove_if(topo_lanes.begin(), topo_lanes.end(),
+                     [&](const TopoLane& topo_lane) {
+                       return std::find(non_directly_connected_lane_ids.begin(),
+                                        non_directly_connected_lane_ids.end(),
+                                        topo_lane.id) !=
+                              non_directly_connected_lane_ids.end();
+                     }),
+      topo_lanes.end());
 }
+
+// 递归检查后继车道是否最终到达 split_next_link
+bool LDRouteInfoStrategy::IsSuccessorReachingSplitNextLink(
+    const iflymapdata::sdpro::Lane* lane,
+    const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
+    const std::unordered_set<uint64_t>& out_link_ids,
+    std::unordered_set<uint64_t>& visited) const {
+
+  if (lane == nullptr) {
+    return false;
+  }
+
+  // 避免重复访问（处理环路）
+  if (visited.count(lane->id()) > 0) {
+    return false;
+  }
+  visited.insert(lane->id());
+
+  // 如果已经到达 split_next_link，返回 true
+  if (lane->link_id() == split_next_link->id()) {
+    return true;
+  }
+
+  // 如果到达了 out_link，返回 false
+  if (out_link_ids.count(lane->link_id()) > 0) {
+    return false;
+  }
+
+  // 如果没有后继，返回 false
+  if (lane->successor_lane_ids().empty()) {
+    return false;
+  }
+
+  // 如果不在 route 上，返回 false
+  if (!ld_map_.isOnRouteLinks(lane->link_id())) {
+    return false;
+  }
+
+  // 递归检查所有后继，所有后继都必须到达 split_next_link
+  for (const auto& suc_lane_id : lane->successor_lane_ids()) {
+    const auto* suc_lane = ld_map_.GetLaneInfoByID(suc_lane_id);
+    if (!IsSuccessorReachingSplitNextLink(suc_lane, split_next_link, out_link_ids, visited)) {
+      return false;  // 有任何一个后继不到达 split_next_link，返回 false
+    }
+  }
+
+  return true;  // 所有后继都到达 split_next_link
+}
+
 std::vector<TopoLane> LDRouteInfoStrategy::CalculateMaxDistanceLanes(
     const TopoLinkGraph& feasible_lane_graph) const {
   std::vector<TopoLane> max_distance_lanes;
@@ -5347,12 +5369,12 @@ LDRouteInfoStrategy::GetCloserSuccessorLinkByLateralDistance(
 void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
     TopoLinkGraph& feasible_lane_graph) {
   // 判断是否为需要移除的那种场景
-  // -------------------
-  //
+  // - - - - - - - - - -
   //              -
   //               -
   //                 -
-  // 如上，如果是直行则不需要移除，如果是右，则需要移除
+  // 如上，如果是直行则不需要移除，如果是转向则需要移除
+
   uint64 front_first_topo_change_link_id =
       mlc_decider_scene_type_info_.topo_change_link_id;
   const auto& front_first_topo_change_link =
@@ -5368,31 +5390,45 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
     return;
   }
 
-  if (front_first_topo_change_link->successor_link_ids().size() != 2) {
-    return;
-  }
-  
-  uint64 out_link_id =
-      front_first_topo_change_link->successor_link_ids()[0] ==
-              split_next_link->id()
-          ? front_first_topo_change_link->successor_link_ids()[1]
-          : front_first_topo_change_link->successor_link_ids()[0];
-  const auto& out_link = ld_map_.GetLinkOnRoute((out_link_id));
-  if (out_link == nullptr) {
+  // 修改：支持 >= 2 个后继 link
+  if (front_first_topo_change_link->successor_link_ids().size() < 2) {
     return;
   }
 
-  const auto& closer_suc_link = GetCloserSuccessorLinkByLateralDistance(
-      front_first_topo_change_link, split_next_link, out_link);
+  // 收集所有有效的后继 link
+  std::vector<const iflymapdata::sdpro::LinkInfo_Link*> valid_successors;
+  for (int i = 0; i < front_first_topo_change_link->successor_link_ids_size(); ++i) {
+    uint64 successor_id = front_first_topo_change_link->successor_link_ids()[i];
+    const auto& successor_link = ld_map_.GetLinkOnRoute(successor_id);
 
-  if (closer_suc_link == nullptr) {
+    if (successor_link != nullptr) {
+      valid_successors.push_back(successor_link);
+    }
+  }
+
+  // 至少需要2个有效后继才有比较的意义
+  if (valid_successors.size() < 2) {
     return;
   }
 
-  if (closer_suc_link->id() == split_next_link->id()) {
+  // 找出横向距离最近的后继 link
+  const iflymapdata::sdpro::LinkInfo_Link* closest_successor = valid_successors[0];
+
+  for (size_t i = 1; i < valid_successors.size(); ++i) {
+    const auto& closer = GetCloserSuccessorLinkByLateralDistance(
+        front_first_topo_change_link, closest_successor, valid_successors[i]);
+
+    if (closer != nullptr && closer->id() == valid_successors[i]->id()) {
+      closest_successor = valid_successors[i];
+    }
+  }
+
+  // 如果导航路线（split_next_link）就是横向距离最近的后继，说明是直行，不执行移除
+  if (closest_successor->id() == split_next_link->id()) {
     return;
   }
 
+  // 否则，说明导航路线在转向，执行移除
   Erase1Split2FeasibleLane(feasible_lane_graph);
 }
 
