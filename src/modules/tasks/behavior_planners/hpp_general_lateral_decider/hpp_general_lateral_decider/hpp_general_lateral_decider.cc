@@ -84,6 +84,13 @@ bool HppGeneralLateralDecider::InitInfo() {
   first_soft_bounds_.clear();
   second_soft_bounds_.clear();
   hard_bounds_.clear();
+  narrow_passage_obstacle_ids_.clear();
+
+  // 清空上一帧的 narrow passage 标记，避免累积
+  session_->mutable_planning_context()
+      ->mutable_lateral_obstacle_decider_output()
+      .ignored_by_narrow_passage.clear();
+
   second_frenet_soft_bounds_.assign(second_frenet_soft_bounds_.size(),
                              std::make_pair(0.0, 0.0));
   first_frenet_soft_bounds_.assign(first_frenet_soft_bounds_.size(),
@@ -124,9 +131,13 @@ bool HppGeneralLateralDecider::Execute() {
 
   GenerateObstaclesBoundary();
 
+  DetectNarrowPassage();
+
   ExtractBoundary(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                   frenet_hard_bounds_, second_soft_bounds_info_,
                   first_soft_bounds_info_, hard_bounds_info_);
+
+  ResolveBoundNarrowPassageByIgnoring();
 
   PostProcessBoundary();
 
@@ -2752,10 +2763,103 @@ void HppGeneralLateralDecider::LimitFrenetLateralSlope(
               frenet_bounds[i - 1].first - dl_ds_ratio * ds;
         }
       }
+      // 防止斜率限制导致 upper < lower
+      if (frenet_bounds[i].first > frenet_bounds[i].second) {
+        const double mid = 0.5 * (frenet_bounds[i].first + frenet_bounds[i].second);
+        frenet_bounds[i].first = mid;
+        frenet_bounds[i].second = mid;
+      }
+      if (frenet_bounds[i - 1].first > frenet_bounds[i - 1].second) {
+        const double mid = 0.5 * (frenet_bounds[i - 1].first + frenet_bounds[i - 1].second);
+        frenet_bounds[i - 1].first = mid;
+        frenet_bounds[i - 1].second = mid;
+      }
     }
   }
 }
 
+void HppGeneralLateralDecider::DetectNarrowPassage() {
+  //收集"通道宽度不足"的障碍物 id。
+  constexpr double kNarrowPassageCrossoverThr = 0.1;
+  for (size_t k = 0; k < hard_bounds_.size(); ++k) {
+    const auto &bounds = hard_bounds_[k];
+    const size_t bounds_size = bounds.size();
+    for (size_t i = 0; i < bounds_size; ++i) {
+      const auto &bi = bounds[i];
+      if (!IsObstacleBoundType(bi.bound_info.type)) {
+        continue;
+      }
+      for (size_t j = i + 1; j < bounds_size; ++j) {
+        const auto &bj = bounds[j];
+        if (!IsObstacleBoundType(bj.bound_info.type)) {
+          continue;
+        }
+        if (bi.upper + kNarrowPassageCrossoverThr < bj.lower ||
+            bj.upper + kNarrowPassageCrossoverThr < bi.lower) {
+          narrow_passage_obstacle_ids_.insert(bi.bound_info.id);
+          narrow_passage_obstacle_ids_.insert(bj.bound_info.id);
+        }
+      }
+    }
+  }
+}
+
+void HppGeneralLateralDecider::ResolveBoundNarrowPassageByIgnoring() {
+  if (narrow_passage_obstacle_ids_.empty()) {
+    return;
+  }
+
+  // 更新 lateral_obstacle_decider_output 中的决策
+  auto& lat_obstacle_decision = session_->mutable_planning_context()
+                                    ->mutable_lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
+  auto& ignored_by_narrow_passage = session_->mutable_planning_context()
+                                         ->mutable_lateral_obstacle_decider_output()
+                                         .ignored_by_narrow_passage;
+
+  for (int obs_id : narrow_passage_obstacle_ids_) {
+    lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
+    ignored_by_narrow_passage.insert(obs_id);
+    ILOG_INFO << "[ResolveBoundNarrowPassage] Ignore obstacle " << obs_id
+              << " due to narrow passage";
+  }
+
+  // 从 hard_bounds_、second_soft_bounds_、first_soft_bounds_ 中移除这些障碍物的 bound
+  for (size_t i = 0; i < hard_bounds_.size(); ++i) {
+    RemoveBoundsByIds(hard_bounds_[i], narrow_passage_obstacle_ids_);
+  }
+  for (size_t i = 0; i < second_soft_bounds_.size(); ++i) {
+    RemoveBoundsByIds(second_soft_bounds_[i], narrow_passage_obstacle_ids_);
+  }
+  for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
+    RemoveBoundsByIds(first_soft_bounds_[i], narrow_passage_obstacle_ids_);
+  }
+
+  // 重新调用 ExtractBoundary 生成最终 bound
+  ExtractBoundary(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                  frenet_hard_bounds_, second_soft_bounds_info_,
+                  first_soft_bounds_info_, hard_bounds_info_);
+}
+
+bool HppGeneralLateralDecider::IsObstacleBoundType(BoundType type) {
+  return type == BoundType::AGENT ||
+         type == BoundType::DYNAMIC_AGENT ||
+         type == BoundType::ADJACENT_AGENT ||
+         type == BoundType::REAR_AGENT ||
+         type == BoundType::LOW_PRIORITY_AGENT ||
+         type == BoundType::REVERSE_AGENT;
+}
+
+void HppGeneralLateralDecider::RemoveBoundsByIds(
+    std::vector<WeightedBound>& bounds,
+    const std::unordered_set<int>& ignored_ids) {
+  bounds.erase(
+      std::remove_if(bounds.begin(), bounds.end(),
+                     [&ignored_ids](const WeightedBound& bound) {
+                       return ignored_ids.count(bound.bound_info.id) > 0;
+                     }),
+      bounds.end());
+}
 
 void HppGeneralLateralDecider::ProtectBoundByInitPoint(
     std::pair<double, double> &bound,

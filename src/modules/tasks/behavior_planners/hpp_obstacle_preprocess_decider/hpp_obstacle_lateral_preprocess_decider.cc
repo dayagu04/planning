@@ -301,88 +301,53 @@ bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
 void HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
     FrenetObstacleBoundary& frenet_boundary,
     ConstReferencePathPtr reference_path_ptr) {
-  constexpr double kRoadBoundary = 5.0;
   const double s_start = frenet_boundary.s_start;
   const double s_end = frenet_boundary.s_end;
+  const double s_center = (s_start + s_end) * 0.5;
   const double l_start = frenet_boundary.l_start;
   const double l_end = frenet_boundary.l_end;
-  double obs_start2left_road_boundary_dis = 0.0,
-         obs_start2right_road_boundary_dis = 0.0,
-         obs_end2left_road_boundary_dis = 0.0,
-         obs_end2right_road_boundary_dis = 0.0;
-  double obs_2left_road_boundary_mindis = 0.0,
-         obs_2right_road_boundary_mindis = 0.0;
 
-  ReferencePathPoint refpath_pt_start;
+  // 获取障碍物起点、中心点、终点的参考路径点
+  ReferencePathPoint refpath_pt_start, refpath_pt_center, refpath_pt_end;
   reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt_start);
-  obs_start2left_road_boundary_dis =
-      refpath_pt_start.left_drivable_width - l_end;
-  obs_start2right_road_boundary_dis =
-      std::fabs(l_start + refpath_pt_start.right_drivable_width);
-  ReferencePathPoint refpath_pt_end;
+  reference_path_ptr->get_reference_point_by_lon(s_center, refpath_pt_center);
   reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt_end);
-  obs_end2left_road_boundary_dis = refpath_pt_end.left_drivable_width - l_end;
-  obs_end2right_road_boundary_dis =
+
+  // 计算障碍物起点和终点到道路边界的距离
+  const double obs_start2left_dis =
+      refpath_pt_start.left_drivable_width - l_end;
+  const double obs_start2right_dis =
+      std::fabs(l_start + refpath_pt_start.right_drivable_width);
+  const double obs_end2left_dis = refpath_pt_end.left_drivable_width - l_end;
+  const double obs_end2right_dis =
       std::fabs(l_start + refpath_pt_end.right_drivable_width);
 
-  if (l_start > -kRoadBoundary && l_end < kRoadBoundary) {
-    obs_2left_road_boundary_mindis = std::min(obs_start2left_road_boundary_dis,
-                                              obs_end2left_road_boundary_dis);
-    obs_2right_road_boundary_mindis = std::min(
-        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-    ILOG_INFO << "obs_2left_road_boundary_mindis = "
-              << obs_2left_road_boundary_mindis
-              << ", obs_2right_road_boundary_mindis = "
-              << obs_2right_road_boundary_mindis;
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        obs_2left_road_boundary_mindis;
-    frenet_boundary.obs_2right_road_boundary_mindis =
-        obs_2right_road_boundary_mindis;
-  } else if (l_end >= kRoadBoundary && l_start <= kRoadBoundary &&
-             l_start >= -kRoadBoundary) {  // 障碍物跨左边界
-    frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
-    obs_2right_road_boundary_mindis = std::min(
-        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-    frenet_boundary.obs_2right_road_boundary_mindis =
-        obs_2right_road_boundary_mindis;
+  // 使用中心点的道路宽度判断障碍物位置
+  const double left_boundary = refpath_pt_center.left_drivable_width;
+  const double right_boundary = -refpath_pt_center.right_drivable_width;
 
-  } else if (l_start <= -kRoadBoundary && l_end >= -kRoadBoundary &&
-             l_end <= kRoadBoundary) {  // 障碍物跨右边界
-    frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
-    obs_2left_road_boundary_mindis = std::min(obs_start2left_road_boundary_dis,
-                                              obs_end2left_road_boundary_dis);
+  if (l_start > right_boundary && l_end < left_boundary) {
+    // 障碍物完全在道路内
     frenet_boundary.obs_2left_road_boundary_mindis =
-        obs_2left_road_boundary_mindis;
-  } else if (l_end < -kRoadBoundary &&
-             l_start < -kRoadBoundary) {  // 障碍物在右边界右侧
-    obs_start2right_road_boundary_dis =
-        std::fabs(l_end + refpath_pt_start.right_drivable_width);
-    obs_end2right_road_boundary_dis =
-        std::fabs(l_end + refpath_pt_end.right_drivable_width);
-    obs_2left_road_boundary_mindis = std::min(obs_start2left_road_boundary_dis,
-                                              obs_end2left_road_boundary_dis);
-    obs_2right_road_boundary_mindis = std::min(
-        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        obs_2left_road_boundary_mindis;
+        std::min(obs_start2left_dis, obs_end2left_dis);
     frenet_boundary.obs_2right_road_boundary_mindis =
-        obs_2right_road_boundary_mindis;
-  } else if (l_start > kRoadBoundary &&
-             l_end > kRoadBoundary) {  // 障碍物在左边界左侧
-    obs_start2left_road_boundary_dis =
-        l_start - refpath_pt_start.left_drivable_width;
-    obs_end2left_road_boundary_dis = l_start - refpath_pt_end.left_drivable_width;
-    obs_2left_road_boundary_mindis = std::min(obs_start2left_road_boundary_dis,
-                                              obs_end2left_road_boundary_dis);
-    obs_2right_road_boundary_mindis = std::min(
-        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        obs_2left_road_boundary_mindis;
+        std::min(obs_start2right_dis, obs_end2right_dis);
+  } else if (l_end >= left_boundary &&
+             l_start >= right_boundary) {
+    // 障碍物跨左边界或完全在左侧
+    frenet_boundary.obs_2left_road_boundary_mindis = 0.0;
     frenet_boundary.obs_2right_road_boundary_mindis =
-        obs_2right_road_boundary_mindis;
-  }else{
-    frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
-    frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
+        std::min(obs_start2right_dis, obs_end2right_dis);
+  } else if (l_start <= right_boundary &&
+             l_end <= left_boundary) {
+    // 障碍物跨右边界或完全在右侧
+    frenet_boundary.obs_2right_road_boundary_mindis = 0.0;
+    frenet_boundary.obs_2left_road_boundary_mindis =
+        std::min(obs_start2left_dis, obs_end2left_dis);
+  } else {
+    // 其他情况（障碍物跨越整个道路）
+    frenet_boundary.obs_2left_road_boundary_mindis = 0.0;
+    frenet_boundary.obs_2right_road_boundary_mindis = 0.0;
   }
 }
 ObstacleRelPosType
