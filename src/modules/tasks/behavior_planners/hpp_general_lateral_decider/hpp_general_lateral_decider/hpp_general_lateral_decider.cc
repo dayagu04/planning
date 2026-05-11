@@ -2526,13 +2526,16 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     return;
   }
 
-  const auto SLToXYPhi_traj = [frenet_coord](TrajectoryPoints &traj) {
+  const auto SLToXYPhi_traj = [frenet_coord](TrajectoryPoints &traj) -> bool {
     Point2D ref_point;
     for (size_t i = 0; i < traj.size(); ++i) {
-      if (frenet_coord->SLToXY(Point2D(traj[i].s, traj[i].l), ref_point)) {
-        traj[i].x = ref_point.x;
-        traj[i].y = ref_point.y;
+      if (!frenet_coord->SLToXY(Point2D(traj[i].s, traj[i].l), ref_point)) {
+        ILOG_WARN << "SLToXY failed at index " << i
+                  << " s=" << traj[i].s << " l=" << traj[i].l;
+        return false;
       }
+      traj[i].x = ref_point.x;
+      traj[i].y = ref_point.y;
       if (i > 0) {
         const double dx = traj[i].x - traj[i - 1].x;
         const double dy = traj[i].y - traj[i - 1].y;
@@ -2542,6 +2545,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     if (traj.size() >= 2) {
       traj.back().heading_angle = traj[traj.size() - 2].heading_angle;
     }
+    return true;
   };
 
   auto is_break_hard_bound = [&](size_t idx) {
@@ -2589,10 +2593,13 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
       // nothing to do
     } else {
       if (!plan_history_traj_.empty() && plan_history_traj_.size() == n) {
+        TrajectoryPoints backup = ref_traj_points_;
         for (size_t i = 0; i < n; ++i) {
           ref_traj_points_[i].l = 0.5 * plan_history_traj_[i].l;
         }
-        SLToXYPhi_traj(ref_traj_points_);
+        if (!SLToXYPhi_traj(ref_traj_points_)) {
+          ref_traj_points_ = backup;
+        }
       }
       return;
     }
@@ -2708,7 +2715,9 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
         (1.0 - alpha_l) * ref_traj_points_[i].l;
   }
 
-  SLToXYPhi_traj(merged);
+  if (!SLToXYPhi_traj(merged)) {
+    return;
+  }
 
   ref_traj_points_ = merged;
 }
