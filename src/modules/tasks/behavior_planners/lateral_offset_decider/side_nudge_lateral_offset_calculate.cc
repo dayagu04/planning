@@ -19,6 +19,16 @@ constexpr double kExtendLonDistance = 10;
 constexpr double kExtendLatDistance = 10;
 constexpr double kMaxNudgeDistance = 0.3;
 constexpr int kMaxConfirmCount = 2;
+// 危险等级判定阈值（进入）
+constexpr double kLatDistanceHigh = 0.6;
+constexpr double kLatDistanceMedium = 0.8;
+constexpr double kLatApproachVHigh = 0.5;
+constexpr double kLatApproachVMedium = 0.3;
+// 危险等级释放阈值（滞回，需比进入阈值更宽松才允许降级）
+constexpr double kLatDistanceReleaseHigh = 0.8;
+constexpr double kLatDistanceReleaseMedium = 1.0;
+constexpr double kLatApproachVReleaseHigh = 0.4;
+constexpr double kLatApproachVReleaseMedium = 0.2;
 SideNudgeLateralOffsetDecider::SideNudgeLateralOffsetDecider(
     framework::Session* session,
     const EgoPlanningConfigBuilder* config_builder) {
@@ -26,8 +36,11 @@ SideNudgeLateralOffsetDecider::SideNudgeLateralOffsetDecider(
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
 }
 
-bool SideNudgeLateralOffsetDecider::Process(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle) {
+bool SideNudgeLateralOffsetDecider::Process(
+    const LaneInfo& lane_info,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacle) {
   if (!Init(lane_info, avd_obstacle)) {
+    last_nudge_info_.Reset();
     return false;
   }
 
@@ -36,7 +49,9 @@ bool SideNudgeLateralOffsetDecider::Process(const LaneInfo& lane_info, const std
   return true;
 }
 
-bool SideNudgeLateralOffsetDecider::Init(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle) {
+bool SideNudgeLateralOffsetDecider::Init(
+    const LaneInfo& lane_info,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacle) {
   reference_path_ptr_ = session_->planning_context()
                             .lane_change_decider_output()
                             .coarse_planning_info.reference_path;
@@ -47,6 +62,7 @@ bool SideNudgeLateralOffsetDecider::Init(const LaneInfo& lane_info, const std::a
       session_->environmental_model().get_ego_state_manager();
   lane_info_ = lane_info;
   avd_obstacle_ = avd_obstacle;
+  offset_change_rate_ = kOffsetChangeRateLow;
   return true;
 }
 
@@ -58,6 +74,7 @@ void SideNudgeLateralOffsetDecider::Reset() {
   is_coodown_time_enough_.SetInvalidCount();
   nudge_info_.Reset();
   count_map_.clear();
+  last_nudge_info_.Reset();
 }
 
 void SideNudgeLateralOffsetDecider::RunStateMachine() {
@@ -100,10 +117,10 @@ void SideNudgeLateralOffsetDecider::RunStateMachine() {
   }
 
   UpdateCurrentState();
+  last_nudge_info_ = nudge_info_;
 }
 
 bool SideNudgeLateralOffsetDecider::IsStartNudge() {
-
   const auto& target_state = session_->planning_context()
                                  .lane_change_decider_output()
                                  .coarse_planning_info.target_state;
@@ -120,7 +137,6 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     return false;
   }
 
-
   bool left_need_nudge = false;
   bool right_need_nudge = false;
   // TODO 自车处于中心线附近时
@@ -134,16 +150,21 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
 
   double curve_kappa = 0.0;
   double curve_radius = 1 / 1e-6;
-  if (!reference_path_ptr_->get_frenet_coord()->GetKappaByS(ego_frenet_state.s(), &curve_kappa)) {
+  if (!reference_path_ptr_->get_frenet_coord()->GetKappaByS(
+          ego_frenet_state.s(), &curve_kappa)) {
     curve_kappa = 0.0;
   }
 
-  curve_kappa = curve_kappa > 0 ? std::max(1e-6, curve_kappa) : std::min(-1e-6, curve_kappa);
+  curve_kappa = curve_kappa > 0 ? std::max(1e-6, curve_kappa)
+                                : std::min(-1e-6, curve_kappa);
   curve_radius = 1 / curve_kappa;
 
   const auto& ego_boundary = ego_frenet_state.boundary();
 
-  const auto ego_heading = session_->environmental_model().get_ego_state_manager()->planning_init_point().heading_angle;
+  const auto ego_heading = session_->environmental_model()
+                               .get_ego_state_manager()
+                               ->planning_init_point()
+                               .heading_angle;
   const auto care_area_center = planning_math::Vec2d(
       (ego_boundary.s_start + ego_boundary.s_end + kExtendLonDistance) * 0.5,
       ego_frenet_state.l());
@@ -151,7 +172,6 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       ego_boundary.s_end + kExtendLonDistance - ego_boundary.s_start;
   const auto ego_extend_polygon = planning_math::Polygon2d(planning_math::Box2d(
       care_area_center, 0, care_area_length, kExtendLatDistance));
-
 
   std::vector<std::shared_ptr<FrenetObstacle>> left_side_obstacles;
   std::vector<std::shared_ptr<FrenetObstacle>> right_side_obstacles;
@@ -161,7 +181,8 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     }
 
     const auto id = iter.first;
-    if (id == avd_obstacle_[0].track_id || id == avd_obstacle_[1].track_id) { // 可优化
+    if (id == avd_obstacle_[0].track_id ||
+        id == avd_obstacle_[1].track_id) {  // 可优化
       continue;
     }
 
@@ -178,8 +199,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       continue;
     }
 
-    const auto& obstacle_boundary =
-        frenet_obstacle->frenet_obstacle_boundary();
+    const auto& obstacle_boundary = frenet_obstacle->frenet_obstacle_boundary();
     std::vector<planning_math::Vec2d> obstacle_points;
     frenet_obstacle->obstacle()->perception_bounding_box().GetAllCorners(
         &obstacle_points);
@@ -190,7 +210,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     double limit_overlap_min_y = obstacle_boundary.l_start;
     double limit_overlap_max_y = obstacle_boundary.l_end;
     if (frenet_obstacle_polygon.ComputeOverlap(ego_extend_polygon,
-                                                &care_overlap_polygon)) {
+                                               &care_overlap_polygon)) {
       limit_overlap_min_y = care_overlap_polygon.min_y();
       limit_overlap_max_y = care_overlap_polygon.max_y();
     }
@@ -203,13 +223,12 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       lat_distance = ego_boundary.l_start - limit_overlap_max_y;
     }
 
-
     if (frenet_obstacle->frenet_l() > 0 &&
         limit_overlap_min_y - ego_boundary.l_end < 1.5) {
       left_side_obstacles.emplace_back(frenet_obstacle);
     } else if (frenet_obstacle->frenet_l() < 0 &&
-                ego_boundary.l_start - limit_overlap_max_y < 1.5
-                //  ego_boundary.l_start - limit_overlap_max_y > 0.2
+               ego_boundary.l_start - limit_overlap_max_y < 1.5
+               //  ego_boundary.l_start - limit_overlap_max_y > 0.2
     ) {
       right_side_obstacles.emplace_back(frenet_obstacle);
     }
@@ -253,7 +272,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
   const std::vector<double> xp_truck_length{6, 8, 10, 12};
   const std::vector<double> fp_truck_length_buffer{0.05, 0.1, 0.15, 0.25};
   const std::vector<double> xp_curv{60, 100, 400, 800, 1000};
-  const std::vector<double> fp_curv_buffer{0.1,0.08, 0.07, 0.05, 0.0};
+  const std::vector<double> fp_curv_buffer{0.1, 0.08, 0.07, 0.05, 0.0};
   const std::vector<double> xp_heading_diff{0, 0.05, 0.2};
   const std::vector<double> fp_heading_diff_buffer{0, 0.1, 0.2};
 
@@ -265,14 +284,15 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     planning_math::Polygon2d care_overlap_polygon;
     double limit_overlap_min_y = obstacle_boundary.l_start;
     double limit_overlap_max_y = obstacle_boundary.l_end;
-    const bool is_truck = general_lateral_decider_utils::IsTruck(left_side_obstacle);
+    const bool is_truck =
+        general_lateral_decider_utils::IsTruck(left_side_obstacle);
     const double length = left_side_obstacle->length();
-    const double heading_angle = left_side_obstacle->obstacle()->heading_angle();
+    const double heading_angle =
+        left_side_obstacle->obstacle()->heading_angle();
     planning_math::Polygon2d frenet_obstacle_polygon;
 
     if (planning_math::Polygon2d::ComputeConvexHull(
-            left_side_obstacle->corner_points(),
-            &frenet_obstacle_polygon) &&
+            left_side_obstacle->corner_points(), &frenet_obstacle_polygon) &&
         frenet_obstacle_polygon.ComputeOverlap(ego_extend_polygon,
                                                &care_overlap_polygon)) {
       limit_overlap_min_y = care_overlap_polygon.min_y();
@@ -280,12 +300,15 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     }
 
     if (is_truck) {
-      truck_length_buffer = interp(length, xp_truck_length, fp_truck_length_buffer);
+      truck_length_buffer =
+          interp(length, xp_truck_length, fp_truck_length_buffer);
     }
 
-    const double heading_diff = planning_math::NormalizeAngle(heading_angle - ego_heading);
+    const double heading_diff =
+        planning_math::NormalizeAngle(heading_angle - ego_heading);
     if (heading_diff < 0) {
-      heading_diff_buffer = interp(-heading_diff, xp_heading_diff, fp_heading_diff_buffer);
+      heading_diff_buffer =
+          interp(-heading_diff, xp_heading_diff, fp_heading_diff_buffer);
     }
 
     if (curve_radius < 0.0) {
@@ -306,25 +329,27 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       left_need_nudge = true;
       left_nudge_info = NudgeInfo(left_side_obstacle->id(),
                                   NudgeDirection::LEFT, limit_overlap_min_y,
-                                  limit_overlap_max_y, EmergecyLevel::LOW);
+                                  limit_overlap_max_y, EmergencyLevel::LOW);
     }
   }
 
   if (right_side_obstacles.size() > 0) {
-    std::shared_ptr<FrenetObstacle> right_side_obstacle = right_side_obstacles[0];
+    std::shared_ptr<FrenetObstacle> right_side_obstacle =
+        right_side_obstacles[0];
     const auto id = right_side_obstacle->id();
     const auto& obstacle_boundary =
         right_side_obstacle->frenet_obstacle_boundary();
     planning_math::Polygon2d care_overlap_polygon;
     double limit_overlap_min_y = obstacle_boundary.l_start;
     double limit_overlap_max_y = obstacle_boundary.l_end;
-    const bool is_truck = general_lateral_decider_utils::IsTruck(right_side_obstacle);
+    const bool is_truck =
+        general_lateral_decider_utils::IsTruck(right_side_obstacle);
     const double length = right_side_obstacle->length();
-    const double heading_angle = right_side_obstacle->obstacle()->heading_angle();
+    const double heading_angle =
+        right_side_obstacle->obstacle()->heading_angle();
     planning_math::Polygon2d frenet_obstacle_polygon;
     if (planning_math::Polygon2d::ComputeConvexHull(
-            right_side_obstacle->corner_points(),
-            &frenet_obstacle_polygon) &&
+            right_side_obstacle->corner_points(), &frenet_obstacle_polygon) &&
         frenet_obstacle_polygon.ComputeOverlap(ego_extend_polygon,
                                                &care_overlap_polygon)) {
       limit_overlap_min_y = care_overlap_polygon.min_y();
@@ -332,12 +357,15 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
     }
 
     if (is_truck) {
-      truck_length_buffer = interp(length, xp_truck_length, fp_truck_length_buffer);
+      truck_length_buffer =
+          interp(length, xp_truck_length, fp_truck_length_buffer);
     }
 
-    const double heading_diff = planning_math::NormalizeAngle(heading_angle - ego_heading);
+    const double heading_diff =
+        planning_math::NormalizeAngle(heading_angle - ego_heading);
     if (heading_diff > 0) {
-      heading_diff_buffer = interp(-heading_diff, xp_heading_diff, fp_heading_diff_buffer);
+      heading_diff_buffer =
+          interp(-heading_diff, xp_heading_diff, fp_heading_diff_buffer);
     }
 
     if (curve_radius > 0.0) {
@@ -348,7 +376,7 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
 
     if (limit_overlap_max_y > -right_lane_width) {
       count_map_[id] = kMaxConfirmCount;
-    } else if (limit_overlap_max_y > -right_lane_width - extra_buffer){
+    } else if (limit_overlap_max_y > -right_lane_width - extra_buffer) {
       count_map_[id] = std::min(kMaxConfirmCount, count_map_[id] + 1);
     } else {
       count_map_[id] = std::max(0, count_map_[id] - 1);
@@ -358,13 +386,14 @@ bool SideNudgeLateralOffsetDecider::IsStartNudge() {
       right_need_nudge = true;
       right_nudge_info = NudgeInfo(right_side_obstacle->id(),
                                    NudgeDirection::RIGHT, limit_overlap_min_y,
-                                   limit_overlap_max_y, EmergecyLevel::LOW);
+                                   limit_overlap_max_y, EmergencyLevel::LOW);
     }
   }
 
   // 清理不再存在的障碍物计数
   std::unordered_set<int> current_obstacle_ids;
-  current_obstacle_ids.reserve(left_side_obstacles.size() + right_side_obstacles.size());
+  current_obstacle_ids.reserve(left_side_obstacles.size() +
+                               right_side_obstacles.size());
   for (const auto& obs : left_side_obstacles) {
     current_obstacle_ids.insert(obs->id());
   }
@@ -409,16 +438,46 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
                           .frenet_state.r;
   double desire_lateral_offset =
       DesireLateralOffsetSideWay(config_.base_nudge_distance);
-  desire_lateral_offset = std::min(kMaxNudgeDistance, desire_lateral_offset);
+  if (nudge_info_.nudge_direction == NudgeDirection::LEFT) {
+    if (ego_init_l > -desire_lateral_offset) {
+      desire_lateral_offset = std::max(std::min(-kMaxNudgeDistance, ego_init_l),
+                                       -desire_lateral_offset);
+    }   
+  } else {
+    if (ego_init_l < desire_lateral_offset) {
+      desire_lateral_offset = std::min(std::max(kMaxNudgeDistance, ego_init_l),
+                                       desire_lateral_offset);
+    }
+  }
+  // desire_lateral_offset = std::min(kMaxNudgeDistance, desire_lateral_offset);
   desire_lateral_offset =
       nudge_info_.nudge_direction == NudgeDirection::LEFT
-          ? -std::min(desire_lateral_offset,
-                      lane_info_.normal_right_avoid_threshold)
+          ? std::max(desire_lateral_offset,
+                     -lane_info_.normal_right_avoid_threshold)
           : std::min(desire_lateral_offset,
                      lane_info_.normal_left_avoid_threshold);
+  // desire_lateral_offset =
+  //     nudge_info_.nudge_direction == NudgeDirection::LEFT
+  //         ? -std::min(desire_lateral_offset,
+  //                     lane_info_.normal_right_avoid_threshold)
+  //         : std::min(desire_lateral_offset,
+  //                    lane_info_.normal_left_avoid_threshold);
 
   // smooth
-  double offset_change_rate = kOffsetChangeRateLow;
+  // 只在避让幅度增大时按危险等级放大变化率，回退时始终用低速率
+  if (std::fabs(desire_lateral_offset) > std::fabs(lateral_offset_)) {
+    switch (nudge_info_.emergency_level) {
+      case EmergencyLevel::HIGH:
+        offset_change_rate_ = kOffsetChangeRateHigh;
+        break;
+      case EmergencyLevel::MEDIUM:
+        offset_change_rate_ = kOffsetChangeRateMedium;
+        break;
+      default:
+        offset_change_rate_ = kOffsetChangeRateLow;
+        break;
+    }
+  }
 
   if ((desire_lateral_offset < lateral_offset_ &&
        desire_lateral_offset > ego_init_l) ||
@@ -430,18 +489,18 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
              (lateral_offset_ > desire_lateral_offset &&
               lateral_offset_ < ego_init_l)) {
     lateral_offset_ =
-        clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-             lateral_offset_ - offset_change_rate);
+        clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+             lateral_offset_ - offset_change_rate_);
   } else {
     if (desire_lateral_offset > ego_init_l) {
       lateral_offset_ = std::max(
-          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-               lateral_offset_ - offset_change_rate),
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+               lateral_offset_ - offset_change_rate_),
           ego_init_l);
     } else {
       lateral_offset_ = std::min(
-          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-               lateral_offset_ - offset_change_rate),
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate_,
+               lateral_offset_ - offset_change_rate_),
           ego_init_l);
     }
   }
@@ -487,7 +546,49 @@ void SideNudgeLateralOffsetDecider::UpdateNudgeInfo() {
 
   nudge_info_.min_l_to_ref = limit_overlap_min_y;
   nudge_info_.max_l_to_ref = limit_overlap_max_y;
+
+  double lat_distance = 0.0;
+  double lat_approach_v = 0.0;
+  if (nudge_info_.nudge_direction == NudgeDirection::LEFT) {
+    lat_distance = nudge_info_.min_l_to_ref - ego_boundary.l_end;
+    lat_approach_v = -frenet_obstacle->frenet_velocity_l();
+  } else {
+    lat_distance = ego_boundary.l_start - nudge_info_.max_l_to_ref;
+    lat_approach_v = frenet_obstacle->frenet_velocity_l();
+  }
+
+  EmergencyLevel raw_level = EmergencyLevel::LOW;
+  if (lat_distance <= kLatDistanceMedium ||
+      lat_approach_v >= kLatApproachVMedium) {
+    raw_level = EmergencyLevel::MEDIUM;
+  }
+  if (lat_distance <= kLatDistanceHigh || lat_approach_v >= kLatApproachVHigh) {
+    raw_level = EmergencyLevel::HIGH;
+  }
+
+  EmergencyLevel last_level = last_nudge_info_.emergency_level;
+  EmergencyLevel level = raw_level;
+  if (raw_level < last_level) {
+    // 降级需满足释放阈值，否则保持当前等级
+    if (last_level == EmergencyLevel::HIGH) {
+      if (lat_distance > kLatDistanceReleaseHigh &&
+          lat_approach_v < kLatApproachVReleaseHigh) {
+        level = EmergencyLevel::MEDIUM;
+      } else {
+        level = EmergencyLevel::HIGH;
+      }
+    } else if (last_level == EmergencyLevel::MEDIUM) {
+      if (lat_distance > kLatDistanceReleaseMedium &&
+          lat_approach_v < kLatApproachVReleaseMedium) {
+        level = EmergencyLevel::LOW;
+      } else {
+        level = EmergencyLevel::MEDIUM;
+      }
+    }
+  }
+  nudge_info_.emergency_level = level;
 }
+
 bool SideNudgeLateralOffsetDecider::IsStopNudge() {
   if (nudge_info_.id == 0) {
     nudge_info_.cancel_nudge_reason = CancelNudgeReason::OTHER;

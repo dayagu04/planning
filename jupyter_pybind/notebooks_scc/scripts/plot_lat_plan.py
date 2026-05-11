@@ -12,7 +12,7 @@ sys.path.append('../../../')
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20260328/20260328-15-00-38/data_collection_BESTUNE_E541_88446_EVENT_FUNEXIT_2026-03-28-15-00-38_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_20405/trigger/20260407/20260407-14-51-51/data_collection_BESTUNE_E541_20405_EVENT_KEY_2026-04-07-14-51-51_no_camera.bag.1776413197.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36716/trigger/20260426/20260426-19-39-44/data_collection_BESTUNE_E541_36716_EVENT_DOWNGRADE_2026-04-26-19-39-44_no_camera.bag"
 
 # frame dt
 frame_dt = 0.05 # sec
@@ -36,7 +36,7 @@ steer_ratio = load_steer_ratio(car_type)
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
-fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9,fig_extend_heading, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
+fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
 if scene_type == 'HPP':
   fig1.width = 1200
   fig1.height = 1300
@@ -271,7 +271,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_planning_request_data(bag_loader, local_view_data, planning_request_data)
 
   push_notebook()
-pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_extend_heading,fig_curve)), title="CurveFigure")
+pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11,fig_curve)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(data_behavior_table_1, data_behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
 pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table, planning_request_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")

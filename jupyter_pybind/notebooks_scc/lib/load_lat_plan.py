@@ -1518,7 +1518,4 @@ def load_lat_plan_figure(fig1, local_view_data):
   fig8.legend.click_policy = 'hide'
   fig9.legend.click_policy = 'hide'
 
-  fig_extend_heading.legend.click_policy = 'hide'
-  fig_extend_heading.toolbar.active_scroll = fig_extend_heading.select_one(WheelZoomTool)
-
-  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, fig_extend_heading, lat_plan_data
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data

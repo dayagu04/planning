@@ -99,21 +99,27 @@ void LateralOffsetDecider::PostProcess() {
     }
   }
 
+  double side_lateral_offset_change_rate = 0.0;
   NudgeDirection side_direction = side_nudge_info.nudge_direction;
   if (side_nudge_info.nudge_direction != NudgeDirection::NONE) {
     if (front_direction == side_nudge_info.nudge_direction) {
       lateral_offset_tmp = front_direction == NudgeDirection::LEFT
                                ? std::min(side_lat_offset, front_lat_offset)
                                : std::max(side_lat_offset, front_lat_offset);
+      side_lateral_offset_change_rate =
+          side_nudge_lateral_offset_decider_.side_offset_change_rate();
     } else if (side_nudge_state != SideNudgeState::CONTROL) {
       lateral_offset_tmp = front_lat_offset;
     } else {
       lateral_offset_tmp = side_lat_offset;
+      side_lateral_offset_change_rate =
+          side_nudge_lateral_offset_decider_.side_offset_change_rate();
     }
   }
 
-  
-  constexpr double lateral_offset_change_rate = 0.05;
+  constexpr double kLateralOffsetChangeRate = 0.05;
+  double lateral_offset_change_rate =
+      std::fmax(kLateralOffsetChangeRate, side_lateral_offset_change_rate);
   if ((lateral_offset_tmp < lateral_offset_ &&
        lateral_offset_tmp > ego_init_l) ||
       (lateral_offset_tmp > lateral_offset_ &&

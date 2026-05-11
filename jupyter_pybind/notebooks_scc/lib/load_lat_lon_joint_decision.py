@@ -508,6 +508,8 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     def parse_str_list(v):
         if isinstance(v, str):
             return [float(x) for x in v.split(',') if x.strip()]
+        if isinstance(v, (int, float)):
+            return [float(v)]
         return list(v) if v else []
 
     def format_intent_list(ids, scores):

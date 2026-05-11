@@ -2602,11 +2602,11 @@ void ParallelPathGenerator::AddPathSegToOutPut(
   }
 }
 
-void ParallelPathGenerator::DeleteFirstSegPath() {
+const bool ParallelPathGenerator::DeleteFirstSegPath() {
   if ((output_.path_segment_vec.size() != output_.gear_cmd_vec.size()) ||
       (output_.path_segment_vec.size() != output_.steer_vec.size())) {
     ILOG_INFO << "size not equal";
-    return;
+    return false;
   }
   size_t delete_i = 1;
   // output_.path_segment_vec;
@@ -2619,7 +2619,7 @@ void ParallelPathGenerator::DeleteFirstSegPath() {
   const size_t path_size = output_.path_segment_vec.size();
   if (delete_i >= path_size || delete_i < 0) {
     ILOG_INFO << "delete_i not valid";
-    return;
+    return false;
   }
 
   output_.path_segment_vec.erase(output_.path_segment_vec.begin(),
@@ -2629,7 +2629,7 @@ void ParallelPathGenerator::DeleteFirstSegPath() {
   output_.steer_vec.erase(output_.steer_vec.begin(),
                           output_.steer_vec.begin() + delete_i);
 
-  return;
+  return true;
 }
 
 const bool ParallelPathGenerator::InsertLineSegToEgo2Path(

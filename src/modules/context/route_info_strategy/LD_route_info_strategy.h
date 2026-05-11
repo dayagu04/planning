@@ -380,10 +380,12 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const double dis_to_front_first_link,
       const iflymapdata::sdpro::LinkInfo_Link& target_link);
 
-  void EraseFeasibleLaneIfNeeded(
-      uint64_t lane_id,
+  // 递归检查后继车道是否最终到达 split_next_link
+  bool IsSuccessorReachingSplitNextLink(
+      const iflymapdata::sdpro::Lane* lane,
       const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
-      TopoLinkGraph& feasible_lane_graph);
+      const std::unordered_set<uint64_t>& out_link_ids,
+      std::unordered_set<uint64_t>& visited) const;
   std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(
       const iflymapdata::sdpro::LinkInfo_Link* split_link,
       const SplitDirection& split_dir);
@@ -423,6 +425,9 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       uint32_t to_seq);
 
   bool IsMissedNaviRoute() const;
+
+  bool IsSuccessorConnectLane(const iflymapdata::sdpro::Lane* cur_lane,
+                              const iflymapdata::sdpro::Lane* suc_lane) const;
 
   bool IsCurrentLaneOnRouteLink(const TopoLinkGraph& feasible_lane_graph) const;
 

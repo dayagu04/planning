@@ -222,10 +222,14 @@ void NSALateralObstacleDecider::UpdateLatDecision(
   lat_obstacle_decision.clear();
 
   double current_timestamp = IflyTime::Now_ms();
-
+  constexpr double PasserbySpeed = 0.25; //行人横向的最大速度，超过该速度，横穿规划就是忽略
   std::unordered_set<uint32_t> current_frame_obstacle_ids;
   for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+        continue;
+      }
       current_frame_obstacle_ids.insert(static_cast<uint32_t>(obstacle->id()));
     }
   }
@@ -242,6 +246,10 @@ void NSALateralObstacleDecider::UpdateLatDecision(
   // 主循环：进行决策计算
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+        continue;
+      }
       uint32_t obs_id = static_cast<uint32_t>(obstacle->id());
       auto& info = obstacle_consistency_map_[obs_id];
       info.last_seen_timestamp = current_timestamp;
@@ -419,6 +427,7 @@ void NSALateralObstacleDecider::UpdateLatDecisionWithARAStar(
   std::vector<double> l_vec(traj_size);
   double angle_offset = 0.0;
   bool behind_equal_l_point = true;
+  constexpr double PasserbySpeed = 0.25; //行人横向的最大速度，超过该速度，横穿规划就是忽略
   for (size_t i = 0; i < traj_size; ++i) {
     s_vec[i] = hybrid_ara_result.s[i];
     l_vec[i] = hybrid_ara_result.l[i];
@@ -432,6 +441,10 @@ void NSALateralObstacleDecider::UpdateLatDecisionWithARAStar(
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
+      if ((std::fabs(obstacle->frenet_velocity_l()) > PasserbySpeed && obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) || obstacle->obstacle()->type() == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+        continue;
+      }
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_ara = 0;
         if (obstacle->frenet_s() < s_vec.front()) {

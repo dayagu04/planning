@@ -885,9 +885,14 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   double half_origin_lane_width = origin_lane->width() * 0.5;
   double half_target_lane_width = target_lane->width() * 0.5;
   double RoadBorderConsiderDistance = ego_vel * predict_time_horizon;
-  double ego_lateral_offset_to_origin_boundary = std::max(ego_lateral_offset_in_target_lane - half_target_lane_width, 0.0);
-  double lateral_ratio = ego_lateral_offset_to_origin_boundary / half_origin_lane_width;
-  //根据横向距离衰减
+  double ego_lateral_offset_to_origin_boundary =
+      std::max(ego_lateral_offset_in_target_lane - half_target_lane_width, 0.0);
+  double lateral_ratio = (half_origin_lane_width > kEps)
+                             ? std::min(ego_lateral_offset_to_origin_boundary /
+                                            half_origin_lane_width,
+                                        1.0)
+                             : 1.0;
+  // 根据横向距离衰减
   RoadBorderConsiderDistance = std::max(lateral_ratio * RoadBorderConsiderDistance, 5.0);
   for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
        s < ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle +

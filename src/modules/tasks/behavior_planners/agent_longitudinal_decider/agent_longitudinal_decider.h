@@ -94,6 +94,8 @@ class AgentLongitudinalDecider : public Task {
 
   void FilterRearAgents();
 
+  void FilterLateralAvoidStaticObstacles();
+
   void FilterUltradistantObs();
 
   void FilterReverseAgents();
@@ -187,5 +189,6 @@ class AgentLongitudinalDecider : public Task {
   std::unordered_map<int32_t, int32_t> hpp_reverse_want_ignore_count_;
   std::unordered_map<int32_t, int32_t> hpp_reverse_want_keep_count_;
   std::unordered_map<int32_t, bool> hpp_reverse_ignore_state_;
+  std::unordered_map<int32_t, int32_t> static_obs_projection_count_;
 };
 }  // namespace planning

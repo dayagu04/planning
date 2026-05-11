@@ -35,10 +35,11 @@ class EdtManager {
 
  private:
   void InitEDT();
-  OccupancyGridBound GenerateOGM(const Pose2D &base_pose);
-  void AddPointClouds(const std::vector<planning_math::Vec2d> &point_clouds,
+  OccupancyGridBound GenerateOGM(const Pose2D& base_pose);
+  void AddPointClouds(const Pose2D& base_pose,
+                      const std::vector<planning_math::Vec2d> &point_clouds,
                       size_t step = 1);
-  void AddODPoint(const Obstacle &obstalce);
+  void AddODPoint(const Pose2D& base_pose, const Obstacle &obstalce);
   bool UpdateEDT(const OccupancyGridBound &grid_bound);
 
  private:

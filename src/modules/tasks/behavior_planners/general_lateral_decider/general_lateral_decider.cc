@@ -4209,6 +4209,13 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
   const bool in_intersection = session_->planning_context()
                                    .lateral_obstacle_decider_output()
                                    .in_intersection;
+  bool is_spatio_planner_search_success = false;
+  bool st_dp_is_sucess = session_->planning_context()
+                                  .spatio_temporal_union_plan_output()
+                                  .st_dp_is_sucess;
+  if (config_.enable_use_spatio_temporal_planning && st_dp_is_sucess) {
+    is_spatio_planner_search_success = true;
+  }
   const auto lat_obs_decision_iter = lat_obstacle_decision.find(obstacle->id());
   if (lat_obs_decision_iter != lat_obstacle_decision.end()) {
     if (lat_obs_decision_iter->second == LatObstacleDecisionType::LEFT ||
@@ -4237,7 +4244,7 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
           !obstacle->is_static() &&
           // (obstacle->frenet_s() < ref_traj_points_.back().s) &&
           !is_cross_obj && !general_lateral_decider_output.lane_change_scene &&
-          !in_intersection) {
+          !(in_intersection && is_spatio_planner_search_success)) {
         // 对向静止的ignore先不考虑
         return true;
       }
