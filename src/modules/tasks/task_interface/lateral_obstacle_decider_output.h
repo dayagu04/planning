@@ -51,7 +51,7 @@ struct FollowObstacleInfo {
 
 struct CrossObstacleInfo{
   bool has_overlap = false;//自车和横穿障碍物是否有碰撞
-  double overlap_position_s = 0.0;//发生碰撞时，自车的s
+  double overlap_position_s = 0.0;//发生碰撞时，自车的s,注意不是相对s，使用时要减去自车当前的s。
 };
 
 struct TimeInterval {
