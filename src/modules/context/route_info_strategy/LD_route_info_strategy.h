@@ -412,6 +412,8 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const iflymapdata::sdpro::LinkInfo_Link* current_link,
       double& link_distance);
   void CalculateFeasibleLaneByMergePoint(TopoLinkGraph& feasible_lane_graph);
+  bool CalculateFeasibleLaneForMergeAfterSplit(
+      TopoLinkGraph& feasible_lane_graph);
   void ProcessEraseFeasibleLaneForSplitScene(
       TopoLinkGraph& feasible_lane_graph);
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
@@ -486,6 +488,7 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
   std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
   TopoLinkGraph feasible_lane_graph_;
+  TopoLinkGraph feasible_lane_graph_for_merge_after_split_;
 
   // 中心线与Link关系分析器
   context::CenterlineLinkAnalyzer centerline_link_analyzer_;
