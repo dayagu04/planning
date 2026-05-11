@@ -296,6 +296,19 @@ uint16 IhcCore::IhcActiveCode() {
     /*do nothing*/
   }
 
+  // bit 8: 车速条件（根据当前状态判断不同的车速阈值）
+  if (ihc_sys_.state.ihc_state == iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE) {
+    // ACTIVE状态：车速低于25kph时禁用
+    if (vehicle_service_output_info_ptr->vehicle_speed_display < 25.0F / 3.6F) {
+      ihc_active_code_temp += uint16_bit[8];
+    }
+  } else if (ihc_sys_.state.ihc_state == iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY) {
+    // STANDBY状态：车速低于40kph时禁用
+    if (vehicle_service_output_info_ptr->vehicle_speed_display < 40.0F / 3.6F) {
+      ihc_active_code_temp += uint16_bit[8];
+    }
+  }
+
   return ihc_active_code_temp & GetContext.get_param()->ihc_active_code_maskcode;
 }
 
