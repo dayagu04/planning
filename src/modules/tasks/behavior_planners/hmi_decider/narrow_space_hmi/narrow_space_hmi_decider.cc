@@ -79,8 +79,12 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
       mutable_nsa_planning_completed = true;
     } else if (!narrow_space_decider_output.is_passable_narrow_space && ego_state->ego_v() < kEgoStopVelThd) {
       // 窄路空间过窄 && 自车停止
-      // hmi_info->nsa_info.is_complete = true;
-      hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
+      if (nsa_dis > kNsaLonDisThred) {
+        hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_DISTANCE_SATISFY;
+        mutable_nsa_planning_completed = true;
+      } else {
+        hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
+      }
       // hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_SPACE;
       // mutable_nsa_planning_completed = true;
     } else if (narrow_space_decider_output.is_passable_narrow_space && narrow_space_decider_output.is_in_narrow_space &&

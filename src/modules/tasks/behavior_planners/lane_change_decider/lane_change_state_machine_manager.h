@@ -263,7 +263,7 @@ class LaneChangeStateMachineManager {
       const std::shared_ptr<ReferencePath> ref_path, const double p_end);
 
   bool IsCancelToHold();
-  double CalculateLCHoldStateLatOffset() const;
+  double CalculateLCHoldStateLatOffset();
   bool IsHighPriorityCompleteMLC() const;
   bool IsFilterStaticAgentLC(
       const planning_data::DynamicAgentNode& agent_node) const;
@@ -367,6 +367,9 @@ class LaneChangeStateMachineManager {
   int complete_state_frame_nums_ = 0;
   double lat_close_boundary_offset_ = 0;
   double lc_hold_state_lat_offset_ = 0;
+  bool small_offset_latched_ = false;
+  double hold_entry_ego_l_ = 0.0;
+  bool hold_entry_captured_ = false;
   const planning_data::DynamicAgentNode* target_lane_front_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;

@@ -1166,7 +1166,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
             if (s < begin_ego_s) {
               continue;
             }
-            total_lateral_offset += lateral_offset;
+            total_lateral_offset += std::fabs(lateral_offset);
             point_nums += 1;
             if (point_nums >= kDefaultPointNums ||
                 s > ego_cart_target_frenet.x +
@@ -1199,12 +1199,12 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
                 s > ego_cart_target_frenet.x + kConsiderLaneLineLength) {
               break;
             }
-            total_lateral_offset += lateral_offset;
+            total_lateral_offset += std::fabs(lateral_offset);
             point_nums += 1;
           }
         }
         point_nums = std::max(1, point_nums);
-        cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
+        cumu_lat_dis_cost = total_lateral_offset / point_nums;
       } else {
         cumu_lat_dis_cost = default_lane_mapping_cost;
       }

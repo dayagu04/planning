@@ -44,6 +44,9 @@ enum class AgentType {
   SPECIFICATIONER = 25,       // 泊车-地锁, context = IdpParkingEntranceStatusType | ...
   LIMITER = 26,               // 泊车-限位器
   COLUMN = 27,                // 柱子
+  TURNSTILE = 28,             // 闸机抬杆
+  CYLINDER_BARRIER = 29,      // 立柱
+  CONSTRUCTION_SIGNS = 30,    // 施工牌
   VIRTUAL = 31,               // 虚拟障碍物
   SPECIAL_VEHICLE = 39,       // 特殊车辆，包括救护车、消防车等
   PICKUP = 40,                // 皮卡
@@ -67,8 +70,6 @@ enum class AgentType {
   OCC_VEGETATION = 61,        // 植被
   OCC_DRIVEABLE_AREA = 62,    // 可行驶区域
   OCC_NON_DRIVEABLE_AREA = 63, // 不可行驶区域
-  CYLINDER_BARRIER = 64,       // 立柱
-  CONSTRUCTION_SIGNS = 65,     // 施工牌
 };
 
 struct AgentStInfo {

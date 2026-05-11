@@ -2478,83 +2478,88 @@ bool SpatioTemporalUnionDp::PrebuildLastFrameToCurrentSpline() {
 void SpatioTemporalUnionDp::PostProcessLateralProfile(
     std::vector<SpeedInfo>& speed_profile, std::vector<double>& l_vec) {
   // 后处理：防止横向超调（在插值前对稀疏DP点修正，使插值结果更平滑）
-  // 条件：自车当前在参考线左侧(l0>0)，未来某点超调到右侧(l<0)，且该点左侧无障碍物cost
-  const double ego_init_l = cost_table_[0][0][0].point().l();
-  if (ego_init_l > 0.0) {
-    for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l >= 0.0) {
-        continue;
+  // 以 prev_l 的符号决定外侧方向：prev_l>0 时"更大的 l"为外侧，prev_l<0 时"更小的 l"为外侧
+  // 当前点若相对 prev_l 向外侧超调，则从当前点（含）向 prev_l 方向扫描 cost_row，
+  // 碰到第一个障碍就停在其 pt_l 侧一格；全程无障碍则回退到 prev_l 对应采样点。
+  const auto& lat_samples = lateral_distance_by_index_;
+  const int lat_size = static_cast<int>(lat_samples.size());
+  for (size_t i = 1; i < speed_profile.size(); ++i) {
+    const double prev_l = speed_profile[i - 1].l;
+    const double cur_l = speed_profile[i].l;
+
+    const bool is_overshoot_left = prev_l > 0.0 && cur_l > prev_l;
+    const bool is_overshoot_right = prev_l < 0.0 && cur_l < prev_l;
+    if (!is_overshoot_left && !is_overshoot_right) {
+      continue;
+    }
+
+    const double point_t = speed_profile[i].t;
+    const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
+    if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+      continue;
+    }
+    const double point_s = speed_profile[i].s;
+    const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                        spatial_distance_by_index_.end(), point_s);
+    const int s_idx = static_cast<int>(
+        std::distance(spatial_distance_by_index_.begin(), s_itr));
+    if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+      continue;
+    }
+    const auto& cost_row = cost_table_[t_idx][s_idx];
+    const int cost_row_size = static_cast<int>(cost_row.size());
+
+    int pt_l_idx = 0;
+    int prev_l_idx = 0;
+    if (is_overshoot_left) {
+      const auto pt_l_itr =
+          std::lower_bound(lat_samples.begin(), lat_samples.end(), cur_l);
+      pt_l_idx = std::min(
+          static_cast<int>(std::distance(lat_samples.begin(), pt_l_itr)),
+          lat_size - 1);
+      const auto prev_l_itr =
+          std::lower_bound(lat_samples.begin(), lat_samples.end(), prev_l);
+      prev_l_idx = std::min(
+          static_cast<int>(std::distance(lat_samples.begin(), prev_l_itr)),
+          lat_size - 1);
+    } else {
+      const auto pt_l_itr =
+          std::upper_bound(lat_samples.begin(), lat_samples.end(), cur_l);
+      pt_l_idx = std::max(
+          static_cast<int>(std::distance(lat_samples.begin(), pt_l_itr)) - 1,
+          0);
+      const auto prev_l_itr =
+          std::upper_bound(lat_samples.begin(), lat_samples.end(), prev_l);
+      prev_l_idx = std::max(
+          static_cast<int>(std::distance(lat_samples.begin(), prev_l_itr)) - 1,
+          0);
+    }
+
+    if (is_overshoot_left && pt_l_idx < prev_l_idx) continue;
+    if (is_overshoot_right && pt_l_idx > prev_l_idx) continue;
+
+    const int step = is_overshoot_left ? -1 : 1;
+    int target_l_idx = prev_l_idx;
+    for (int k = pt_l_idx;
+         is_overshoot_left ? k >= prev_l_idx : k <= prev_l_idx; k += step) {
+      if (k < 0 || k >= cost_row_size) {
+        break;
       }
-      const double point_t = speed_profile[i].t;
-      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
-      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
-        continue;
-      }
-      const double point_s = speed_profile[i].s;
-      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
-                                          spatial_distance_by_index_.end(), point_s);
-      const int s_idx = static_cast<int>(
-          std::distance(spatial_distance_by_index_.begin(), s_itr));
-      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
-        continue;
-      }
-      bool left_has_obstacle = false;
-      const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.end()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr));
-        if (ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          left_has_obstacle = true;
-        }
-      }
-      if (!left_has_obstacle) {
-        ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
+      if (cost_row[k].obstacle_cost() > 1e-3) {
+        target_l_idx = (k == pt_l_idx) ? pt_l_idx : k - step;
+        break;
       }
     }
-  }
-  // 条件：自车当前在参考线右侧(l0<0)，未来某点超调到左侧(l>0)，且该点右侧无障碍物cost
-  if (ego_init_l < 0.0) {
-    for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l <= 0.0) {
-        continue;
-      }
-      const double point_t = speed_profile[i].t;
-      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
-      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
-        continue;
-      }
-      const double point_s = speed_profile[i].s;
-      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
-                                          spatial_distance_by_index_.end(), point_s);
-      const int s_idx = static_cast<int>(
-          std::distance(spatial_distance_by_index_.begin(), s_itr));
-      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
-        continue;
-      }
-      bool right_has_obstacle = false;
-      const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.begin()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr)) - 1;
-        if (ref_l_idx >= 0 && ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          right_has_obstacle = true;
-        }
-      }
-      if (!right_has_obstacle) {
-        ILOG_DEBUG << "[PostProcess] Overshoot correction (right) at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
-      }
+
+
+    const bool moved = is_overshoot_left ? target_l_idx < pt_l_idx
+                                         : target_l_idx > pt_l_idx;
+    if (moved) {
+      const double new_l = lat_samples[target_l_idx];
+      ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
+                 << " l=" << cur_l << " -> " << new_l;
+      speed_profile[i].l = new_l;
+      l_vec[i] = new_l;
     }
   }
 

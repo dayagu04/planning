@@ -3440,7 +3440,17 @@ const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   // need to set is_first_path to true
   previous_parallel_path_planner_.GetOutputPtr()->is_first_path = true;
 
-  previous_parallel_path_planner_.DeleteFirstSegPath();
+  if (previous_parallel_path_planner_.GetOutput().path_seg_index.second ==
+      previous_parallel_path_planner_.GetOutput().path_segment_vec.size() - 1) {
+    ILOG_INFO << "last path is the only one";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
+  if (!previous_parallel_path_planner_.DeleteFirstSegPath()) {
+    ILOG_INFO << "delete first seg path failed";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
 
   // insert line ego -> path start pt
   pnc::geometry_lib::PathPoint line_pa_pose = cur_pose;

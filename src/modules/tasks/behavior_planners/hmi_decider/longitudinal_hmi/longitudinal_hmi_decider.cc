@@ -8,6 +8,8 @@
 namespace planning {
 namespace {
 constexpr int32_t kLonCollisionCountThred = 3;
+constexpr int32_t kIntersectionRedLightStopExitDebounceFrame = 10;
+constexpr int32_t kIntersectionGreenLightGoExitDebounceFrame = 10;
 constexpr double kEgoStaticVelThred = 0.1;
 constexpr double kRoundaboutDisThred = 120.0;
 }
@@ -128,23 +130,59 @@ bool LongitudinalHmiDecider::Execute() {
   constexpr uint8 kIntersectionStatusNone = 8;
   ad_info.intersection_pass_sts =
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
-  if (tfl_decider.is_in_straight_lane && is_red_tfl && !tfl_decider.can_pass && start_stop_info != common::StartStopInfo::STOP &&
-      intersection_state == planning::common::APPROACH_INTERSECTION && (!tfl_decider.is_small_front_intersection ||
-      tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
+
+  bool red_light_stop_condition =
+      tfl_decider.is_in_straight_lane && is_red_tfl && !tfl_decider.can_pass &&
+      start_stop_info != common::StartStopInfo::STOP &&
+      intersection_state == planning::common::APPROACH_INTERSECTION &&
+      (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) &&
+      (lateral_obstacles->leadone() == nullptr ||
       (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
-      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
+      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis));
+
+  if (red_light_stop_condition) {
+    intersection_red_light_stop_active_ = true;
+    intersection_red_light_stop_exit_count_ = 0;
     ad_info.intersection_pass_sts =
         iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
+  } else if (intersection_red_light_stop_active_) {
+    intersection_red_light_stop_exit_count_++;
+    if (intersection_red_light_stop_exit_count_ >= kIntersectionRedLightStopExitDebounceFrame) {
+      intersection_red_light_stop_active_ = false;
+      intersection_red_light_stop_exit_count_ = 0;
+    } else {
+      ad_info.intersection_pass_sts =
+          iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
+    }
   }
 
-  if (tfl_decider.is_in_straight_lane && is_green_tfl && tfl_decider.can_pass && v_ego < kEgoStaticVelThred &&
-      (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
+  bool green_light_go_condition =
+      !intersection_red_light_stop_active_ &&
+      tfl_decider.is_in_straight_lane && is_green_tfl && tfl_decider.can_pass && v_ego < kEgoStaticVelThred &&
+      (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) &&
+      (lateral_obstacles->leadone() == nullptr ||
       (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
-      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
+      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis));
+
+  if (green_light_go_condition) {
+    intersection_green_light_go_active_ = true;
+    intersection_green_light_go_exit_count_ = 0;
     ad_info.intersection_pass_sts =
         iflyauto::IntersectionPassSts::INTERSECTION_GREEN_LIGHT_GO;
+  } else if (intersection_green_light_go_active_) {
+    intersection_green_light_go_exit_count_++;
+    if (intersection_green_light_go_exit_count_ >= kIntersectionGreenLightGoExitDebounceFrame) {
+      intersection_green_light_go_active_ = false;
+      intersection_green_light_go_exit_count_ = 0;
+    } else {
+      ad_info.intersection_pass_sts =
+          iflyauto::IntersectionPassSts::INTERSECTION_GREEN_LIGHT_GO;
+    }
   }
+
   JSON_DEBUG_VALUE("intersection_pass_sts", int(ad_info.intersection_pass_sts));
+  JSON_DEBUG_VALUE("intersection_red_light_stop_exit_count", intersection_red_light_stop_exit_count_);
+  JSON_DEBUG_VALUE("intersection_green_light_go_exit_count", intersection_green_light_go_exit_count_);
 
   // lon collision check by traj deceleration less than thred by multi-frame
   const auto& raw_traj_points =

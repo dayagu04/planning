@@ -237,6 +237,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeHold;
           lc_lane_mgr_->set_fix_lane_to_origin();
+          small_offset_latched_ = false;
+          hold_entry_captured_ = false;
           lc_hold_state_lat_offset_ = CalculateLCHoldStateLatOffset();
           execution_state_frame_nums_ = 0;
         }
@@ -247,6 +249,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangeHold) {
         hold_state_frame_nums_++;
+        lc_hold_state_lat_offset_ = CalculateLCHoldStateLatOffset();
 
         // 在hold状态下最多维持8s，不满足变道条件那么就返回原车道
         bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
@@ -282,6 +285,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_lane_mgr_->set_fix_lane_to_target();
           lane_change_stage_info_.Reset();
           hold_state_frame_nums_ = 0;
+          small_offset_latched_ = false;
+          hold_entry_captured_ = false;
+          lc_hold_state_lat_offset_ = 0.0;
           is_high_priority_back_ = false;
         } else if (is_hold_to_cancel) {
           transition_info_.lane_change_status =
@@ -289,12 +295,18 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
           lane_change_stage_info_.Reset();
           hold_state_frame_nums_ = 0;
+          small_offset_latched_ = false;
+          hold_entry_captured_ = false;
+          lc_hold_state_lat_offset_ = 0.0;
           is_high_priority_back_ = false;
         } else if (is_hold_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
           hold_state_frame_nums_ = 0;
+          small_offset_latched_ = false;
+          hold_entry_captured_ = false;
+          lc_hold_state_lat_offset_ = 0.0;
           is_high_priority_back_ = false;
         }
       }
@@ -1727,6 +1739,9 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   hold_state_dash_cnt = 0;
   road_edge_collision_cnt_ = 0;
   overtake_lane_change_confirmed_ = false;
+  small_offset_latched_ = false;
+  hold_entry_captured_ = false;
+  lc_hold_state_lat_offset_ = 0.0;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   if (transition_info_.lane_change_status != kLaneChangePropose &&
@@ -1758,6 +1773,9 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
   road_edge_collision_cnt_ = 0;
+  small_offset_latched_ = false;
+  hold_entry_captured_ = false;
+  lc_hold_state_lat_offset_ = 0.0;
 }
 void LaneChangeStateMachineManager::OnlyResetLCStateMachine() {
   //重置 变道状态机 变道请求 但是保留lane change cmd
@@ -1787,6 +1805,9 @@ void LaneChangeStateMachineManager::OnlyResetLCStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  small_offset_latched_ = false;
+  hold_entry_captured_ = false;
+  lc_hold_state_lat_offset_ = 0.0;
 }
 bool LaneChangeStateMachineManager::TimeOut(const bool trigger,
                                             bool* is_start_count,
@@ -5495,7 +5516,7 @@ bool LaneChangeStateMachineManager::IsCancelToHold() {
   return false;
 }
 
-double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
+double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() {
   const auto& ref_path_manager =
       session_->environmental_model().get_reference_path_manager();
   const auto& virtual_lane_manager =
@@ -5553,12 +5574,19 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   double inertial_distance = ComputeInertialLatOffset(vy, lat_acc, limit_jerk_hold);
   //限幅
   inertial_distance = std::max(std::min(inertial_distance, half_origin_lane_width), 0.0);
+  // 基准 l 冻结为进入 Hold 那一帧的 ego_l，避免车朝目标车道挪动后，基准跟随移动
+  // 导致大偏移随自车位置持续外推（正反馈）。vy / lat_acc 仍用瞬时值，让 inertial 分量
+  // 随横向减速自然衰减。
+  if (!hold_entry_captured_) {
+    hold_entry_ego_l_ = fix_ref_path->get_frenet_ego_state().l();
+    hold_entry_captured_ = true;
+  }
   double inertial_lateral_offset = 0.0;
   // 惯性偏移后位置
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    inertial_lateral_offset = fix_ref_path->get_frenet_ego_state().l() + inertial_distance;
+    inertial_lateral_offset = hold_entry_ego_l_ + inertial_distance;
   } else {
-    inertial_lateral_offset = fix_ref_path->get_frenet_ego_state().l() - inertial_distance;
+    inertial_lateral_offset = hold_entry_ego_l_ - inertial_distance;
   }
   // 考虑后车僵持or超车
   // 保持在原车道内的偏移位置-避让后车位置
@@ -5596,11 +5624,12 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
     is_rear_lc_back = rear_agent_overtaking_ &&
                               target_lane_rear_node_->node_agent_id() == back_agent_id;
   }
-  if(is_rear_lc_back || is_side_obs_back) {
-    return small_lateral_offset; //小偏移
-  }else{
-    return large_lateral_offset; //大偏移
+  bool is_front_lc_back =
+      lane_change_stage_info_.lc_back_reason == "front view back"; //前方车引起的变道返回
+  if(is_rear_lc_back || is_side_obs_back || is_front_lc_back) {
+    small_offset_latched_ = true;  // 一旦触发，Hold 期间永久锁存到小偏移
   }
+  return small_offset_latched_ ? small_lateral_offset : large_lateral_offset;
 }
 ThirdOrderTimeOptimalTrajectory
 LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(

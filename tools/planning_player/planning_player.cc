@@ -2095,6 +2095,21 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       // std::cerr << "missing /iflytek/control/control_command" << std::endl;
     }
 
+    auto perception_tsr_ros_msg =
+      find_ros_msg_with_header_time_upper_bound<struct_msgs::CameraPerceptionTsrInfo>(
+          TOPIC_TRAFFIC_SIGN, start_time);
+    if (perception_tsr_ros_msg) {
+      iflyauto::CameraPerceptionTsrInfo perception_tsr_msg{};
+      convert(perception_tsr_msg, *perception_tsr_ros_msg,
+              ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->Feed_IflytekCameraPerceptionTrafficSignRecognition(
+          perception_tsr_msg);
+    } else {
+      std::cerr << "frame_num " << frame_num_
+                << " missing /iflytek/camera_perception/traffic_sign_recognition"
+                << std::endl;
+    }
+
     // auto hmi_mcu_ros_msg = find_ros_msg_with_header_time_upper_bound<
     //     struct_msgs_legacy_v2_4_5::HmiMcuInner>(TOPIC_HMI_MCU_INNER,
     //                                             start_time);

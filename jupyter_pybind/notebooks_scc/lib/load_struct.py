@@ -1514,6 +1514,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['lane_mark_vec'] = []
       lane_info['dist_to_lborder'] = [0]
       lane_info['dist_to_rborder'] = [0]
+      lane_info['order_id'] = [0]
 
     lane_info['lane_mark_point_x'] = lane_mark_point_x
     lane_info['lane_mark_point_y'] = lane_mark_point_y
