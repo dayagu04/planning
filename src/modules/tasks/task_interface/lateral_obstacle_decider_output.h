@@ -51,7 +51,7 @@ struct FollowObstacleInfo {
 
 struct CrossObstacleInfo{
   bool has_overlap = false;//自车和横穿障碍物是否有碰撞
-  double overlap_position_s = 0.0;//发生碰撞时，自车的s
+  double overlap_position_s = 0.0;//发生碰撞时，自车的s,注意不是相对s，使用时要减去自车当前的s。
 };
 
 struct TimeInterval {
@@ -89,6 +89,7 @@ enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
 struct LateralObstacleDeciderOutput {
   ara_star::HybridARAStarResult hybrid_ara_result;
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
+  std::unordered_set<uint32_t> ignored_by_narrow_passage;
   std::unordered_map<uint32_t, bool> is_emergency_avoid_release;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
@@ -110,6 +111,7 @@ struct LateralObstacleDeciderOutput {
   void Clear() {
     hybrid_ara_result.Clear();
     lat_obstacle_decision.clear();
+    ignored_by_narrow_passage.clear();
     search_result = SearchResult::NO_SEARCH;
   }
 };

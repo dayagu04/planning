@@ -823,7 +823,7 @@ bool STGraph::HppComputeSRange(
 
   if (agent.is_stop_destination_virtual_obs()) {
     if (min_l > ego_half_width || max_l < -ego_half_width) return false;
-    *lower_s = coarse_min_s - front_edge;
+    *lower_s = std::fmax(1e-6, coarse_min_s - front_edge);
     *upper_s = coarse_max_s + rear_edge;
     return true;
   }

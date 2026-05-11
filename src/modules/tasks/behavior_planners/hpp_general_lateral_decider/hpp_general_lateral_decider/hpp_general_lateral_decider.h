@@ -122,6 +122,11 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
   void PostProcessBoundary();
+  void DetectNarrowPassage();
+  void ResolveBoundNarrowPassageByIgnoring();
+  static bool IsObstacleBoundType(BoundType type);
+  void RemoveBoundsByIds(std::vector<WeightedBound>& bounds,
+                         const std::unordered_set<int>& ignored_ids);
   void LimitFrenetLateralSlope(
       std::vector<std::pair<double, double>> &frenet_bounds);
   void ProtectBoundByInitPoint(std::pair<double, double> &bound,
@@ -225,6 +230,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info_;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
+  // 通道宽度不足的障碍物 id 集合
+  std::unordered_set<int> narrow_passage_obstacle_ids_;
   std::vector<std::pair<Point2D, Point2D>> enu_soft_bounds_;
   std::vector<std::pair<Point2D, Point2D>> enu_hard_bounds_;
 
@@ -243,6 +250,12 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;
+
+  // 参考线合并状态跟踪
+  bool is_ref_merge_active_ = false;
+  int merge_trigger_count_ = 0;
+  int merge_recover_count_ = 0;
+  int ref_break_blend_frame_count_ = 0;
 };
 
 }  // namespace planning
