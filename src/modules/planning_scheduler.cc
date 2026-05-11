@@ -1571,7 +1571,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   }
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
-
+  
+  // fill adas
+  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
 #ifdef PlanTimeBenchmark
   double start_time, end_time;
   start_time = IflyTime::Now_ms();
@@ -1605,8 +1607,6 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("TaskFunctionCost", end_time - start_time);
 #endif
-  // fill adas
-  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
   session_.mutable_planning_context()->mutable_last_planning_success() =
