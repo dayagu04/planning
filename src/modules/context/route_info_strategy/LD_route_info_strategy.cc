@@ -2991,6 +2991,9 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     }
     // 确定合流方向
     const auto merge_direction = CalculateMergeDirection(*merge_ptr, ld_map_);
+    if (merge_direction == RAMP_NONE) {
+      continue;
+    }
 
     // 3. 判断是否需要处理该合流点
     // 3.1 仅处理拓扑变化点之前的合流点
@@ -3032,7 +3035,10 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       continue;
     }
     bool is_need_avoid = false;
+    const iflymapdata::sdpro::Lane* avoid_feasible_lane = nullptr;
     for (const auto merge_link_lane_id : merge_ptr->lane_ids()) {
+      // 每轮重置，避免沿用上一轮 merge_link_lane 对应的结果
+      avoid_feasible_lane = nullptr;
       const auto* merge_link_lane = ld_map_.GetLaneInfoByID(merge_link_lane_id);
       if (merge_link_lane == nullptr) {
         continue;
@@ -3052,22 +3058,21 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       if (ld_map_.isOnRouteLinks(pre_merge_link_lane->link_id())) {
         continue;
       }
-      // 判断是否是feasible lane旁边车道
+      // 根据 search_orderid 直接获取 avoid_feasible_lane
       uint32 search_orderid = merge_direction == RAMP_ON_LEFT
                                   ? merge_link_lane->sequence() + 1
                                   : merge_link_lane->sequence() - 1;
-      auto it = std::find_if(
-          feasible_lane_graph.lane_topo_groups[merge_link_idx]
-              .topo_lanes.begin(),
-          feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end(),
-          [search_orderid](const TopoLane& lane) {
-            return lane.order_id == search_orderid;
-          });
-      if (it == feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end()) {
-        continue;
+      for (const auto& lane_id : merge_ptr->lane_ids()) {
+        const auto* tmp_lane = ld_map_.GetLaneInfoByID(lane_id);
+        if (tmp_lane == nullptr) {
+          continue;
+        }
+        if (tmp_lane->sequence() == search_orderid) {
+          avoid_feasible_lane = tmp_lane;
+          break;
+        }
       }
       // 判断需要躲避的feasible_lane前继link是否在route上
-      const auto* avoid_feasible_lane = ld_map_.GetLaneInfoByID(it->id);
       if (avoid_feasible_lane == nullptr) {
         continue;
       }
@@ -3110,8 +3115,14 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           break;
         }
       }
+
+      // 一次满足就行
+      if (is_need_avoid) {
+        break;
+      }
     }
-    if (!is_need_avoid) {
+
+    if (!is_need_avoid || avoid_feasible_lane == nullptr) {
       continue;
     }
     // 4. 更新该合流点之前所有link的车道可行距离
@@ -3120,6 +3131,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       if (feasible_lane_graph.lane_topo_groups[t].topo_lanes.size() < 2) {
         continue;
       }
+      
       for (auto& lane : feasible_lane_graph.lane_topo_groups[t].topo_lanes) {
         const auto lane_info = ld_map_.GetLaneInfoByID(lane.id);
         const auto link_info = ld_map_.GetLinkOnRoute(lane.link_id);
@@ -3127,24 +3139,14 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
           continue;
         }
 
-        bool is_leftest = false;
-        bool is_rightest = false;
-        IsTheLaneOnSide(lane_info, is_leftest, is_rightest);
-
-        // 判定是否属于需要躲避的侧向车道
-        bool should_reduce = false;
-        if (merge_direction == RAMP_ON_LEFT && is_rightest) {
-          should_reduce = true;
-        } else if (merge_direction == RAMP_ON_RIGHT && is_leftest) {
-          should_reduce = true;
+        if (!IsSuccessorConnectLane(lane_info, avoid_feasible_lane)) {
+          continue;
         }
 
-        if (should_reduce) {
-          double link_distance = 0.0;
-          if (CalculateDistanceToCertainLink(merge_ptr, link_info,
-                                             link_distance)) {
-            lane.front_feasible_distance = link_distance - 500.0;
-          }
+        double link_distance = 0.0;
+        if (CalculateDistanceToCertainLink(merge_ptr, link_info,
+                                            link_distance)) {
+          lane.front_feasible_distance = link_distance - 500.0;
         }
       }
     }
@@ -5552,4 +5554,39 @@ void LDRouteInfoStrategy::ExportFrameData(
   ofs.close();
 }
 
+bool LDRouteInfoStrategy::IsSuccessorConnectLane(
+    const iflymapdata::sdpro::Lane* cur_lane,
+    const iflymapdata::sdpro::Lane* suc_lane) const {
+  if (cur_lane == nullptr || suc_lane == nullptr) {
+    return false;
+  }
+
+  std::unordered_set<uint64> visited;
+  const auto* current_lane = cur_lane;
+  visited.insert(current_lane->id());
+
+  while (current_lane != nullptr) {
+    if (current_lane->successor_lane_ids_size() >= 2) {
+      return false;
+    }
+
+    if (current_lane->successor_lane_ids_size() == 0) {
+      return false;
+    }
+
+    uint64 successor_id = current_lane->successor_lane_ids()[0];
+    if (successor_id == suc_lane->id()) {
+      return true;
+    }
+
+    if (visited.find(successor_id) != visited.end()) {
+      return false;
+    }
+    visited.insert(successor_id);
+
+    current_lane = ld_map_.GetLaneInfoByID(successor_id);
+  }
+
+  return false;
+}
 }  // namespace planning

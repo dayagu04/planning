@@ -376,6 +376,9 @@ void ProcessLaneMapMergePoint(
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
                             int& lane_num);
 
+  bool IsSuccessorConnectLane(const iflymapdata::sdpro::Lane* cur_lane,
+                              const iflymapdata::sdpro::Lane* suc_lane) const;
+
   bool IsCurrentLaneOnRouteLink(const TopoLinkGraph& feasible_lane_graph) const;
 
   // 收集 link 上有效（非 emergency/diversion）车道，按 sequence 从大到小排序
