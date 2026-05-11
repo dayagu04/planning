@@ -22,7 +22,7 @@ bool ElkCore::UpdateElkMainSwitch(void) {
   return function_state_machine_info_ptr->switch_sts.elk_main_switch;
 }
 
-uint16 ElkCore::UpdateElkEnableCode(void) {
+uint32 ElkCore::UpdateElkEnableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
@@ -30,7 +30,7 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
 
-  uint16 enable_code = 0;
+  uint32 enable_code = 0;
 
   // bit 0
   // 判断车速是否处于工作车速范围内
@@ -346,8 +346,8 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status_available == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     enable_code += uint32_bit[25];
   } else {
     /*do nothing*/
@@ -394,7 +394,7 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
   return enable_code & GetContext.get_param()->elk_enable_code_maskcode;
 }
 
-uint16 ElkCore::UpdateElkDisableCode(void) {
+uint32 ElkCore::UpdateElkDisableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
@@ -402,7 +402,7 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
 
-  uint16 disable_code = 0;
+  uint32 disable_code = 0;
 
   // bit 0
   // 判断车速是否处于工作车速范围内
@@ -699,8 +699,8 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status_available == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     disable_code += uint32_bit[25];
   } else {
     /*do nothing*/

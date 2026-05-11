@@ -31,8 +31,10 @@ void MebCore::InitOnce(void) {
 
 void MebCore::UpdateMebEnableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  const auto& meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
-  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto &meb_param =
+      adas_function::MebPreprocess::GetInstance().GetMebParam();
+  const auto &meb_input =
+      adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
                                               ->mutable_environmental_model()
@@ -64,43 +66,46 @@ void MebCore::UpdateMebEnableCode(void) {
     /*do nothing*/
   }
 
-  if (!vehicle_service_output_info_ptr->aeb_actuator_status_available) {
-    enable_code += uint16_bit[2];
-  }
-
-  if ((vehicle_service_output_info_ptr->fl_door_state == true) ||
-      (vehicle_service_output_info_ptr->fr_door_state == true) ||
-      (vehicle_service_output_info_ptr->rl_door_state == true) ||
-      (vehicle_service_output_info_ptr->rr_door_state == true) ||
-      (vehicle_service_output_info_ptr->fl_door_state_available == false) ||
-      (vehicle_service_output_info_ptr->fr_door_state_available == false) ||
-      (vehicle_service_output_info_ptr->rl_door_state_available == false) ||
-      (vehicle_service_output_info_ptr->rr_door_state_available == false)) {
-    enable_code += uint16_bit[3];
-  } else {
-    /*do nothing*/
-  }
-
-  if ((vehicle_service_output_info_ptr->hood_state == true) ||
-      (vehicle_service_output_info_ptr->hood_state_available == false)) {
-    enable_code += uint16_bit[4];
-  } else {
-    /*do nothing*/
-  }
-
-  //
-  if ((vehicle_service_output_info_ptr->trunk_door_state == true) ||
-      (vehicle_service_output_info_ptr->trunk_door_state_available == false)) {
-    enable_code += uint16_bit[5];
-  } else {
-    /*do nothing*/
-  }
-
   if (GetContext.get_param()->meb_function_state_switch) {
+    if ((!vehicle_service_output_info_ptr->aeb_actuator_status_available) ||
+        (vehicle_service_output_info_ptr->aeb_actuator_status > 2) ||
+        (vehicle_service_output_info_ptr->aeb_actuator_status == 0)) {
+      enable_code += uint16_bit[2];
+    }
+
+    if ((vehicle_service_output_info_ptr->fl_door_state == true) ||
+        (vehicle_service_output_info_ptr->fr_door_state == true) ||
+        (vehicle_service_output_info_ptr->rl_door_state == true) ||
+        (vehicle_service_output_info_ptr->rr_door_state == true) ||
+        (vehicle_service_output_info_ptr->fl_door_state_available == false) ||
+        (vehicle_service_output_info_ptr->fr_door_state_available == false) ||
+        (vehicle_service_output_info_ptr->rl_door_state_available == false) ||
+        (vehicle_service_output_info_ptr->rr_door_state_available == false)) {
+      enable_code += uint16_bit[3];
+    } else {
+      /*do nothing*/
+    }
+
+    if ((vehicle_service_output_info_ptr->hood_state == true) ||
+        (vehicle_service_output_info_ptr->hood_state_available == false)) {
+      enable_code += uint16_bit[4];
+    } else {
+      /*do nothing*/
+    }
+
+    //
+    if ((vehicle_service_output_info_ptr->trunk_door_state == true) ||
+        (vehicle_service_output_info_ptr->trunk_door_state_available ==
+         false)) {
+      enable_code += uint16_bit[5];
+    } else {
+      /*do nothing*/
+    }
+
     if (vehicle_service_output_info_ptr->fl_seat_belt_state == false ||
         vehicle_service_output_info_ptr->fl_seat_belt_state_available ==
             false) {
-      enable_code += uint16_bit[1];
+      enable_code += uint16_bit[6];
     } else {
     }
   }
@@ -109,8 +114,10 @@ void MebCore::UpdateMebEnableCode(void) {
 
 void MebCore::UpdateMebDisableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  const auto& meb_param = adas_function::MebPreprocess::GetInstance().GetMebParam();
-  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto &meb_param =
+      adas_function::MebPreprocess::GetInstance().GetMebParam();
+  const auto &meb_input =
+      adas_function::MebPreprocess::GetInstance().GetMebInput();
   auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
                                               ->mutable_environmental_model()
                                               ->get_local_view()
@@ -143,7 +150,9 @@ void MebCore::UpdateMebDisableCode(void) {
   }
 
   if (GetContext.get_param()->meb_function_state_switch) {
-    if ((!vehicle_service_output_info_ptr->aeb_actuator_status_available)) {
+    if ((!vehicle_service_output_info_ptr->aeb_actuator_status_available) ||
+        (vehicle_service_output_info_ptr->aeb_actuator_status > 2) ||
+        (vehicle_service_output_info_ptr->aeb_actuator_status == 0)) {
       disable_code += uint16_bit[2];
     }
 
@@ -151,16 +160,27 @@ void MebCore::UpdateMebDisableCode(void) {
         (vehicle_service_output_info_ptr->fr_door_state == true) ||
         (vehicle_service_output_info_ptr->rl_door_state == true) ||
         (vehicle_service_output_info_ptr->rr_door_state == true) ||
-        (vehicle_service_output_info_ptr->hood_state == true) ||
-        (vehicle_service_output_info_ptr->trunk_door_state == true) ||
         (vehicle_service_output_info_ptr->fl_door_state_available == false) ||
         (vehicle_service_output_info_ptr->fr_door_state_available == false) ||
         (vehicle_service_output_info_ptr->rl_door_state_available == false) ||
-        (vehicle_service_output_info_ptr->rr_door_state_available == false) ||
-        (vehicle_service_output_info_ptr->hood_state_available == false) ||
+        (vehicle_service_output_info_ptr->rr_door_state_available == false)) {
+      disable_code += uint16_bit[3];
+    } else {
+      /*do nothing*/
+    }
+
+    if ((vehicle_service_output_info_ptr->hood_state == true) ||
+        (vehicle_service_output_info_ptr->hood_state_available == false)) {
+      disable_code += uint16_bit[4];
+    } else {
+      /*do nothing*/
+    }
+
+    //
+    if ((vehicle_service_output_info_ptr->trunk_door_state == true) ||
         (vehicle_service_output_info_ptr->trunk_door_state_available ==
          false)) {
-      disable_code += uint16_bit[3];
+      disable_code += uint16_bit[5];
     } else {
       /*do nothing*/
     }
@@ -168,7 +188,7 @@ void MebCore::UpdateMebDisableCode(void) {
     if (vehicle_service_output_info_ptr->fl_seat_belt_state == false ||
         vehicle_service_output_info_ptr->fl_seat_belt_state_available ==
             false) {
-      disable_code += uint16_bit[4];
+      disable_code += uint16_bit[6];
     } else {
     }
   }
@@ -266,7 +286,8 @@ void MebCore::UpdateMebSuppCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
-  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto &meb_input =
+      adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   uint32 supp_code = 0;
   if (meb_cooling_time_remain_ > 0.1) {
@@ -532,8 +553,14 @@ void MebCore::SetMebOutputInfo(void) {
           100;
       GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
           0.0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+          iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
+          0.0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+          iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
     }
 
     if (GetContext.get_param()->meb_request_status_const_switch == true) {
@@ -546,10 +573,11 @@ void MebCore::SetMebOutputInfo(void) {
 
 void MebCore::Log(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  const auto& meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
+  const auto &meb_input =
+      adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260413);
+  JSON_DEBUG_VALUE("meb_version", (double)260511);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);

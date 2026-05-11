@@ -1571,7 +1571,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   }
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
-
+  
+  // fill adas
+  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
 #ifdef PlanTimeBenchmark
   double start_time, end_time;
   start_time = IflyTime::Now_ms();
@@ -1639,7 +1641,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
   FillHPPPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  // FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {
     planning_hmi_info->ad_info.is_avaliable = false;

@@ -334,8 +334,8 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status_available == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     enable_code += uint32_bit[25];
   } else {
     /*do nothing*/
@@ -686,8 +686,8 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
 
   // bit 9
   // 横向控制执行器状态异常
-  if ((vehicle_service_output_info_ptr
-           ->pilot_lat_control_actuator_status_available == false)) {
+  if ((vehicle_service_output_info_ptr->pilot_lat_control_actuator_status == 0) ||
+      (vehicle_service_output_info_ptr->pilot_lat_control_actuator_status > 2)) {
     disable_code += uint32_bit[25];
   } else {
     /*do nothing*/
@@ -2126,7 +2126,7 @@ void LdpCore::SetLdpOutputInfo() {
         ->ldp_output_info_.ldp_right_intervention_flag_ = false;
   }
 
-  uint32 mask_enable_E541 = 33574927;
+  uint32 mask_enable_E541 = GetContext.get_param()->ldp_enable_code_maskcode;
   mask_enable_code_e541 = ldp_enable_code_ & mask_enable_E541;
   if (GetContext.get_param()->car_type == "bestune_e541") {
     if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::

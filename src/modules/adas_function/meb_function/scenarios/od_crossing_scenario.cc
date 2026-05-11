@@ -348,17 +348,24 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
     }
   }
 
+  double ttc = 0;
+  double ttc_thre = 0.3;
+  if (obj.type_for_meb == OdObjGroup::kPeople ||
+      obj.type_for_meb == OdObjGroup::kMotor) {
+    ttc_thre = 0.35;
+  }
+
   /*bit_12*/
   // ttc过小
   double obj_min_dist =
       obj.rel_x - 0.5 * obj.width - param.origin_2_front_bumper;
-  double ttc;
+
   if (vehicle_service.shift_lever_state ==
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
     // Todo:未考虑障碍物航向角，这样简化计算有点问题
     if ((obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
       ttc = fabs(obj_min_dist / obj.rel_vx);
-      if (ttc < 0.3) {
+      if (ttc < ttc_thre) {
         suppe_code += uint32_bit[12];
       }
     } else if (obj_min_dist <= 0.0) {
@@ -390,14 +397,24 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
   /*bit_15*/
   // 障碍物横穿到 自车前or后时，障碍物中心的横向位置 小于 0.5 *
   // 本车宽度目前只考虑D挡位
+  double collision_point_y_thr = 0;
+  if (obj.age < 5000) {
+    collision_point_y_thr = 0.5 * GetContext.get_param()->ego_width;
+  } else if (fabs(obj.rel_vy) < (8.0 / 3.6)) {
+    collision_point_y_thr = 0.5 * GetContext.get_param()->ego_width +
+                            0.5 * obj.length + 0.30 * fabs(obj.rel_vy);
+  } else {
+    collision_point_y_thr = 0.5 * GetContext.get_param()->ego_width +
+                            0.5 * obj.length + 0.70 * fabs(obj.rel_vy);
+  }
+
   if (vehicle_service.shift_lever_state ==
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
     if ((obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
       ttc = fabs(obj_min_dist / obj.rel_vx);
       obj.collision_point_y = ttc * obj.rel_vy + obj.rel_y;
-      if (ttc > 0.3 &&
-          (obj.collision_point_y > 0.5 * GetContext.get_param()->ego_width) &&
-          (obj.age < 5000)) {
+      if ((ttc > ttc_thre) &&
+          (fabs(obj.collision_point_y) > collision_point_y_thr)) {
         suppe_code += uint32_bit[15];
       }
     }
@@ -410,6 +427,12 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
                                                    0.5, 0.5, 0.5)) &&
       (obj.age > check_frames * MEB_CYCLE_TIME_SEC * 1000)) {
     suppe_code += uint32_bit[16];
+  }
+
+  /*bit_17*/
+  // 判断本车处于运动状态的持续时长
+  if (ego_in_motion_state_duration_ < 3.0) {
+    suppe_code += uint32_bit[17];
   }
 
   // 如果误触发策略关闭，则suppe_code清零
@@ -490,6 +513,16 @@ void OdCrossingScenario::Process(void) {
   }
   if (ego_in_constant_speed_state_duration_ > 60.0) {
     ego_in_constant_speed_state_duration_ = 60.0;
+  }
+
+  //本车处于运动状态的持续时长 单位:s
+  if (vehicle_service.vehicle_speed > (1.0 / 3.6)) {
+    ego_in_motion_state_duration_ += GetContext.get_param()->dt;
+    if (ego_in_motion_state_duration_ > 60.0) {
+      ego_in_motion_state_duration_ = 60.0;
+    }
+  } else {
+    ego_in_motion_state_duration_ = 0.0;
   }
 
   // 获取场景抑制码

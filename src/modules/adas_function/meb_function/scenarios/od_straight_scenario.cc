@@ -1,5 +1,5 @@
-
 #include "od_straight_scenario.h"
+#include <limits>
 using namespace planning;
 namespace adas_function {
 
@@ -338,76 +338,140 @@ uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
   //   }
   // }
 
-  if ((vehicle_service.shift_lever_state ==
-       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) ||
-      (vehicle_service.shift_lever_state ==
-       iflyauto::ShiftLeverStateEnum::ShiftLeverState_M)) {
-    double obj_exist_time_thrd = 0.0;
-    if (meb_pre.GetMebInput().park_mode) {
-      obj_exist_time_thrd = 6000.0;
-    } else {
-      obj_exist_time_thrd = 10000.0;
-    }
-    double distance =
+  bool has_valid_front_radar_obj =
+      front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM;
+  double distance = std::numeric_limits<double>::infinity();
+  if (has_valid_front_radar_obj) {
+    distance =
         sqrt((obj.rel_x - front_radar_key_obj_info.key_obj_relative_x) *
                  (obj.rel_x - front_radar_key_obj_info.key_obj_relative_x) +
              (obj.rel_y - front_radar_key_obj_info.key_obj_relative_y) *
                  (obj.rel_y - front_radar_key_obj_info.key_obj_relative_y));
-    if ((front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM) &&
-        (distance < 2.0)) {
+  }
+
+  if (!(vehicle_service.shift_lever_state ==
+        iflyauto::ShiftLeverStateEnum::ShiftLeverState_R)) {
+    if (has_valid_front_radar_obj && (distance < 2.0)) {
+      // 若有前雷达信息，则用前雷达信息判断
       if (collision_result_for_front_radar_obj_ == false) {
         suppe_code += uint32_bit[14];
       }
     } else {
-      if ((obj.age < obj_exist_time_thrd) &&
-          (obj.type_for_meb == OdObjGroup::kPeople)) {
-        if (collision_result_for_front_radar_obj_ == false) {
-          suppe_code += uint32_bit[14];
-        }
+      // 若无前雷达信息
+      // 1.若障碍物存活时间较长，则不做雷达校验,用障碍物x 位置的递减判断。
+      // 2.若雷达存活时间较短，则需要进行障碍物x 位置的递减判断。
+      int obj_exist_time_thrd = 0;
+      if (meb_pre.GetMebInput().park_mode) {
+        obj_exist_time_thrd = 1000;
+      } else {
+        obj_exist_time_thrd = 10000;
+      }
+
+      int kStaticHistoryCheckFrames = 40;  // 4 s
+      kStaticHistoryCheckFrames =
+          std::min(kStaticHistoryCheckFrames, OBJECT_LOGGER_MAX_RECORDS);
+      double kStaticSpeedThreshold = 1.5;       // m/s
+      double kHistoryXDecreaseTolerance = 0.2;  // m
+
+      if (meb_pre.GetMebInput().park_mode) {
+        kStaticHistoryCheckFrames = 10;
+        kHistoryXDecreaseTolerance = 1.5;
+        kStaticSpeedThreshold = 3.0;
+      }
+
+      if (obj.age < obj_exist_time_thrd) {
+        suppe_code += uint32_bit[14];
+      } else if ((obj.age >=
+                  kStaticHistoryCheckFrames * MEB_CYCLE_TIME_SEC * 1000) &&
+                 (!meb_pre.ObjectLoggerCheckContinuousStaticHistory(
+                     obj.track_id, kStaticHistoryCheckFrames,
+                     kStaticSpeedThreshold, kHistoryXDecreaseTolerance))) {
+        suppe_code += uint32_bit[14];
       }
     }
-
-    /*bit_15*/
-    // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验, R 档无需判断
-    // 注:这样判断有缺陷,不适用于转弯场景
-    if ((obj.type_for_meb == OdObjGroup::kPeople) && (distance < 2.0) &&
-        (front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
-      if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
-        suppe_code += uint32_bit[15];
-      }
-    }
-
-    // if ((obj.type_for_meb == OdObjGroup::kPeople ||
-    //      obj.type_for_meb == OdObjGroup::kMotor) &&
-    //     (front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
-    //   if ((distance > 4.0) && (distance < 8.0) &&
-    //       fabs(front_radar_key_obj_info.key_obj_relative_y) <
-    //           0.5 * param.ego_width) {
-    //     suppe_code += uint32_bit[15];
-    //   }
-    // }
   }
-
   /*bit_15*/
-  // 障碍物在历史帧中是否一直处于车宽边缘
-  int check_frames = obj.age / (MEB_CYCLE_TIME_SEC * 1000);
-  check_frames = std::min(40, check_frames);
-  if (!meb_pre.ObjectLoggerCheckHistoryWithinEgoWidth(
-          obj.track_id, check_frames, 0.5 * param.ego_width)) {
-    suppe_code += uint32_bit[15];
+  // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验, R 档无需判断
+  // 注:这样判断有缺陷,不适用于转弯场景
+  if ((obj.type_for_meb == OdObjGroup::kPeople) && has_valid_front_radar_obj &&
+      (distance < 2.0) &&
+      (!(vehicle_service.shift_lever_state ==
+         iflyauto::ShiftLeverStateEnum::ShiftLeverState_R))) {
+    if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
+      suppe_code += uint32_bit[15];
+    }
   }
+
+  // if ((obj.type_for_meb == OdObjGroup::kPeople ||
+  //      obj.type_for_meb == OdObjGroup::kMotor) &&
+  //     (front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
+  //   if ((distance > 4.0) && (distance < 8.0) &&
+  //       fabs(front_radar_key_obj_info.key_obj_relative_y) <
+  //           0.5 * param.ego_width) {
+  //     suppe_code += uint32_bit[15];
+  //   }
+  // }
+  // namespace adas_function
 
   /*bit_16*/
+  // 障碍物在历史帧中是否一直处于车宽边缘
+
+  int check_frames = obj.age / (MEB_CYCLE_TIME_SEC * 1000);
+  if (meb_pre.GetMebInput().park_mode) {
+    check_frames = std::min(20, check_frames);
+  } else {
+    check_frames = std::min(40, check_frames);
+  }
+  if (!meb_pre.ObjectLoggerCheckHistoryWithinEgoWidth(
+          obj.track_id, check_frames, 0.5 * param.ego_width)) {
+    suppe_code += uint32_bit[16];
+  }
+
+  /*bit_17*/
   // 防止泊车场景出地库在坡道上时,因感知误识别导致误触发
   if (vehicle_service.shift_lever_state ==
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
     if ((vehicle_service.vehicle_speed > 2.5) &&
         (vehicle_service.long_acceleration > 0.45)) {
-      suppe_code += uint32_bit[16];
+      suppe_code += uint32_bit[17];
     }
   }
 
-  // }
+  /*bit_18*/
+  // 判断障碍物历史位置判断。if(障碍物存活时间 >
+  // 4s){障碍物4s前的时刻与本车的纵向距离 > 5m，则认为障碍物有效 } else {
+  // 判断障碍物首帧出现的时刻与本车的纵向距离 > 5m，则认为障碍物有效}。
+  {
+    constexpr int kHistoryCheckTime4s = 40;        // 4s = 40 * 0.1s
+    constexpr double kMinDistanceThreshold = 5.0;  // 5m
+
+    bool is_valid_obj = false;
+
+    if (obj.age >= kHistoryCheckTime4s * MEB_CYCLE_TIME_SEC * 1000) {
+      // 障碍物存活时间 > 4s，检查 4s 前的位置
+      double history_rel_x = meb_pre.ObjectLoggerGetFirstFrameRelX(
+          obj.track_id, obj.rel_x, kHistoryCheckTime4s);
+
+      if (fabs(history_rel_x) > kMinDistanceThreshold) {
+        is_valid_obj = true;
+      }
+    } else {
+      // 障碍物存活时间 <= 4s，检查首帧位置
+      int check_frames = obj.age / (MEB_CYCLE_TIME_SEC * 1000);
+      check_frames = std::min(check_frames, OBJECT_LOGGER_MAX_RECORDS);
+
+      double first_frame_rel_x = meb_pre.ObjectLoggerGetFirstFrameRelX(
+          obj.track_id, obj.rel_x, check_frames);
+
+      if (fabs(first_frame_rel_x) > kMinDistanceThreshold) {
+        is_valid_obj = true;
+      }
+    }
+
+    if (!is_valid_obj) {
+      suppe_code += uint32_bit[18];
+    }
+  }
 
   // 如果误触发策略关闭，则suppe_code清零
   if (param.meb_false_trigger_switch == false) {
@@ -415,7 +479,7 @@ uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
   }
 
   return suppe_code;
-}
+}  // namespace adas_function
 
 bool OdStraightScenario::CollisionCalculateForFrontRadarObj(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
@@ -560,7 +624,8 @@ bool OdStraightScenario::CollisionCalculateForFrontRadarObj(void) {
   //     double current_dist = box_collision_.boxs_info_.obj_x -
   //                           box_collision_.boxs_info_.ego_backshaft_2_fbumper
   //                           - 0.5 * box_collision_.boxs_info_.obj_length;
-  //     std::cout << "与障碍物当前的剩余距离为:" << current_dist << std::endl;
+  //     std::cout << "与障碍物当前的剩余距离为:" << current_dist <<
+  //     std::endl;
 
   //     bool is_collision_result_temp =
   //         box_collision_.GetCollisionResultBySimEgoDec(

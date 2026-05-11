@@ -483,7 +483,7 @@ bool MebPreprocess::ObjectLoggerCheckVelocityStability(
   }
 
   constexpr float kHorizontalAngle = 1.57f;    // π/2
-  constexpr float kMinCrossingSpeed = 0.833f;  // 3 kph
+  constexpr float kMinCrossingSpeed = 0.755f;  // 3 kph
   constexpr float kEps = 1e-3f;
   const float angle_diff_thres = static_cast<float>(speed_angle_thres);
 
@@ -546,6 +546,113 @@ bool MebPreprocess::ObjectLoggerCheckHistoryWithinEgoWidth(
   }
 
   return found_count >= check_frames;
+}
+
+double MebPreprocess::ObjectLoggerGetFirstFrameRelX(int track_id,
+                                                    double current_rel_x,
+                                                    int check_frames) const {
+  if (!meb_input_.obj_logger_.is_full || check_frames <= 0) {
+    return current_rel_x;
+  }
+
+  const int max_frames =
+      std::min(static_cast<int>(OBJECT_LOGGER_MAX_RECORDS), check_frames);
+
+  // 从最旧帧向最新帧扫描，找到第一个命中该 track_id 的帧
+  for (int frame_idx = max_frames - 1; frame_idx >= 0; frame_idx--) {
+    const auto *frame = GetHistoryObjectLogger(frame_idx);
+    if (frame == nullptr) {
+      continue;
+    }
+
+    for (int obj_idx = 0; obj_idx < frame->fusion_object_size; obj_idx++) {
+      const auto &obj = frame->fusion_object[obj_idx];
+      if (obj.additional_info.track_id == track_id) {
+        return obj.common_info.relative_center_position.x;
+      }
+    }
+  }
+
+  return current_rel_x;
+}
+
+bool MebPreprocess::ObjectLoggerCheckContinuousStaticHistory(
+    int track_id, int check_frames, double static_speed_threshold,
+    double x_decrease_tolerance) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto vehicle_service = GetContext.get_session()
+                             ->environmental_model()
+                             .get_local_view()
+                             .vehicle_service_output_info;
+  if (!meb_input_.obj_logger_.is_full || check_frames <= 0 ||
+      !meb_input_.history_full_) {
+    return false;
+  }
+
+  struct HistoryState {
+    double rel_x;
+    double abs_speed;
+  };
+
+  const int max_frames =
+      std::min(static_cast<int>(OBJECT_LOGGER_MAX_RECORDS), check_frames);
+  std::array<HistoryState, OBJECT_LOGGER_MAX_RECORDS> history_states{};
+  int found_count = 0;
+
+  for (int frame_idx = 0; frame_idx < max_frames; frame_idx++) {
+    const auto *frame = GetHistoryObjectLogger(frame_idx);
+    if (frame == nullptr) {
+      return false;
+    }
+
+    float ego_speed = FindClosestVehicleSpeed(frame->msg_header.stamp,
+                                              MEB_VEHICLE_SERVICE_FRAME_SIZE);
+    if (vehicle_service.shift_lever_state ==
+        iflyauto::ShiftLeverStateEnum::ShiftLeverState_R) {
+      ego_speed = -1.0 * ego_speed;
+    }
+
+    bool found_track = false;
+    for (int obj_idx = 0; obj_idx < frame->fusion_object_size; obj_idx++) {
+      const auto &obj = frame->fusion_object[obj_idx];
+      if (obj.additional_info.track_id != track_id) {
+        continue;
+      }
+
+      found_track = true;
+      const double rel_x = obj.common_info.relative_center_position.x;
+      const double abs_vx = obj.common_info.relative_velocity.x + ego_speed;
+      const double abs_vy = obj.common_info.relative_velocity.y;
+      history_states[found_count] = {rel_x, std::hypot(abs_vx, abs_vy)};
+      found_count++;
+      break;
+    }
+
+    if (!found_track) {
+      return false;
+    }
+  }
+
+  if (found_count < check_frames) {
+    return false;
+  }
+
+  // history_states[0] 是最新帧，因此这里按时间正序（从旧到新）检查。
+  for (int idx = found_count - 1; idx >= 0; idx--) {
+    if (history_states[idx].abs_speed >= static_speed_threshold) {
+      return false;
+    }
+  }
+
+  for (int idx = found_count - 1; idx > 0; idx--) {
+    const double older_rel_x_abs = std::fabs(history_states[idx].rel_x);
+    const double newer_rel_x_abs = std::fabs(history_states[idx - 1].rel_x);
+    if (newer_rel_x_abs > older_rel_x_abs + x_decrease_tolerance) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 uint8 MebPreprocess::GetRearKeyObjSelectIntersetCode(

@@ -22,6 +22,9 @@ class OdCrossingScenario : public MebScenarioBase {
 
   //本车处于匀速状态的持续时长 单位:s
   double ego_in_constant_speed_state_duration_ = 0.0;
+
+  //本车处于运动状态的持续时长 单位:s
+  double ego_in_motion_state_duration_ = 0.0;
 };
 }  // namespace adas_function
 #endif  // STRAIGHT_SCENARIO_H_

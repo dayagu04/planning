@@ -398,11 +398,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   // 先尝试获取sd_map限速信息
   //0309新增策略，只有开启车机导航才使用地图限速。否则使用感知限速
-  if (road_info->sdmap_info.valid_flag) {
-    sd_map_speed_limit_valid = true;
-    sd_map_speed_limit = road_info->sdmap_info.speed_limit;
-    current_road_type_ = road_info->sdmap_info.road_type;
-  }
+  // if (road_info->sdmap_info.valid_flag) {
+  //   sd_map_speed_limit_valid = true;
+  //   sd_map_speed_limit = road_info->sdmap_info.speed_limit;
+  //   current_road_type_ = road_info->sdmap_info.road_type;
+  // }
 
   // 如果sd_map限速有效且大于0，则使用sd_map限速
   if (sd_map_speed_limit_valid  && tsr_navi_flag_) {
