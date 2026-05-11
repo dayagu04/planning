@@ -62,7 +62,7 @@ bool SideNudgeLateralOffsetDecider::Init(
       session_->environmental_model().get_ego_state_manager();
   lane_info_ = lane_info;
   avd_obstacle_ = avd_obstacle;
-  offset_change_rate_ = 0.0;
+  offset_change_rate_ = kOffsetChangeRateLow;
   return true;
 }
 
@@ -74,6 +74,7 @@ void SideNudgeLateralOffsetDecider::Reset() {
   is_coodown_time_enough_.SetInvalidCount();
   nudge_info_.Reset();
   count_map_.clear();
+  last_nudge_info_.Reset();
 }
 
 void SideNudgeLateralOffsetDecider::RunStateMachine() {
@@ -464,7 +465,6 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
 
   // smooth
   // 只在避让幅度增大时按危险等级放大变化率，回退时始终用低速率
-  offset_change_rate_ = kOffsetChangeRateLow;
   if (std::fabs(desire_lateral_offset) > std::fabs(lateral_offset_)) {
     switch (nudge_info_.emergency_level) {
       case EmergencyLevel::HIGH:
