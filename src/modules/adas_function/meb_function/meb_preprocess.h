@@ -201,9 +201,22 @@ class MebPreprocess {
                                           double velocity_y_threshold,
                                           double speed_angle_thres);
 
+  // 判断障碍物历史轨迹是否连续，绝对速度静止，且 |rel_x| 历史单调靠近
+  bool ObjectLoggerCheckContinuousStaticHistory(int track_id, int check_frames,
+                                                double static_speed_threshold,
+                                                double x_decrease_tolerance);
+
   // 判断障碍物在历史帧中是否一直处于车宽边缘
   bool ObjectLoggerCheckHistoryWithinEgoWidth(int track_id, int check_frames,
                                               double half_ego_width);
+
+  // 判断障碍物的历史 第一帧 x 位置
+  //输入： 障碍物的 track_id、当前相对x位置、要检查的历史帧数 check_frames
+  //返回：该障碍物在历史记录中首次出现时的相对 x 位置
+  //特殊情况：如果找不到该障碍物或数据不足，返回 0.0
+  double ObjectLoggerGetFirstFrameRelX(int track_id, double current_rel_x,
+                                       int check_frames) const;
+
   double FindClosestVehicleSpeed(uint64 target_timestamp,
                                  uint16 max_search_frames);
 

@@ -553,8 +553,14 @@ void MebCore::SetMebOutputInfo(void) {
           100;
       GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
           0.0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+          iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
+          0.0;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+          iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
     }
 
     if (GetContext.get_param()->meb_request_status_const_switch == true) {
@@ -571,7 +577,7 @@ void MebCore::Log(void) {
       adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260413);
+  JSON_DEBUG_VALUE("meb_version", (double)260511);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);
