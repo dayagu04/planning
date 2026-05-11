@@ -160,8 +160,10 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
       continue;
     }
-    if (obs_classification_result.id_to_rel_pos_type.find(obs_id)->second ==
-        ObstacleRelPosType::FAR_AWAY) {
+    if (obs_classification_result.id_to_rel_pos_type.find(obs_id) !=
+            obs_classification_result.id_to_rel_pos_type.end() &&
+        obs_classification_result.id_to_rel_pos_type.find(obs_id)->second ==
+            ObstacleRelPosType::FAR_AWAY) {
       lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
       continue;
     }
