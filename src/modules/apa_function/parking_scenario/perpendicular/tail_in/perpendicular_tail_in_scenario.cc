@@ -2178,7 +2178,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
             extend_pt_vec,
             ColDetBuffer(lon_buffer, body_lat_buffer, mirror_lat_buffer),
-            GJKColDetRequest(false));
+            GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
+                             CarBodyType::NORMAL, ApaObsMovementType::ALL,
+                             param.use_obs_height_method));
 
     if (col_res.remain_dist < 0.02) {
       ILOG_INFO << "consider obs extend_length is small, not allow extend "
@@ -2481,10 +2483,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
-    double remain_dist = CalRemainDistFromObs(
-        real_time_brake_info.static_col_det_buffer,
-        real_time_brake_info.dynamic_col_det_buffer, false,
-        param.use_obs_height_method);
+    double remain_dist =
+        CalRemainDistFromObs(real_time_brake_info.static_col_det_buffer,
+                             real_time_brake_info.dynamic_col_det_buffer, false,
+                             param.use_obs_height_method);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
