@@ -2446,13 +2446,6 @@ bool HppGeneralLateralDecider::SmoothPointsIteratively(
   for (size_t i = 0; i < n; ++i) {
     output[i].s = s_ref[i];
     output[i].l = l_curr[i];
-    Point2D xy;
-    if (!frenet_coord->SLToXY(Point2D(s_ref[i], l_curr[i]), xy)) {
-      return false;
-    } else {
-      output[i].x = xy.x;
-      output[i].y = xy.y;
-    }
   }
 
   return true;
@@ -2522,18 +2515,42 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   const size_t n = ref_traj_points_.size();
   if (n == 0 || bound_center_line_.size() != n || hard_bounds.size() != n ||
       soft_bounds.size() != n) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
 
   constexpr size_t kBlendRadius = 5;
   const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
   if (frenet_coord == nullptr) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
 
+  const auto SLToXYPhi_traj = [frenet_coord](TrajectoryPoints &traj) -> bool {
+    Point2D ref_point;
+    for (size_t i = 0; i < traj.size(); ++i) {
+      if (!frenet_coord->SLToXY(Point2D(traj[i].s, traj[i].l), ref_point)) {
+        ILOG_WARN << "SLToXY failed at index " << i
+                  << " s=" << traj[i].s << " l=" << traj[i].l;
+        return false;
+      }
+      traj[i].x = ref_point.x;
+      traj[i].y = ref_point.y;
+      if (i > 0) {
+        const double dx = traj[i].x - traj[i - 1].x;
+        const double dy = traj[i].y - traj[i - 1].y;
+        traj[i - 1].heading_angle = std::atan2(dy, dx);
+      }
+    }
+    if (traj.size() >= 2) {
+      traj.back().heading_angle = traj[traj.size() - 2].heading_angle;
+    }
+    return true;
+  };
+
   auto is_break_hard_bound = [&](size_t idx) {
-    return ref_traj_points_[idx].l < hard_bounds[idx].first ||
-           ref_traj_points_[idx].l > hard_bounds[idx].second;
+    return ref_traj_points_[idx].l < hard_bounds[idx].first - 0.1 ||
+           ref_traj_points_[idx].l > hard_bounds[idx].second + 0.1;
   };
 
   bool has_any_break = false;
@@ -2544,7 +2561,52 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     }
   }
 
-  if (!has_any_break) {
+  constexpr int kMergeTriggerFrames = 3;
+  constexpr int kMergeRecoverFrames = 2;
+
+  if (has_any_break) {
+    merge_trigger_count_++;
+    merge_recover_count_ = 0;
+  } else {
+    merge_trigger_count_ = 0;
+    if (is_ref_merge_active_) {
+      merge_recover_count_++;
+    }
+  }
+
+  if (!is_ref_merge_active_) {
+    // 未激活状态：需要连续 kMergeTriggerFrames 帧触发才激活
+    if (merge_trigger_count_ >= kMergeTriggerFrames) {
+      is_ref_merge_active_ = true;
+    } else {
+      return;
+    }
+  } else {
+    // 已激活状态：需要连续 kMergeRecoverFrames 帧恢复才退出
+    if (merge_recover_count_ >= kMergeRecoverFrames) {
+      is_ref_merge_active_ = false;
+      merge_trigger_count_ = 0;
+      merge_recover_count_ = 0;
+      ref_break_blend_frame_count_ = 0;
+      return;
+    } else if (merge_recover_count_ == 0) {
+      // nothing to do
+    } else {
+      if (!plan_history_traj_.empty() && plan_history_traj_.size() == n) {
+        TrajectoryPoints backup = ref_traj_points_;
+        for (size_t i = 0; i < n; ++i) {
+          ref_traj_points_[i].l = 0.5 * plan_history_traj_[i].l;
+        }
+        if (!SLToXYPhi_traj(ref_traj_points_)) {
+          ref_traj_points_ = backup;
+        }
+      }
+      return;
+    }
+  }
+
+  if (!is_ref_merge_active_) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
   // 连续 break 0.5m 以上，则认为 break
@@ -2603,8 +2665,19 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   if (break_recover_ranges.empty()) {
+    ref_break_blend_frame_count_ = 0;
     return;
   }
+
+  ++ref_break_blend_frame_count_;
+  constexpr int kBreakBlendRampFrames = 5;
+  const int c = ref_break_blend_frame_count_;
+  const double alpha_l =
+      std::min(1.0,
+               0.2 + 0.8 * static_cast<double>(std::min(
+                                  std::max(c - 1, 0),
+                                  kBreakBlendRampFrames - 1)) /
+                         static_cast<double>(kBreakBlendRampFrames - 1));
 
   TrajectoryPoints merged = ref_traj_points_;
   const size_t first_break_start = break_recover_ranges.front().first;
@@ -2637,22 +2710,14 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   merged = iterativeSmoothWithBounds(merged);
-  Point2D ref_point;
-  for (size_t i = 0; i < merged.size(); i++) {
-    if (frenet_coord->SLToXY(
-            Point2D(merged[i].s, merged[i].l),
-            ref_point)) {
-      merged[i].x = ref_point.x;
-      merged[i].y = ref_point.y;
-    }
-    if (i > 0) {
-      const double dx = merged[i].x - merged[i - 1].x;
-      const double dy = merged[i].y - merged[i - 1].y;
-      merged[i - 1].heading_angle = std::atan2(dy, dx);
-    }
+  for (size_t i = 0; i < n; ++i) {
+    merged[i].l = alpha_l * merged[i].l +
+        (1.0 - alpha_l) * ref_traj_points_[i].l;
   }
-  merged.back().heading_angle =
-      merged[merged.size() - 2].heading_angle;
+
+  if (!SLToXYPhi_traj(merged)) {
+    return;
+  }
 
   ref_traj_points_ = merged;
 }
