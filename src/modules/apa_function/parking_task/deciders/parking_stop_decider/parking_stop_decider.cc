@@ -27,7 +27,7 @@ void ParkingStopDecider::Execute(
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
     const trajectory::Trajectory& trajectory,
     const pnc::geometry_lib::PathSegGear gear,
-    const double slot_occupied_ratio) {
+    const bool skip_obstacle_stop_decision) {
   // init
   stop_obstacle_ = nullptr;
   stop_decision_.Clear();
@@ -39,12 +39,8 @@ void ParkingStopDecider::Execute(
 
   double start_time = IflyTime::Now_ms();
   AddDecisionByPathTargetPoint(lateral_path);
-  constexpr double kMinSlotOccupiedRatio = 0.001;
 
-  if (gear == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
-      slot_occupied_ratio > kMinSlotOccupiedRatio) {
-    // todo ::It is more appropriate to determine whether it is in the inbound
-    // state based on the combination of the state machine and the current path
+  if (skip_obstacle_stop_decision) {
     return;
   }
 
@@ -290,11 +286,11 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
   upper_points->clear();
   lower_points->clear();
   double end_s = trajectory.back().s();
+  constexpr double kMaxPredictTime = 7.0;
 
   // For those with no predicted trajectories, just map the obstacle's
   // current position to ST-graph and always assume it's static.
   if (obstacle.GetObsAttributeType() != ApaObsAttributeType::FUSION_POLYGON) {
-    double max_time = 7.0;
     int collision_index = 0;
     bool is_collision = GetPathCollisionByObstacle(&collision_index, obstacle);
 
@@ -311,9 +307,9 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
       upper_points->reserve(2);
 
       lower_points->emplace_back(low_s, 0.0);
-      lower_points->emplace_back(low_s, max_time);
+      lower_points->emplace_back(low_s, kMaxPredictTime);
       upper_points->emplace_back(high_s, 0.0);
-      upper_points->emplace_back(high_s, max_time);
+      upper_points->emplace_back(high_s, kMaxPredictTime);
 
       ILOG_INFO << "collision_index = " << collision_index << ", s = " << low_s;
     }
@@ -339,7 +335,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
       double trajectory_point_time = trajectory_point.absolute_time();
       const size_t ego_check_index =
           trajectory.QueryLowerBoundPoint(trajectory_point_time);
-      if (trajectory_point_time > 7.0 ||
+      if (trajectory_point_time > kMaxPredictTime ||
           ego_check_index == trajectory.size() - 1) {
         continue;
       }
@@ -352,24 +348,35 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
           big_buffer_path_polygons_, global_polygon, &first_collision_index,
           &end_collision_index);
 
-      if (first_collision_index > ego_check_index ||
-          end_collision_index < ego_check_index) {
-        // todo: should add a buffer based on time
+      if (!is_collision) {
+        ILOG_INFO << "no_collision";
         continue;
       }
 
-      if (is_collision) {
-        double low_s = std::fmax(0.0, trajectory[ego_check_index].s());
-        double high_s = std::fmin(end_s, trajectory[end_collision_index].s());
-
-        lower_points->emplace_back(low_s, trajectory_point_time);
-        upper_points->emplace_back(high_s, trajectory_point_time);
+      // Skip if the obstacle's collision range at this time does not cover
+      // where ego is expected to be.
+      // todo: should add a buffer based on time
+      if (static_cast<size_t>(first_collision_index) > ego_check_index ||
+          static_cast<size_t>(end_collision_index) < ego_check_index) {
+        ILOG_INFO << "return , first_collision_index = "
+                  << first_collision_index
+                  << " , end_collision_index = "
+                  << end_collision_index
+                  << " , ego_check_index = "
+                  << ego_check_index;
+        continue;
       }
+
+      double low_s = std::fmax(0.0, trajectory[ego_check_index].s());
+      double high_s = std::fmin(end_s, trajectory[end_collision_index].s());
+
+      lower_points->emplace_back(low_s, trajectory_point_time);
+      upper_points->emplace_back(high_s, trajectory_point_time);
     }
   }
 
 #if DECIDER_DEBUG
-  ILOG_INFO << "lower size" << lower_points->size();
+  ILOG_INFO << "lower size = " << lower_points->size();
 #endif
 
   return (lower_points->size() > 0 && upper_points->size() > 0);
