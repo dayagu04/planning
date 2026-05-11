@@ -885,11 +885,18 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       stop_decider->SelectSpeedTrajectory(
           apa_world_ptr_->GetPredictPathManagerPtr(), trajectory_,
           gear_command);
+  constexpr double kMinSlotOccupiedRatio = 0.001;
+  const double slot_occupied_ratio = apa_world_ptr_->GetSlotManagerPtr()
+                                         ->GetEgoInfoUnderSlot()
+                                         .slot_occupied_ratio;
+  const bool skip_obstacle_stop_decision =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingInStatus() &&
+      gear_command == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
+      slot_occupied_ratio > kMinSlotOccupiedRatio;
+
   stop_decider->Execute(stitch_init_speed, traj_stitcher->GetConstStitchPath(),
                         ego_trajectory, gear_command,
-                        apa_world_ptr_->GetSlotManagerPtr()
-                            ->GetEgoInfoUnderSlot()
-                            .slot_occupied_ratio);
+                        skip_obstacle_stop_decision);
 
   // todo: will be retired
   if (apa_param.GetParam().speed_config.use_remain_dist) {
