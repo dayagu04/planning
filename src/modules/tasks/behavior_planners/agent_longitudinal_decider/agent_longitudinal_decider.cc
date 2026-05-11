@@ -53,6 +53,7 @@ constexpr double kIntersectionFactor = 0.3;
 constexpr size_t kMaxHistorySize = 5;
 
 constexpr double kBayesNormalMuLateralVel = 0.0;
+constexpr int kStaticObsProjectionConfirmFrames = 2;
 constexpr std::array<double, 2> kBayesNormalSigma = {0.20, 1.0};
 
 constexpr double kBayesCutinMuLateralVel = -0.35;
@@ -166,6 +167,8 @@ void AgentLongitudinalDecider::Init() {
 bool AgentLongitudinalDecider::Update() {
 
   FilterRearAgents();
+
+  FilterLateralAvoidStaticObstacles();
 
   FilterUltradistantObs();
 
@@ -1265,6 +1268,141 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     }
     mutable_agent->mutable_agent_decision()->set_agent_decision_type(
         agent::AgentDecisionType::IGNORE);
+  }
+}
+
+void AgentLongitudinalDecider::FilterLateralAvoidStaticObstacles() {
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto& mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    return;
+  }
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  if (agents.empty()) {
+    return;
+  }
+
+  const auto& lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+
+  // 使用规划路径坐标系而不是车道线坐标系
+  const auto& planned_path_coord =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_path_coord == nullptr) {
+    return;
+  }
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_half_width = vehicle_param.width * kHalf;
+
+  const auto& init_point = ego_state_manager_->planning_init_point();
+  double ego_center_s = 0.0;
+  double ego_center_l = 0.0;
+  planned_path_coord->XYToSL(init_point.x, init_point.y, &ego_center_s,
+                             &ego_center_l);
+  const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
+  ego_center_s += (session_->is_rads_scene() ? -rear_axle_to_center
+                                             : rear_axle_to_center);
+  const Box2d ego_box(Vec2d(init_point.x, init_point.y),
+                      init_point.heading_angle, vehicle_param.length,
+                      vehicle_param.width);
+
+  std::unordered_set<int32_t> current_static_obs_ids;
+
+  for (const auto agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+
+    if (!agent->is_static()) {
+      continue;
+    }
+
+    const auto agent_type = agent->type();
+    if (agent_type != agent::AgentType::CYLINDER_BARRIER &&
+        agent_type != agent::AgentType::TRAFFIC_CONE &&
+        agent_type != agent::AgentType::CTASH_BARREL &&
+        agent_type != agent::AgentType::WATER_SAFETY_BARRIER) {
+      continue;
+    }
+
+    const int32_t agent_id = agent->agent_id();
+    current_static_obs_ids.insert(agent_id);
+
+    auto it = lat_obstacle_decision.find(agent_id);
+    if (it != lat_obstacle_decision.end()) {
+      const auto& decision = it->second;
+      if (decision == LatObstacleDecisionType::LEFT ||
+          decision == LatObstacleDecisionType::RIGHT) {
+        auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
+        if (mutable_agent != nullptr) {
+          mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+              agent::AgentDecisionType::IGNORE);
+        }
+        static_obs_projection_count_.erase(agent_id);
+        continue;
+      }
+    }
+
+    const auto& obs_box = agent->box();
+    double obs_center_s = 0.0;
+    double obs_center_l = 0.0;
+    const auto& obs_center = obs_box.center();
+    if (planned_path_coord->XYToSL(obs_center.x(), obs_center.y(), &obs_center_s,
+                                    &obs_center_l) &&
+        obs_center_s < ego_center_s) {
+      if (!ego_box.HasOverlap(obs_box)) {
+        auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
+        if (mutable_agent != nullptr) {
+          mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+              agent::AgentDecisionType::IGNORE);
+        }
+        static_obs_projection_count_.erase(agent_id);
+        continue;
+      }
+    }
+
+    const auto& obs_corners = obs_box.GetAllCorners();
+    bool has_overlap = false;
+    for (const auto& corner : obs_corners) {
+      double project_s = 0.0;
+      double project_l = 0.0;
+      if (!planned_path_coord->XYToSL(corner.x(), corner.y(), &project_s,
+                                       &project_l)) {
+        continue;
+      }
+      if (project_l >= -ego_half_width && project_l <= ego_half_width) {
+        has_overlap = true;
+        break;
+      }
+    }
+
+    if (has_overlap) {
+      static_obs_projection_count_[agent_id]++;
+    } else {
+      static_obs_projection_count_[agent_id] = 0;
+    }
+
+    if (static_obs_projection_count_[agent_id] < kStaticObsProjectionConfirmFrames) {
+      auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
+      if (mutable_agent != nullptr) {
+        mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+            agent::AgentDecisionType::IGNORE);
+      }
+    }
+  }
+
+  for (auto it = static_obs_projection_count_.begin();
+       it != static_obs_projection_count_.end();) {
+    if (current_static_obs_ids.count(it->first) == 0) {
+      it = static_obs_projection_count_.erase(it);
+    } else {
+      ++it;
+    }
   }
 }
 
