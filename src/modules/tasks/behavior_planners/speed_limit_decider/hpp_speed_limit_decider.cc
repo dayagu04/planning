@@ -158,16 +158,17 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
     return;
   }
 
-  // 1. 扫描轨迹，生成曲率 profile（一次遍历，供各子函数共享）
+  // 1. Scan trajectory once and build a curvature profile shared by the
+  //    curvature-related sub-functions.
   CurvatureProfile profile = ScanTrajectory(traj_points);
 
-  // 2. 基础曲率限速
+  // 2. Base curvature-based speed limit.
   double v_limit_curv = ComputeCurvatureSpeedLimit(profile);
 
-  // 3. S 弯限速（基于地图区域 + 基础曲率限速值）
+  // 3. S-curve speed limit.
   CalculateSCurveLimit(v_limit_curv);
 
-  // 4. U 型弯限速（掉头弯，曲率极大，需要更严格限速）
+  // 4. U-turn speed limit.
   CalculateUTurnLimit(v_limit_curv);
 }
 
@@ -175,9 +176,9 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   if (!session_->is_hpp_scene()) {
     return;
   }
-  // 基于 hard_bounds 的物理窄道检测
+  // Physical narrow-passage detection from hard_bounds.
   CalculateNarrowAreaSpeedLimitFromBounds();
-  // 基于地图标注的窄道检测（兜底）
+  // Map-annotated narrow-passage detection.
   CalculateNarrowAreaSpeedLimitFromMap();
 }
 
@@ -188,9 +189,12 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimitFromMap() {
       hpp_speed_limit_config_.speed_narrow_passage_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
 
+  // Narrow passage: half-vehicle exit is NOT enabled. Lateral clearance is
+  // tight, so the ego must be fully out of the zone before resuming normal
+  // speed, otherwise the rear overhang may scrape or hug the edge.
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::NarrowPassage,
-          CElemType::Ignore, approach_distance_threshold)) {
+          CElemType::Ignore, approach_distance_threshold, false)) {
 #ifdef ENABLE_PROTO_LOG
     FillZoneSnapshot(
         MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
@@ -282,7 +286,7 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 2. 根据障碍物类型确定参数
+    // 2. Determine parameters based on obstacle type.
     const agent::AgentType agent_type = agent->type();
     bool is_vru = (agent_type == agent::AgentType::PEDESTRIAN ||
                    agent_type == agent::AgentType::ADULT ||
@@ -292,11 +296,11 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
                    agent_type == agent::AgentType::MOTORCYCLE_RIDING ||
                    agent_type == agent::AgentType::TRICYCLE_RIDING);
 
-    // 横向阈值：VRU 使用更宽松的阈值
+    // Lateral threshold: relax by 20% for VRUs.
     double lateral_threshold =
         hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
     if (is_vru) {
-      lateral_threshold *= 1.2;  // VRU 横向阈值放宽 20%
+      lateral_threshold *= 1.2;  // VRU lateral threshold +20%
     }
 
     const double lateral_dist = std::abs(agent_l);
@@ -304,24 +308,24 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 3. 纵向触发距离：VRU 需要更早触发
+    // 3. Longitudinal trigger distance: trigger earlier for VRUs.
     double approach_dist = hpp_speed_limit_config_.hpp_avoid_approach_distance;
     if (is_vru) {
-      approach_dist *= 1.5;  // VRU 提前 50% 触发
+      approach_dist *= 1.5;  // VRU trigger +50% earlier
     }
 
     if (longitudinal_dist > approach_dist) {
       continue;
     }
 
-    // 4. 计算目标限速
+    // 4. Compute the target speed limit.
     const double target_v =
         agent->is_static()
             ? hpp_speed_limit_config_.hpp_avoid_velocity_limit
             : std::max(agent->speed() + kAvoidAgentMinSpeed,
                        hpp_speed_limit_config_.velocity_lower_bound);
 
-    // 5. segment 扩展：VRU 需要更长的减速区间
+    // 5. Segment extension: VRUs need a longer deceleration window.
     double extend_forward = is_vru ? 5.0 : 0.0;
     double extend_backward = is_vru ? 1.0 : 0.0;
 
@@ -388,12 +392,12 @@ CurvatureProfile HPPSpeedLimitDecider::ScanTrajectory(
                                   ->planning_init_point()
                                   .v;
 
-  // 根据当前车速，插值得到扫描距离
+  // Interpolate scan distance from current ego velocity.
   profile.scan_distance = interp(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
 
-  // 考虑方向盘转角对应的即时曲率
+  // Account for the instantaneous curvature induced by the steering angle.
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& vehicle_param =
@@ -402,13 +406,13 @@ CurvatureProfile HPPSpeedLimitDecider::ScanTrajectory(
       std::tan(ego_state->ego_steer_angle() / vehicle_param.steer_ratio) /
       vehicle_param.wheel_base;
 
-  // 初始化：方向盘曲率在 s=0 位置
+  // Seed the profile with the steering curvature at s=0.
   profile.s_values.push_back(0.0);
   profile.curvature_values.push_back(steer_curvature);
   profile.max_curvature = std::fabs(steer_curvature);
   profile.max_curvature_s = 0.0;
 
-  // 遍历轨迹点，记录 s 和曲率
+  // Walk the trajectory points, recording s and curvature.
   double s_accumulate = 0.0;
   for (size_t i = 1; i < traj_points.size(); ++i) {
     s_accumulate +=
@@ -436,7 +440,7 @@ double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
     const CurvatureProfile& profile) {
   constexpr double kCurvatureThreshold = 1e-4;
 
-  // 曲率不足以触发限速
+  // Curvature below threshold: no speed limit triggered.
   if (profile.max_curvature <= kCurvatureThreshold) {
     max_curvature_ = profile.max_curvature;
 #ifdef ENABLE_PROTO_LOG
@@ -449,7 +453,7 @@ double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
 
   max_curvature_ = profile.max_curvature;
 
-  // 根据最大曲率计算限速
+  // Compute speed limit from the maximum curvature.
   double radius = 1.0 / profile.max_curvature;
   double v_limit_curv =
       interp(radius, hpp_speed_limit_config_.curv_radius_breakpoints,
@@ -464,7 +468,7 @@ double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
                      SpeedLimitType::CURVATURE, v_limit_curv);
 #endif
 
-  // 生成限速 segment
+  // Emit speed limit segment.
   if (v_limit_curv < hpp_speed_limit_config_.velocity_upper_bound &&
       profile.scan_distance > 0.0) {
     const auto& reference_path_ptr = session_->planning_context()
@@ -493,7 +497,7 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
 
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::Ignore,
-          CElemType::SpeedBumpRoad, approach_distance_threshold)) {
+          CElemType::SpeedBumpRoad, approach_distance_threshold, true)) {
     auto& planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
     planning_result.speed_bump_path_segments.clear();
@@ -533,7 +537,7 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
 bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
     HPPSpeedLimitZoneInfo& zone_info, const CRoadType& road_type,
     const CPassageType& passage_type, const CElemType& elem_type,
-    const double approach_distance_threshold) {
+    const double approach_distance_threshold, bool use_half_vehicle_exit) {
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -568,6 +572,18 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
   }
 
   zone_info.s_segments = object_near_range_list;
+
+  if (use_half_vehicle_exit) {
+    // Vehicle params do not change at runtime; cache on first call to avoid
+    // reading VehicleConfigurationContext every frame.
+    static const double half_vehicle_length =
+        VehicleConfigurationContext::Instance()->get_vehicle_param().length *
+        0.5;
+    for (auto& seg : zone_info.s_segments) {
+      seg.second = std::max(seg.first, seg.second - half_vehicle_length);
+    }
+  }
+
   zone_info.in_speed_limit_zone = object_near_range.first <= ego_head_s &&
                                   object_near_range.second >= ego_s;
 
@@ -578,31 +594,6 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
       zone_info.distance_to_zone < approach_distance_threshold;
 
   return true;
-}
-
-double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
-    const HPPSpeedLimitZoneInfo& zone_info, const double target_v) {
-  // 区域内限速
-  const double kSpeedObjectiveZoneLimit = target_v;
-  // 减速度
-  const double kDecelerationRate =
-      hpp_speed_limit_config_.approaching_zone_deceleration;
-
-  if (zone_info.in_speed_limit_zone || zone_info.approaching_speed_limit_zone) {
-    // 接近区域，根据距离和减速度计算限速
-    // 使用运动学公式: v² = v0² + 2*a*s
-    // 其中 v = kSpeedObjectiveZoneLimit, a = kDecelerationRate, s =
-    // distance_to_zone 求解 v0 = sqrt(v² - 2*a*s)
-    double target_velocity_squared =
-        kSpeedObjectiveZoneLimit * kSpeedObjectiveZoneLimit;
-    double velocity_squared_at_distance =
-        target_velocity_squared -
-        2.0 * kDecelerationRate * zone_info.distance_to_zone;
-
-    return std::sqrt(velocity_squared_at_distance);
-  }
-
-  return std::numeric_limits<double>::max();
 }
 
 void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
@@ -646,10 +637,10 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
       }
     }
 
-    double v_peak_sq = (a_decel * ego_v * ego_v +
-                        a_accel * next_zone_v * next_zone_v +
-                        2.0 * a_accel * a_decel * dist_to_next_zone) /
-                       (a_accel + a_decel);
+    double v_peak_sq =
+        (a_decel * ego_v * ego_v + a_accel * next_zone_v * next_zone_v +
+         2.0 * a_accel * a_decel * dist_to_next_zone) /
+        (a_accel + a_decel);
     double v_peak = std::sqrt(std::max(v_peak_sq, ego_v * ego_v));
 
     constexpr double kMinSpeedGain = 1.0;
@@ -678,7 +669,7 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
 
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
                                    CPassageType::Ignore, CElemType::RampRoad,
-                                   approach_distance_threshold)) {
+                                   approach_distance_threshold, true)) {
 #ifdef ENABLE_PROTO_LOG
     FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_ramp(),
                      SpeedLimitType::RAMP_ROAD, v_limit_speed_ramp, zone_info);
@@ -720,7 +711,7 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
 
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::Ignore,
-          CElemType::IntersectionRoad, approach_distance_threshold)) {
+          CElemType::IntersectionRoad, approach_distance_threshold, true)) {
 #ifdef ENABLE_PROTO_LOG
     FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
                      SpeedLimitType::INTERSECTION_ROAD,
@@ -780,7 +771,7 @@ void HPPSpeedLimitDecider::CalculateSCurveLimit(double v_limit_curv) {
 
   constexpr double kSCurveSpeedFactor = 0.8;
 
-  // S 弯限速 = 基础曲率限速 * 0.8
+  // S-curve speed limit = base curvature limit * 0.8.
   double s_curve_v_limit = v_limit_curv * kSCurveSpeedFactor;
   s_curve_v_limit =
       std::clamp(s_curve_v_limit, hpp_speed_limit_config_.velocity_lower_bound,
@@ -794,7 +785,8 @@ void HPPSpeedLimitDecider::CalculateSCurveLimit(double v_limit_curv) {
       continue;
     }
 
-    // 直接用地图标注的区域，提前减速由 BuildSmoothedSpeedProfile 后向平滑处理
+    // Use the map-annotated zone directly; early deceleration is handled by
+    // the backward pass in BuildSmoothedSpeedProfile.
     speed_limit_segments_.push_back(
         {s_start, s_end, s_curve_v_limit, SpeedLimitType::CURVATURE});
 
@@ -829,10 +821,11 @@ void HPPSpeedLimitDecider::CalculateUTurnLimit(double v_limit_curv) {
   const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   const double ego_s = frenet_ego_state.s();
 
-  // U 型弯限速系数：掉头弯曲率极大，需要更严格的限速
+  // U-turn speed factor: U-turns have very high curvature and need a tighter
+  // speed limit.
   constexpr double kUTurnSpeedFactor = 0.8;
 
-  // U 型弯限速 = 基础曲率限速 * 0.8
+  // U-turn speed limit = base curvature limit * 0.8.
   double uturn_v_limit = v_limit_curv * kUTurnSpeedFactor;
   uturn_v_limit =
       std::clamp(uturn_v_limit, hpp_speed_limit_config_.velocity_lower_bound,
@@ -945,12 +938,12 @@ bool HPPSpeedLimitDecider::IsImmovableObstacle(agent::AgentType type) const {
 
 double HPPSpeedLimitDecider::ComputeObstacleSpeedCompensation(
     const BoundInfo& bound_info) const {
-  // 非障碍物 bound（道路边界等），id = -100
+  // Non-obstacle bound (road boundary, etc.), id = -100.
   if (bound_info.id == -100) {
-    return 0.0;  // 静止不可移动物体补偿 -0
+    return 0.0;  // No compensation for static immovable objects.
   }
 
-  // 获取 agent_manager
+  // Fetch agent_manager.
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (!agent_manager) {
@@ -964,12 +957,12 @@ double HPPSpeedLimitDecider::ComputeObstacleSpeedCompensation(
 
   const agent::AgentType agent_type = agent->type();
 
-  // 1. 静止不可移动物体：不额外降速
+  // 1. Static immovable obstacles: no extra deceleration.
   if (IsImmovableObstacle(agent_type)) {
     return 0.0;
   }
 
-  // 2. 根据障碍物速度插值补偿
+  // 2. Interpolate compensation based on obstacle speed.
   const double speed = agent->speed();
   return planning_math::ClampInterpolate(
       hpp_speed_limit_config_.narrow_obstacle_speed_lower,
@@ -984,13 +977,13 @@ double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
   const double vehicle_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().max_width;
 
-  // 基础限速：基于通道宽度插值
+  // Base speed limit: interpolate from passage width.
   const double v_base = planning_math::ClampInterpolate(
       hpp_speed_limit_config_.narrow_speed_width_lower,
       hpp_speed_limit_config_.narrow_speed_v_lower, vehicle_width,
       hpp_speed_limit_config_.narrow_speed_v_upper, width);
 
-  // 取左右两侧更严格的补偿
+  // Take the stricter compensation between the two sides.
   const double compensation =
       std::max(ComputeObstacleSpeedCompensation(left_bound_info),
                ComputeObstacleSpeedCompensation(right_bound_info));

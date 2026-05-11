@@ -2129,7 +2129,8 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
         'obstacles_acc': [],
         'obstacles_tid': [],
         'is_cipv': [],
-        'obs_label':[]
+        'obs_label':[],
+        'sensor_source_id': []
       }
       obs_info_all[source] = obs_info
     polygon_x = []
@@ -2205,12 +2206,21 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
     obs_info_all[source]['obstacles_acc'].append(common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(additional_info.track_id)
 
+    # Extract sensor_source_id
+    try:
+      sensor_source_id = additional_info.sensor_source_id
+    except:
+      sensor_source_id = -1
+    obs_info_all[source]['sensor_source_id'].append(sensor_source_id)
+
     if frenet_vs == 255 and  frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(obs_id) + ')=' \
-          + str(type))
+      obs_info_all[source]['obs_label'].append('occ_id=' + str(obs_id) + '\n' \
+          + 'type=' + str(type) + '\n' \
+          + 'sensor_src_id=' + str(sensor_source_id))
     else:
-      obs_info_all[source]['obs_label'].append('vs(' + str(obs_id) + ')=' \
-          + str(type)+'\n'\
+      obs_info_all[source]['obs_label'].append('occ_id=' + str(obs_id) + '\n' \
+          + 'type=' + str(type) + '\n' \
+          + 'sensor_src_id=' + str(sensor_source_id) + '\n' \
           + lat_decision + '\n' + is_static)
 
   if fusion_object_size == 0:
