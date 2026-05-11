@@ -45,7 +45,7 @@ class ParkingStopDecider : public ParkingTask {
                const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
                const trajectory::Trajectory& trajectory,
                const pnc::geometry_lib::PathSegGear gear,
-               const double slot_occupied_ratio);
+               const bool skip_obstacle_stop_decision);
 
   void AddStopDecisionByDistance(
       const double stop_s, const LonDecisionReason decision_reason,
