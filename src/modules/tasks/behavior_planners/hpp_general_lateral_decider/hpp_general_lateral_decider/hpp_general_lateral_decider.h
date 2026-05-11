@@ -243,6 +243,12 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;
+
+  // 参考线合并状态跟踪
+  bool is_ref_merge_active_ = false;
+  int merge_trigger_count_ = 0;
+  int merge_recover_count_ = 0;
+  int ref_break_blend_frame_count_ = 0;
 };
 
 }  // namespace planning
