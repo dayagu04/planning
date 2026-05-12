@@ -295,9 +295,9 @@
   "keeping_still_time_thr_for_switch_parking": 1.0,
   "enable_hpp_obs_blocked_timeout": true,
   "hpp_obs_blocked_enter_ego_v_thr": 0.1,
-  "hpp_obs_blocked_exit_ego_v_thr": 0.4,
-  "hpp_obs_blocked_stop_traj_v_thr": 0.1,
-  "hpp_obs_blocked_stop_traj_s_thr": 0.3,
+  "hpp_obs_blocked_exit_ego_v_thr": 0.3,
+  "hpp_obs_blocked_stop_traj_v_thr": 0.3,
+  "hpp_obs_blocked_stop_traj_s_thr": 1,
   "hpp_obs_blocked_exit_non_stop_frames": 5,
   "hpp_obs_blocked_timeout_frames": 300,
   "general_lateral_decider": {
