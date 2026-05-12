@@ -101,9 +101,6 @@ bool ParkingSlotManager::Update(
                                              .get_route_info()
                                              ->get_route_info_output()
                                               .hpp_route_info_output.distance_to_target_dest;
-  if (std::fabs(distance_to_target_dest) > 20.0) {
-    return false;
-  }
   const size_t parking_slot_lists_size =
       parking_fusion_info.parking_fusion_slot_lists_size;
   const auto& parking_slot_lists =

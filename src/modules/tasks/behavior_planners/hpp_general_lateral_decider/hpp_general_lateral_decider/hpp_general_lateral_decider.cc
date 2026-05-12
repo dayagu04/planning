@@ -486,13 +486,15 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
       ego_cart_state_manager_->planning_init_point().lat_init_state.y());
   Point2D frenet_init_pt{0.0, 3.0};
   Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
-  frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
+  if (!frenet_coord->XYToSL(cart_init_pt, frenet_init_pt, 3.0)) {
+    frenet_init_pt.x = planning_init_point.frenet_state.s;
+  }
+  double s_ref = frenet_init_pt.x;
 
   const double kMaxAcc = 0.2;
   const double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
   double ego_v = planning_init_point.v;
-  double s_ref = frenet_init_pt.x;
 
   const auto static_analysis_storage =
       reference_path_ptr_->get_static_analysis_storage();
@@ -602,7 +604,7 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
                                   planning_init_point.lat_init_state.y());
   Point2D frenet_init_pt{planning_init_point.frenet_state.s, 0.0};
   Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
-  if (!frenet_coord->XYToSL(cart_init_pt, frenet_init_pt)) {
+  if (!frenet_coord->XYToSL(cart_init_pt, frenet_init_pt, 3.0)) {
     frenet_init_pt.x = planning_init_point.frenet_state.s;
   }
   double s_ref = frenet_init_pt.x;
