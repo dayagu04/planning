@@ -3311,6 +3311,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "recommend_low_speed_lc_lon_acc");
     ReadItem<double>(json, max_steer_angle_dot_low_speed_lc_without_obstacle, "lat_motion_ilqr",
                      "max_steer_angle_dot_low_speed_lc_without_obstacle");
+    ReadItem<bool>(json, is_use_path_post_process, "lat_motion_ilqr", "is_use_path_post_process");
   }
 
   bool pass_acc_mode = false;
@@ -3468,6 +3469,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   std::vector<double> q_jerk_for_big_theta{20.0, 5.0};
   double path_backward_appended_length = 2.5;
   int lc_style = 0;
+  bool is_use_path_post_process = false;
 };
 
 struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {

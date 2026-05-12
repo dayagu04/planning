@@ -1147,7 +1147,8 @@
       5.0
     ],
     "path_backward_appended_length": 2.5,
-    "lc_style": 0
+    "lc_style": 0,
+    "is_use_path_post_process": false
   },
   "long_motion_ilqr": {
     "q_ref_pos_startmode": 35.0,

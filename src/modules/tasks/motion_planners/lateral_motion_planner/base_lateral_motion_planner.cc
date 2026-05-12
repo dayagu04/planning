@@ -564,17 +564,25 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
       reference_path_ptr->GetReferencePathCurveInfo().curve_type ==
       ReferencePathCurveInfo::CurveType::BIG_CURVE &&
       !planning_input_.complete_follow() &&
-      (concerned_index < N - 1)) {
+      (concerned_index < N - 1) &&
+      config_.is_use_path_post_process) {
     size_t end_points_size = concerned_index + 1;
+    bool is_find_valid_end_pt = false;
     Point2D frenet_ref_pt, frenet_traj_pt;
     for (size_t i = concerned_index + 1; i < N; ++i) {
       if (frenet_coord->XYToSL(Point2D(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i)), frenet_ref_pt) &&
           frenet_coord->XYToSL(Point2D(planning_output_.x_vec(i), planning_output_.y_vec(i)), frenet_traj_pt)) {
-        if (std::fabs(frenet_traj_pt.y - frenet_ref_pt.y) >= 0.05) {
+        if (std::fabs(frenet_traj_pt.y - frenet_ref_pt.y) > 0.04 &&
+            std::fabs(frenet_traj_pt.y - frenet_ref_pt.y) < 0.08 &&
+            (frenet_traj_pt.x - frenet_ref_pt.x < planning_input_.ref_vel() * 0.1)) {
           end_points_size = i;
+          is_find_valid_end_pt = true;
           break;
         }
       }
+    }
+    if (!is_find_valid_end_pt) {
+      end_points_size = N;
     }
     std::vector<double> end_x_vec(N);
     std::vector<double> end_y_vec(N);
@@ -600,7 +608,7 @@ bool BaseLateralMotionPlanner::HandleOutputData() {
     double end_ds =
         (end_s_vec.back() - end_s_vec[end_points_size - 1]) /
         (N - end_points_size);
-    end_ds = std::max(std::min(end_ds, planning_input_.ref_vel() * 0.2), 1e-3);
+    end_ds = std::max(end_ds, 1e-3);
     double end_s = end_s_vec[end_points_size - 1];
     for (size_t i = end_points_size; i < N; ++i) {
       end_s += end_ds;
