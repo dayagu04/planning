@@ -29,6 +29,8 @@ class MirrorDecider : public Task {
   int mirror_unfold_frame_count_{0};
   // 记录上一帧的后视镜指令值（用于判断是否持续为2）
   iflyauto::RearViewMirrorSignalType last_mirror_value_{iflyauto::REAR_VIEW_MIRROR_NONE};
+  void HandleNarrowRoadExitRearMirror(const iflyauto::FunctionalState& nsa_func_state);
+  void SetRearMirrorCommand();
 
 };
 

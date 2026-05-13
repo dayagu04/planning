@@ -14,6 +14,43 @@ MirrorDecider::MirrorDecider(const EgoPlanningConfigBuilder *config_builder,
   current_mirror_state_ = iflyauto::REAR_VIEW_MIRROR_NONE;
   unfold_frame_counter_ = 0;
 }
+void MirrorDecider::HandleNarrowRoadExitRearMirror(const iflyauto::FunctionalState& nsa_func_state) {
+  auto& rear_mirror_cmd = session_->mutable_planning_context()->mutable_planning_output().rear_view_mirror_signal_command;
+  if (current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_FOLD &&
+      nsa_func_state == iflyauto::FunctionalState_NRA_COMPLETED) {
+    unfold_frame_counter_++;
+    if (unfold_frame_counter_ <= 5) {
+      rear_mirror_cmd.available = true;
+      rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
+    }
+    else {
+      rear_mirror_cmd.available = false;
+      rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
+    }
+  }
+  else {
+    unfold_frame_counter_ = 0;
+    if (current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_NONE ||
+        current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_UNFOLD) {
+      rear_mirror_cmd.available = false;
+      rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
+    } else {
+      rear_mirror_cmd.available = true;
+      rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
+    }
+  }
+}
+void MirrorDecider::SetRearMirrorCommand() {
+  auto&rear_mirror_cmd = session_->mutable_planning_context()->mutable_planning_output().rear_view_mirror_signal_command;
+  if (current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_NONE) {
+    rear_mirror_cmd.available = false;
+    rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
+  } else {
+    rear_mirror_cmd.available = true;
+    rear_mirror_cmd.rear_view_mirror_value = current_mirror_state_;
+  }
+}
+
 
 bool MirrorDecider::Execute() {
   ILOG_DEBUG << "=======MirrorFoldDecider=======";
@@ -24,7 +61,7 @@ bool MirrorDecider::Execute() {
   }
   // 设置阈值  后视镜折叠条件的阈值、后视镜展开条件的阈值，车停止时的阈值
   constexpr double fold_threshold = 0.2;
-  constexpr double unfold_threshold = 0.4;
+  constexpr double unfold_threshold = 0.3;
   constexpr double stop_threshold = 0.1;
   // 设置4秒规划 角点的参数
   double s_front_left_traj = 1.00;
@@ -44,6 +81,7 @@ bool MirrorDecider::Execute() {
   // 获取输出的窄路信息
   const auto& narrow_output = session_->planning_context().narrow_space_decider_output();
   if (!narrow_output.is_exist_narrow_space) {
+    HandleNarrowRoadExitRearMirror(nsa_func_state);
     return true;
   }
   double narrow_start_s = narrow_output.narrow_space_s_range.first;   //narrow_space_s_range 窄路区间的起始点
@@ -104,7 +142,7 @@ bool MirrorDecider::Execute() {
   bool condition_to_fold = false;
 
   // 只有在 NSA 功能被激活的大前提下，才需要做判定
-  if ( std::fabs(ego_velocity) > 1e-3 && (nsa_func_state == iflyauto::FunctionalState_NRA_SUSPEND || nsa_func_state == iflyauto::FunctionalState_NRA_GUIDANCE)) {
+  if ( std::fabs(ego_velocity) > 1e-3 && nsa_func_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
 
     // 前提条件：必须让 左前角点 或者 右前角点 位于窄路范围内
     // 条件1：适合慢速，当前4秒规划还没有到车头的位置
@@ -157,7 +195,7 @@ bool MirrorDecider::Execute() {
       }
     }
   }
-  else if( std::fabs(ego_velocity) <= 1e-3 ){
+  else if( std::fabs(ego_velocity) <=1e-3||nsa_func_state==iflyauto::FunctionalState_NRA_COMPLETED||nsa_func_state == iflyauto::FunctionalState_NRA_SUSPEND){
       if (front_left_l1_ego <= stop_threshold || front_left_l2_ego >= -stop_threshold || front_right_l1_ego <= stop_threshold || front_right_l2_ego >= -stop_threshold) {
         condition_to_fold = true;
       }
@@ -247,14 +285,7 @@ bool MirrorDecider::Execute() {
       break;
   }
 
-  auto& rear_mirror_cmd = session_->mutable_planning_context()->mutable_planning_output().rear_view_mirror_signal_command;
-  if (current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_NONE) {
-    rear_mirror_cmd.available = false;
-    rear_mirror_cmd.rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
-  } else {
-    rear_mirror_cmd.available = true;
-    rear_mirror_cmd.rear_view_mirror_value = current_mirror_state_;
-  }
+  SetRearMirrorCommand();
 
   return true;
 }
