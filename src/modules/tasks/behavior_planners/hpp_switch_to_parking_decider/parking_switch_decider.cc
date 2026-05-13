@@ -1,5 +1,6 @@
 #include "parking_switch_decider.h"
 #include <cmath>
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "planning_context.h"
 #include "session.h"
@@ -134,6 +135,8 @@ bool ParkingSwitchDecider::Execute() {
   JSON_DEBUG_VALUE("is_standstill_near_target_slot", parking_switch_info_.is_standstill_near_target_slot);
   JSON_DEBUG_VALUE("is_timeout_for_target_slot_allowed_to_park", parking_switch_info_.is_timeout_for_target_slot_allowed_to_park);
 
+  UpdateHppObsBlockedTimeout();
+
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()
       .parking_switch_info = std::move(parking_switch_info_);
@@ -158,4 +161,133 @@ bool ParkingSwitchDecider::IsTargetSlotAllowedToPark() {
   }
   return false;
 }
+
+void ParkingSwitchDecider::UpdateHppObsBlockedTimeout() {
+  parking_switch_info_.is_obs_blocked_timeout = false;
+
+  if (!config_.enable_hpp_obs_blocked_timeout) {
+    hpp_obs_blocked_frame_count_ = 0;
+    hpp_non_stop_traj_count_ = 0;
+    is_hpp_obs_blocked_timeout_ = false;
+    return;
+  }
+
+  const auto& env = session_->environmental_model();
+  const auto current_state =
+      env.get_local_view().function_state_machine_info.current_state;
+  const bool in_hpp_cruise =
+      (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING ||
+       current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
+  if (!in_hpp_cruise) {
+    hpp_obs_blocked_frame_count_ = 0;
+    hpp_non_stop_traj_count_ = 0;
+    is_hpp_obs_blocked_timeout_ = false;
+    return;
+  }
+
+  const auto ego_state_mgr = env.get_ego_state_manager();
+  if (ego_state_mgr == nullptr) return;
+  const double ego_v = std::fabs(ego_state_mgr->ego_v());
+
+  const auto& planning_context = session_->planning_context();
+  const auto& traj_points = planning_context.planning_result().traj_points;
+
+  bool is_stop_trajectory = false;
+  if (!traj_points.empty()) {
+    double max_abs_s = 0.0;
+    double max_abs_v = 0.0;
+    for (const auto& p : traj_points) {
+      max_abs_s = std::max(max_abs_s, std::fabs(p.s));
+      max_abs_v = std::max(max_abs_v, std::fabs(p.v));
+    }
+    is_stop_trajectory =
+        (max_abs_s < config_.hpp_obs_blocked_stop_traj_s_thr) ||
+        (max_abs_v < config_.hpp_obs_blocked_stop_traj_v_thr);
+  }
+
+  const auto& cipv = planning_context.cipv_decider_output();
+  const int32_t cipv_id = cipv.cipv_id();
+  const bool has_cipv = (cipv_id != -1);
+
+  const auto agent_mgr = env.get_agent_manager();
+  const auto* cipv_agent =
+      (has_cipv && agent_mgr != nullptr) ? agent_mgr->GetAgent(cipv_id)
+                                         : nullptr;
+
+  const bool is_cipv_dest_or_tfl =
+      (cipv_agent != nullptr) &&
+      (cipv_agent->is_stop_destination_virtual_obs() ||
+       cipv_agent->is_tfl_virtual_obs());
+
+  const bool is_cipv_real_obs =
+      has_cipv && (cipv_agent != nullptr) && !is_cipv_dest_or_tfl;
+
+  // 退出条件 A：车速 > exit_thr 立即退出
+  if (ego_v > config_.hpp_obs_blocked_exit_ego_v_thr) {
+    hpp_obs_blocked_frame_count_ = 0;
+    hpp_non_stop_traj_count_ = 0;
+    is_hpp_obs_blocked_timeout_ = false;
+    DEBUG_KEY_VALUE("hpp_obs_blocked_frame_count", hpp_obs_blocked_frame_count_);
+    DEBUG_KEY_VALUE("is_hpp_obs_blocked_timeout",
+                    static_cast<int>(is_hpp_obs_blocked_timeout_));
+    return;
+  }
+
+  // 退出条件 C：前方是终点/红绿灯 且 刹停轨迹 立即退出
+  if (is_cipv_dest_or_tfl && is_stop_trajectory) {
+    hpp_obs_blocked_frame_count_ = 0;
+    hpp_non_stop_traj_count_ = 0;
+    is_hpp_obs_blocked_timeout_ = false;
+    DEBUG_KEY_VALUE("hpp_obs_blocked_frame_count", hpp_obs_blocked_frame_count_);
+    DEBUG_KEY_VALUE("is_hpp_obs_blocked_timeout",
+                    static_cast<int>(is_hpp_obs_blocked_timeout_));
+    return;
+  }
+
+  // 退出条件 B：连续 N 帧非刹停轨迹 退出
+  if (!is_stop_trajectory) {
+    ++hpp_non_stop_traj_count_;
+  } else {
+    hpp_non_stop_traj_count_ = 0;
+  }
+  if (hpp_non_stop_traj_count_ >=
+      config_.hpp_obs_blocked_exit_non_stop_frames) {
+    hpp_obs_blocked_frame_count_ = 0;
+    hpp_non_stop_traj_count_ = 0;
+    is_hpp_obs_blocked_timeout_ = false;
+    DEBUG_KEY_VALUE("hpp_obs_blocked_frame_count", hpp_obs_blocked_frame_count_);
+    DEBUG_KEY_VALUE("is_hpp_obs_blocked_timeout",
+                    static_cast<int>(is_hpp_obs_blocked_timeout_));
+    return;
+  }
+
+  // 进入 / 累加
+  const bool enter_cond =
+      (ego_v < config_.hpp_obs_blocked_enter_ego_v_thr) &&
+      is_stop_trajectory && is_cipv_real_obs;
+
+  if (hpp_obs_blocked_frame_count_ > 0 || enter_cond) {
+    ++hpp_obs_blocked_frame_count_;
+  }
+
+  if (hpp_obs_blocked_frame_count_ >=
+      config_.hpp_obs_blocked_timeout_frames) {
+    is_hpp_obs_blocked_timeout_ = true;
+  }
+
+  parking_switch_info_.is_obs_blocked_timeout = is_hpp_obs_blocked_timeout_;
+
+  DEBUG_KEY_VALUE("hpp_obs_blocked_frame_count", hpp_obs_blocked_frame_count_);
+  DEBUG_KEY_VALUE("hpp_non_stop_traj_count", hpp_non_stop_traj_count_);
+  DEBUG_KEY_VALUE("is_hpp_obs_blocked_timeout",
+                  static_cast<int>(is_hpp_obs_blocked_timeout_));
+  DEBUG_KEY_VALUE("hpp_obs_blocked_is_stop_traj",
+                  static_cast<int>(is_stop_trajectory));
+  DEBUG_KEY_VALUE("hpp_obs_blocked_is_cipv_real",
+                  static_cast<int>(is_cipv_real_obs));
+  DEBUG_KEY_VALUE("hpp_obs_blocked_cipv_id", cipv_id);
+  DEBUG_KEY_VALUE("hpp_obs_blocked_enter_cond",
+                  static_cast<int>(enter_cond));
+}
+
 }  // namespace planning

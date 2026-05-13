@@ -22,6 +22,9 @@ struct HppParkingSwitchInfo {
   bool is_standstill_near_target_slot;
   bool is_timeout_for_target_slot_allowed_to_park;
 
+  // HPP 巡航前方非虚拟障碍物刹停超时（用于触发 OBS_BLOCKED_TIMEOUT 上报）
+  bool is_obs_blocked_timeout;
+
   void Clear() {
     is_target_slot_occupied = false;
     is_target_slot_allowed_to_park = false;
@@ -29,6 +32,7 @@ struct HppParkingSwitchInfo {
     is_selected_slot_allowed_to_park = false;
     is_standstill_near_target_slot = false;
     is_timeout_for_target_slot_allowed_to_park = false;
+    is_obs_blocked_timeout = false;
     return;
   }
 };
