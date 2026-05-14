@@ -85,6 +85,9 @@ bool LongitudinalHmiDecider::Execute() {
   if (!session_) {
     return false;
   }
+  bool disable_tlf_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
+                                             ->get_function_switch_config()
+                                             .disable_tlf_function);
   auto& ad_info = session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
                       ->ad_info;
@@ -132,8 +135,8 @@ bool LongitudinalHmiDecider::Execute() {
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
 
   bool red_light_stop_condition =
-      tfl_decider.is_in_straight_lane && is_red_tfl && !tfl_decider.can_pass &&
-      start_stop_info != common::StartStopInfo::STOP &&
+      !disable_tlf_from_product && tfl_decider.is_in_straight_lane && is_red_tfl &&
+      !tfl_decider.can_pass && start_stop_info != common::StartStopInfo::STOP &&
       intersection_state == planning::common::APPROACH_INTERSECTION &&
       (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) &&
       (lateral_obstacles->leadone() == nullptr ||
@@ -157,7 +160,7 @@ bool LongitudinalHmiDecider::Execute() {
   }
 
   bool green_light_go_condition =
-      !intersection_red_light_stop_active_ &&
+      !disable_tlf_from_product && !intersection_red_light_stop_active_ &&
       tfl_decider.is_in_straight_lane && is_green_tfl && tfl_decider.can_pass && v_ego < kEgoStaticVelThred &&
       (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) &&
       (lateral_obstacles->leadone() == nullptr ||
@@ -212,9 +215,6 @@ bool LongitudinalHmiDecider::Execute() {
         iflyauto::REQUEST_REASON_LON_COLLISION_RISK;
   }
   // intersection left/right takeover request
-  bool disable_tlf_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
-                                      ->get_function_switch_config()
-                                      .disable_tlf_function);
   if (!tfl_decider.is_in_straight_lane && !disable_tlf_from_product) {
     IntersectionLeftRightLaneTakeOverProc();
   }
