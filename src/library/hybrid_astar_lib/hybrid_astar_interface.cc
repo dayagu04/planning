@@ -823,7 +823,8 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
   constexpr float kOffsetX = 0.3f;
   traj_candidates_size_ = 9;
 
-  // Clear all candidate trajectories to avoid using stale data from previous frame
+  // Clear all candidate trajectories to avoid using stale data from previous
+  // frame
   for (auto& traj : traj_candidates_) {
     traj.Clear();
   }
@@ -907,9 +908,6 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   // todo: 需要限制搜索时间
   ILOG_INFO << "scenario try planning";
-
-  std::fill(stable_feasible_directions_.begin(),
-            stable_feasible_directions_.end(), false);
 
   if (request_.direction_request_size > 1) {
     ParkingDirectionAttempt(advised_lat_buffer_inside);
@@ -1126,6 +1124,17 @@ void HybridAStarInterface::ParkingDirectionAttempt(
       config_.max_search_time_ms_scenario_try_park_out;  // 300ms
   double accumulated_search_time_ms = 0.0;
 
+  auto mark_direction_infeasible = [this](int8_t i) {
+    if (i >= static_cast<int8_t>(stable_feasible_directions_.size())) {
+      return;
+    }
+    feasible_confirm_count_[i] = std::max<int8_t>(
+        feasible_confirm_count_[i] - 1, kInfeasibleConfirmThresh);
+    if (feasible_confirm_count_[i] <= kInfeasibleConfirmThresh) {
+      stable_feasible_directions_[i] = false;
+    }
+  };
+
   for (int8_t i = 0; i < request_.direction_request_size; i++) {
     ILOG_INFO << "***************** [ " << static_cast<int>(i)
               << " ] try, dir :  "
@@ -1144,6 +1153,7 @@ void HybridAStarInterface::ParkingDirectionAttempt(
       ILOG_INFO << "dist_goal_collide = "
                 << target_regulator_result.dist_to_obs;
       ILOG_INFO << "target_regulator_goal_ will collide";
+      mark_direction_infeasible(i);
       continue;
     }
     if (request_.direction_request_stack[i] ==
@@ -1160,6 +1170,7 @@ void HybridAStarInterface::ParkingDirectionAttempt(
                   << target_regulator_result.pose.x << ", "
                   << target_regulator_result.pose.y;
         ILOG_INFO << "insufficient space on both sides";
+        mark_direction_infeasible(i);
         continue;
       }
     }
@@ -1175,9 +1186,8 @@ void HybridAStarInterface::ParkingDirectionAttempt(
                                &traj_candidates_[i]);
 
     // Update feasibility with temporal filtering to prevent flickering
-    bool this_frame_feasible =
-        (traj_candidates_[i].x.size() > 5 &&
-         i < stable_feasible_directions_.size());
+    bool this_frame_feasible = (traj_candidates_[i].x.size() > 5 &&
+                                i < stable_feasible_directions_.size());
 
     if (this_frame_feasible) {
       feasible_confirm_count_[i] = std::min<int8_t>(
