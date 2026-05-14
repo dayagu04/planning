@@ -276,6 +276,8 @@ struct EgoPlanningConfig : public Config {
     use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
     enable_use_dynamic_agent_emergency_avoidence_lane_change_request = read_json_key<bool>(
         json, "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
+    enable_init_point_compensation = read_json_key<bool>(
+        json, "enable_init_point_compensation", enable_init_point_compensation);
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -317,6 +319,7 @@ struct EgoPlanningConfig : public Config {
   double press_line_fewly_threshold = 0.3;
   bool use_press_line_fewly_threshold = false;
   bool enable_use_dynamic_agent_emergency_avoidence_lane_change_request = false;
+  bool enable_init_point_compensation = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {

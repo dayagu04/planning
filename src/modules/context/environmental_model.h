@@ -7,6 +7,7 @@
 
 #include "ad_common/hdmap/hdmap.h"
 #include "agent/agent_manager.h"
+#include "modules/common/math/filter/mean_filter.h"
 #include "config/vehicle_param.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
@@ -343,6 +344,14 @@ class EnvironmentalModel {
   void set_is_mrc_mode(bool mrc_mode) { is_mrc_mode_ = mrc_mode; }
   bool is_mrc_mode() const { return is_mrc_mode_; }
 
+  // bool UpdateInitPoint();
+
+  bool UpdateInitPoint(bool is_in_cur_lane);
+
+  const Eigen::MatrixXd& GetInitPointDiffMat() const {
+    return init_point_diff_mat_;
+  }
+
  private:
   const LocalView *local_view_ = nullptr;
   bool vehicle_dbw_status_{false};
@@ -376,6 +385,12 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *nsa_config_builder_ptr_ = nullptr;
   common::DrivingFunctionInfo function_info_;
   bool is_mrc_mode_ = false;
+
+  std::shared_ptr<planning::ReferencePath> last_refline_ = nullptr;
+  planning::planning_math::MeanFilter point_dx_filter_;
+  planning::planning_math::MeanFilter point_dy_filter_;
+  planning::planning_math::MeanFilter point_dtheta_filter_;
+  Eigen::MatrixXd init_point_diff_mat_;
 };
 
 }  // namespace planning

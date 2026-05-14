@@ -29,6 +29,9 @@ class FrenetEgoState {
   const FrenetBoundaryCorners &corners() const { return corners_; }
   const planning_math::Polygon2d &polygon() const { return polygon_; }
   bool planning_init_point_valid() const { return planning_init_point_valid_; }
+  PlanningInitPoint &mutable_planning_init_point() {
+    return planning_init_point_;
+  }
   const PlanningInitPoint &planning_init_point() const {
     return planning_init_point_;
   }

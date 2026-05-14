@@ -131,6 +131,10 @@ class ReferencePath {
     return frenet_coord_;
   }
 
+  FrenetEgoState &mutable_frenet_ego_state() {
+    return frenet_ego_state_;
+  }
+
   const FrenetEgoState &get_frenet_ego_state() const {
     return frenet_ego_state_;
   }

@@ -544,6 +544,26 @@ bool EnvironmentalModelManager::Run() {
 #endif
 
   if (!session_->is_hpp_scene()) {
+    if (ego_config_.enable_init_point_compensation) {
+      const auto &coarse_planning_info =
+          session_->planning_context()
+                  .lane_change_decider_output()
+                  .coarse_planning_info;
+      bool is_in_cur_lane =
+          (coarse_planning_info.target_state == kLaneKeeping  ||
+           coarse_planning_info.target_state == kLaneChangePropose);
+      const auto &general_lateral_decider_output =
+          session_->planning_context()
+                  .general_lateral_decider_output();
+      session_->mutable_environmental_model()->UpdateInitPoint(is_in_cur_lane);
+    }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("init_point_update cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
     // time_start = IflyTime::Now_ms();
     lateral_obstacle_ptr_->update();
     // time_end = IflyTime::Now_ms();

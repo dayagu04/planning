@@ -131,6 +131,12 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
 
   // Step 2) get dense trajectory points
+  const auto& init_point_diff_mat =
+      session_->environmental_model()
+              .GetInitPointDiffMat();
+  double dx = init_point_diff_mat(0, 0);
+  double dy = init_point_diff_mat(1, 0);
+  double dtheta = init_point_diff_mat(2, 0);
 
   std::vector<TrajectoryPoint> dense_traj_points;
   int dense_num_points =
