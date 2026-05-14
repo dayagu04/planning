@@ -51,6 +51,8 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
   // auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
   // enable_lane_borrow_deciderV3_ =
   //     lane_borrow_config.enable_lane_borrow_deciderV3;
+  // steering_wheel_stationary_decider_ =
+  //     std::make_unique<SteeringWheelStationaryDecider>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV2::Run() {
@@ -154,6 +156,12 @@ bool LongTimeTaskPipelineV2::Run() {
   // ok = scc_longitudinal_motion_planner_->Execute();
   // if (!ok) {
   //   AddErrorInfo(scc_longitudinal_motion_planner_->Name());
+  //   return false;
+  // }
+
+  // ok = steering_wheel_stationary_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(steering_wheel_stationary_decider_->Name());
   //   return false;
   // }
 

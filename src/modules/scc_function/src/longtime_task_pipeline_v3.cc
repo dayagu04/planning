@@ -86,6 +86,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<StartStopDecider>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
+  steering_wheel_stationary_decider_ =
+      std::make_unique<SteeringWheelStationaryDecider>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
@@ -531,6 +533,19 @@ bool LongTimeTaskPipelineV3::Run() {
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("scc_longitudinal_motion_planner_cost",
+                   end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
+  ok = steering_wheel_stationary_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(steering_wheel_stationary_decider_->Name());
+    return false;
+  }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("steering_wheel_stationary_decider",
                    end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif

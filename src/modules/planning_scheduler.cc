@@ -697,19 +697,25 @@ void PlanningScheduler::FillPlanningTrajectory(
   }
 
   // 7.Open loop steering command
+  const auto &steering_wheel_stationary_output =
+      planning_context.steering_wheel_stationary_decider_output();
   auto open_loop_steering_command =
       &(planning_output->open_loop_steering_command);
   open_loop_steering_command->available = true;
-  open_loop_steering_command->jerk_factor = 70.0;  // hack
-  open_loop_steering_command->need_steering_wheel_stationary = false;
-  open_loop_steering_command->steering_wheel_rad_limit = 0.1;
+  open_loop_steering_command->jerk_factor = 6.28;  // rad/s^3
+  open_loop_steering_command->need_steering_wheel_stationary =
+      steering_wheel_stationary_output.is_need_steering_wheel_stationary;
+  open_loop_steering_command->steering_wheel_rad_limit =
+      steering_wheel_stationary_output.target_steering_angle;
 
+  // 8.mirror command
   auto rear_mirror_cmd_output = &(planning_output->rear_view_mirror_signal_command);
   const auto& internal_mirror_result =
       session_.planning_context().planning_output().rear_view_mirror_signal_command;
   rear_mirror_cmd_output->available = internal_mirror_result.available;
   rear_mirror_cmd_output->rear_view_mirror_value = internal_mirror_result.rear_view_mirror_value;
-  // 8.Planning status
+
+  // 9.Planning status
   auto planning_status = &(planning_output->planning_status);
   planning_status->standstill = false;
   if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||

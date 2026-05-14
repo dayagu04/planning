@@ -414,7 +414,15 @@ GapSelectorStatus GapSelectorDecider::Update() {
   } else if (coarse_planning_info.target_state == kLaneChangeExecution ||
              coarse_planning_info.target_state == kLaneChangeComplete) {
     if (ego_v > 1e-2) {
-      lc_timer_ += 0.1;
+    lc_timer_ += 0.1;
+    } else if (std::fabs(ego_v) <= 1e-2) {
+      double target_steering_angle = ego_state_mgr->ego_steer_angle();
+      session_->mutable_planning_context()
+              ->mutable_steering_wheel_stationary_decider_output()
+              .is_need_steering_wheel_stationary = true;
+      session_->mutable_planning_context()
+              ->mutable_steering_wheel_stationary_decider_output()
+            .target_steering_angle = target_steering_angle;
     }
     is_lc_scene = true;
   } else if (coarse_planning_info.target_state == kLaneChangeCancel) {
@@ -523,7 +531,15 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   }
   auto v_cruise =
       use_ego_v_ ? ego_state_mgr->ego_v() : ego_state_mgr->ego_v_cruise();
-  auto ego_v = std::fmax(v_cruise, config_.min_ego_v_cruise);
+  auto ego_v = std::fmax(v_cruise, config_.min_lc_cruise_v);
+  const auto &static_steering_status=
+    session_->planning_context()
+            .steering_wheel_stationary_decider_output()
+            .static_steering_status;
+  if (static_steering_status == kStaticSteeringReady ||
+      static_steering_status == kStaticSteeringComplete) {
+    ego_v = std::fmax(v_cruise, config_.min_static_lc_cruise_v);
+  }
   auto lat_state = ego_state_mgr->planning_init_point().lat_init_state;
   Point2D frenet_init_point;
   Point2D cart_init_point{lat_state.x(), lat_state.y()};
@@ -658,7 +674,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
                                       const double lat_avoid_offset) {
   const auto &ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  if (ego_state_mgr->ego_v() >= config_.min_ego_v_cruise &&
+  if (ego_state_mgr->ego_v() >= config_.min_lc_cruise_v &&
       (*remain_lc_time > 1.0 || use_ego_v_)) {
     return;
   }

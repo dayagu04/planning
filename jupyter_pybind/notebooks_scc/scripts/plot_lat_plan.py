@@ -33,6 +33,7 @@ max_time = bag_loader.load_all_data()
 car_type = global_var.get_value('car_type')
 scene_type = global_var.get_value('scene_type')
 steer_ratio = load_steer_ratio(car_type)
+plot_turning_circle = False
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
@@ -51,6 +52,8 @@ fig_hmi = load_avoid_hmi(bag_loader)
 fig_hmi = load_enter_fuction_hmi(fig_hmi, bag_loader)
 fig_curve = load_road_curve(bag_loader, lat_plan_data)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
+if plot_turning_circle:
+  data_turning_circle = load_turning_circle(fig1)
 
 # behavior
 behavior_data_1 = ColumnDataSource({
@@ -166,6 +169,33 @@ def update_lat_behavior_data(local_view_data):
     'data': datas,
   })
 
+open_loop_steering_command_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
+columns = [
+        TableColumn(field="name", title="name",),
+        TableColumn(field="data", title="data"),
+    ]
+data_open_loop_steering_command_table = DataTable(source=open_loop_steering_command_data, columns=columns, width=400, height=125)
+
+def update_open_loop_steering_command(open_loop_steering_command):
+  vars = ['available', 'jerk_factor', \
+          'need_steering_wheel_stationary', 'steering_wheel_rad_limit']
+  names  = []
+  datas = []
+  for name in vars:
+    try:
+      datas.append(getattr(open_loop_steering_command, name))
+      names.append(name)
+    except:
+      pass
+
+  open_loop_steering_command_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+
 # steer and steer dot
 def get_plan_debug_msg_idx(bag_loader, bag_time):
   plan_debug_msg_idx = 0
@@ -263,14 +293,19 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
   # update_center_line_info(data_center_line_info, local_view_data)
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
+  if plot_turning_circle:
+    update_turning_circle(data_turning_circle, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     update_lat_behavior_data(local_view_data)
     update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data)
   update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data)
+  if bag_loader.plan_msg['enable'] ==True:
+    open_loop_steering_command = local_view_data['data_msg']['plan_msg'].open_loop_steering_command
+    data_open_loop_steering_command_table = update_open_loop_steering_command(open_loop_steering_command)
   push_notebook()
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11,fig_curve)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(data_behavior_table_1, data_behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
-pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table))))), title="Hmi")
+pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table, data_open_loop_steering_command_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
 if scene_type == "HPP":
   pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ], height = 1200)

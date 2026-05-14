@@ -738,7 +738,8 @@ class LoadRosbag:
                           'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
                           'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence',
-                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link', 'road_right_level']
+                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link', 'road_right_level',
+                          "turning_direction", "target_steering_angle", "turning_target_obstacle_id", "target_turning_point_x", "target_turning_point_y", "static_steering_status", "static_steering_failed_reason"]
 
       json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
                           "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
@@ -838,7 +839,7 @@ class LoadRosbag:
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
                          "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot", "is_target_slot_allowed_to_park",
-                          "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
+                         "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
       # nsa

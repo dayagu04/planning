@@ -2017,8 +2017,10 @@ struct GapSelectorConfig : public EgoPlanningConfig {
                      "lh_heading_error_min");
 
     ReadItem<bool>(json, use_gs, "gap_selector", "use_gs");
-    ReadItem<double>(json, min_ego_v_cruise, "gap_selector",
-                     "min_ego_v_cruise");
+    ReadItem<double>(json, min_lc_cruise_v, "gap_selector",
+                     "min_lc_cruise_v");
+    ReadItem<double>(json, min_static_lc_cruise_v, "gap_selector",
+                     "min_static_lc_cruise_v");
   }
 
   double default_lc_time = 6.0;
@@ -2037,7 +2039,8 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lh_heading_error_min = 0.5;
   double lh_heading_error_max = 4.5;
   bool use_gs = true;
-  double min_ego_v_cruise = 2.0;
+  double min_lc_cruise_v = 2.0;
+  double min_static_lc_cruise_v = 2.0;
 };
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
@@ -2460,6 +2463,10 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"general_lateral_decider", "lc_min_v_cruise"},
         lc_min_v_cruise);
+    static_lc_min_v_cruise = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider", "static_lc_min_v_cruise"},
+        static_lc_min_v_cruise);
     ReadItem<double>(json, lc_ref_acc, "general_lateral_decider", "lc_ref_acc");
     ReadItem<double>(json, lc_ref_offset, "general_lateral_decider",
                      "lc_ref_offset");
@@ -2736,6 +2743,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lc_min_v_cruise = 5.0;
   double lc_ref_acc = 0.0;
   double lc_ref_offset = 0.0;
+  double static_lc_min_v_cruise = 2.0;
 
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};
@@ -3077,6 +3085,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "acc_bound_lane_change");
     ReadItem<double>(json, jerk_bound_lane_borrow, "lat_motion_ilqr",
                      "jerk_bound_lane_borrow");
+    ReadItem<double>(json, jerk_bound_steering, "lat_motion_ilqr",
+                     "jerk_bound_steering");
     ReadItem<double>(json, q_ref_x, "lat_motion_ilqr", "q_ref_x");
     ReadItem<double>(json, q_ref_y, "lat_motion_ilqr", "q_ref_y");
     ReadItem<double>(json, q_ref_theta, "lat_motion_ilqr", "q_ref_theta");
@@ -3342,6 +3352,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_borrow = 1.0;
+  double jerk_bound_steering = 1.0;
   double q_acc_bound = 20000.0;
   double q_jerk_bound = 500000.0;
 
@@ -5053,6 +5064,31 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_extend_pos_bound = 20.0;
 };
 
+struct SteeringWheelStationaryDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<bool>(json, enable_static_steering, "steering_wheel_stationary_decider",
+                   "enable_static_steering");
+    ReadItem<double>(json, safe_buffer, "steering_wheel_stationary_decider",
+                   "safe_buffer");
+    ReadItem<double>(json, steer_angle_step, "steering_wheel_stationary_decider",
+                   "steer_angle_step");
+    ReadItem<double>(json, min_steer_angle, "steering_wheel_stationary_decider",
+                   "min_steer_angle");
+    ReadItem<double>(json, steer_angle_thr, "steering_wheel_stationary_decider",
+                   "steer_angle_thr");
+    ReadItem<double>(json, min_lon_dist_thr, "steering_wheel_stationary_decider",
+                   "min_lon_dist_thr");
+  }
+  bool enable_static_steering = false;
+  double safe_buffer = 0.3;
+  double steer_angle_step = 5.0;
+  double min_steer_angle = 50.0;
+  double steer_angle_thr = 5.0;
+  double min_lon_dist_thr = 2.0;
+};
+
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -5225,6 +5261,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                           hpp_replan_lon_err_threshold_value);
     ReadItem<bool>(json, use_yaw_rate_to_delta, "use_yaw_rate_to_delta");
     ReadItem<double>(json, kEpsilon_vel_stop, "kEpsilon_vel_stop");
+    steer_angle_thr = read_json_key<double>(
+        json, "steer_angle_thr", steer_angle_thr);
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -5256,6 +5294,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
   bool use_yaw_rate_to_delta = false;
+  double steer_angle_thr = 0.95;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

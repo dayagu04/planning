@@ -32,6 +32,7 @@
 #include "../tasks/task_interface/parking_switch_decider_output.h"
 #include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
+#include "../tasks/task_interface/steering_wheel_stationary_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
@@ -309,6 +310,14 @@ class PlanningContext {
 
   MotionPlannerOutput &mutable_motion_planner_output() {
     return motion_planner_output_;
+  }
+
+  const SteeringWheelStationaryDeciderOutput &steering_wheel_stationary_decider_output() const {
+    return steering_wheel_stationary_decider_output_;
+  }
+
+  SteeringWheelStationaryDeciderOutput &mutable_steering_wheel_stationary_decider_output() {
+    return steering_wheel_stationary_decider_output_;
   }
 
   void feed_planning_hmi_info(
@@ -623,6 +632,8 @@ class PlanningContext {
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
   PotentialDangerousAgentDeciderOutput
       potential_dangerous_agent_decider_output_;
+  SteeringWheelStationaryDeciderOutput steering_wheel_stationary_decider_output_;
+
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
   common::StartStopInfo start_stop_result_;
