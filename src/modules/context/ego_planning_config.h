@@ -2697,6 +2697,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, first_soft_min_distance2center,
                      "general_lateral_decider",
                      "first_soft_min_distance2center");
+    ReadItem<bool>(json, is_premove_in_merge_scene,
+                     "general_lateral_decider",
+                     "is_premove_in_merge_scene");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -2821,7 +2824,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_dynamic_nudge_buffer2first_bound = 0.0;
   bool use_first_soft_bound = false;
   double first_soft_min_distance2center = 11;
-
+  bool is_premove_in_merge_scene = false;
 };
 
 

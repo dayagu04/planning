@@ -484,6 +484,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
     is_use_spatio_planner_result = true;
   }
   bool limit_ref_vel_on_ramp_valid = false;
+  bool is_aggressive_scence = lane_change_decider_output.is_aggressive_scence;
   bool is_LK = coarse_planning_info.target_state == kLaneKeeping;
   bool is_LC_PROPOSE = coarse_planning_info.target_state == kLaneChangePropose;
   bool is_LC_CHANGE =
@@ -1080,7 +1081,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
         }
         ref_lat_offset += compensation_buffer;
         last_compensation_buffer_ = compensation_buffer;
-        HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
+        if (is_LC_PROPOSE && is_aggressive_scence && config_.is_premove_in_merge_scene) {
+          if (!HandleMergeSceneRefOffset(ref_lat_offset, traj_points, front_axis_ref_path)) {
+            HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
+          }
+        } else {
+          HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
+        }
         // }
       } else {
         last_compensation_buffer_ = 0.0;
@@ -1147,6 +1154,166 @@ void GeneralLateralDecider::HandleRefPathOffset(
       ILOG_DEBUG << "HandleAvoidScene frenet error!";
     }
   }
+}
+
+bool GeneralLateralDecider::HandleMergeSceneRefOffset(
+    double ref_buffer, TrajectoryPoints& traj_points,
+    std::vector<std::pair<double, double>>& front_axis_ref_path) {
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  int premove_direction = lane_change_decider_output.lc_request;
+  if (premove_direction != LEFT_CHANGE && premove_direction != RIGHT_CHANGE) {
+    return false;
+  }
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_manager->get_current_lane();
+  const auto& target_lane = premove_direction == LEFT_CHANGE ?
+      virtual_lane_manager->get_left_lane() : virtual_lane_manager->get_right_lane();
+  if (target_lane == nullptr || current_lane == nullptr) {
+    return false;
+  }
+  const auto& current_ref_path = current_lane->get_reference_path();
+  const auto& target_ref_path = target_lane->get_reference_path();
+  if (target_ref_path == nullptr || current_ref_path == nullptr) {
+    return false;
+  }
+  const double ego_vel = current_ref_path->get_frenet_ego_state().velocity();
+  const auto& current_frenet_coord = current_ref_path->get_frenet_coord();
+  const auto& frenet_coord = target_ref_path->get_frenet_coord();
+  if (frenet_coord == nullptr || current_frenet_coord == nullptr ||
+      ego_vel < 0.1) {
+    return false;
+  }
+  double frist_point_s = traj_points.front().s;
+  double last_point_s = traj_points.back().s;
+  double distance_to_stop_point = lane_change_decider_output.distance_to_stop_point;
+  if (distance_to_stop_point > std::max(last_point_s - frist_point_s + 5.0, 10.0) ||
+      distance_to_stop_point < 1e-6) {
+    return false;
+  }
+  double target_point_s = frist_point_s + distance_to_stop_point;
+  const auto& target_path_point = current_frenet_coord->GetPathPointByS(target_point_s);
+  double init_lane_width = target_lane->width_by_s(frist_point_s);
+  double init_offset = 0.5 * (init_lane_width + vehicle_param.max_width) + 0.1;
+  Point2D target_sl_point;
+  if (frenet_coord->XYToSL(Point2D(target_path_point.x(), target_path_point.y()), target_sl_point)) {
+    // depend on stop point
+    init_offset = std::max(init_offset, std::fabs(target_sl_point.y));
+  }
+  double min_safe_offset = init_offset - 0.5 * vehicle_param.max_width;
+  if (!CheckPremoveSafety(premove_direction, distance_to_stop_point, target_ref_path, min_safe_offset)) {
+    return false;
+  }
+  min_safe_offset += 0.5 * vehicle_param.max_width;
+  min_safe_offset = std::min(std::fabs(target_ref_path->get_frenet_ego_state().l()), min_safe_offset);
+  double init_diff_x = 0.;
+  double init_diff_y = 0.;
+  if (std::fabs(ref_buffer) > 1e-6) {
+    Point2D first_offset_xy_point;
+    if (current_frenet_coord->SLToXY(Point2D(traj_points[0].s, ref_buffer),
+                                     first_offset_xy_point)) {
+      init_diff_x = first_offset_xy_point.x - traj_points[0].x;
+      init_diff_y = first_offset_xy_point.y - traj_points[0].y;
+    }
+  }
+  Point2D ref_xy_point;
+  Point2D ref_sl_point;
+  ReferencePathPoint refpath_pt{};
+  std::vector<double> diff_x;
+  std::vector<double> diff_y;
+  std::vector<double> diff_l;
+  diff_x.resize(traj_points.size(), init_diff_x);
+  diff_y.resize(traj_points.size(), init_diff_y);
+  diff_l.resize(traj_points.size(), ref_buffer);
+  for (size_t i = 0; i < traj_points.size(); ++i) {
+    if (traj_points[i].s - frist_point_s > distance_to_stop_point) {
+      break;
+    }
+    if (frenet_coord->XYToSL(Point2D(traj_points[i].x + init_diff_x, traj_points[i].y + init_diff_y), ref_sl_point)) {
+      double tp_offset = init_offset;
+      if (target_ref_path->get_reference_point_by_lon(ref_sl_point.x, refpath_pt)) {
+        double dist_to_border = premove_direction == 1 ?
+            refpath_pt.distance_to_right_lane_border : refpath_pt.distance_to_left_lane_border;
+        tp_offset = std::max(dist_to_border + 0.5 * vehicle_param.max_width + 0.2, tp_offset);
+      }
+      tp_offset = std::max(min_safe_offset, tp_offset);
+      tp_offset = premove_direction == 1 ? -tp_offset : tp_offset;
+      if (std::fabs(ref_sl_point.y) <= std::fabs(tp_offset)) {
+        break;
+      }
+      diff_l[i] = tp_offset - ref_sl_point.y;
+      if (frenet_coord->SLToXY(Point2D(traj_points[i].s, tp_offset), ref_xy_point)) {
+        diff_x[i] = ref_xy_point.x - traj_points[i].x;
+        diff_y[i] = ref_xy_point.y - traj_points[i].y;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  // valid
+  for (size_t i = 0; i < traj_points.size(); ++i) {
+    traj_points[i].x += diff_x[i];
+    traj_points[i].y += diff_y[i];
+    traj_points[i].l += diff_l[i];
+
+    front_axis_ref_path[i].first += diff_x[i];
+    front_axis_ref_path[i].second += diff_y[i];
+  }
+  return true;
+}
+
+bool GeneralLateralDecider::CheckPremoveSafety(
+    const int premove_direction, const double remain_distance,
+    const std::shared_ptr<LaneReferencePath> lane_ref_path,
+    double& min_safe_offset) {
+  if (lane_ref_path == nullptr) {
+    return false;
+  }
+  const auto& frenet_ego = lane_ref_path->get_frenet_ego_state();
+  const auto& obs_vec = lane_ref_path->get_obstacles();
+  for (const auto& obs : obs_vec) {
+    const auto& frenet_obs_boundary = obs->frenet_obstacle_boundary();
+    if ((premove_direction == LEFT_CHANGE && (frenet_obs_boundary.l_start > 1e-6 ||
+         frenet_obs_boundary.l_start < frenet_ego.boundary().l_end)) ||
+        (premove_direction == RIGHT_CHANGE && (frenet_obs_boundary.l_end < -1e-6 ||
+         frenet_obs_boundary.l_end > frenet_ego.boundary().l_start))) {
+      continue;
+    }
+
+    const double obs_rel_vel_lat = obs->frenet_relative_velocity_l();
+    const double obs_rel_vel_lon = obs->frenet_relative_velocity_s();
+    double remain_premove_time = remain_distance / frenet_ego.velocity();
+    double remain_rel_distance = obs_rel_vel_lon * remain_premove_time;
+    double final_rel_s = obs->rel_s() + remain_rel_distance;
+    double start_s = std::max(frenet_ego.boundary().s_start, frenet_obs_boundary.s_start);
+    double end_s = std::min(frenet_ego.boundary().s_end, frenet_obs_boundary.s_end);
+    bool lon_overlap = start_s - 5.0 < end_s;
+    if (lon_overlap) {
+      return false;
+    } else if (obs->rel_s() > 1e-6 && final_rel_s < 5.0) {
+      return false;
+    } else if (obs->rel_s() < -1e-6 && final_rel_s > -5.0) {
+      return false;
+    } else {
+      double lateral_buffer = 0.4;
+      if (general_lateral_decider_utils::IsVRU(obs->type())) {
+        lateral_buffer = 0.7;
+      } else if (general_lateral_decider_utils::IsTruck(obs)) {
+        lateral_buffer = 0.6;
+      }
+      if (premove_direction == LEFT_CHANGE) {
+        min_safe_offset = std::max(min_safe_offset, std::fabs(frenet_obs_boundary.l_start) + lateral_buffer);
+      } else if (premove_direction == RIGHT_CHANGE) {
+        min_safe_offset = std::max(min_safe_offset, std::fabs(frenet_obs_boundary.l_end) + lateral_buffer);
+      }
+    }
+  }
+  return true;
 }
 
 bool GeneralLateralDecider::ConstructReferencePathPoints(
